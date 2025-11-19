@@ -20,15 +20,16 @@ final class TodoItem {
     }
 }
 
-struct HealthLog: Identifiable, Codable {
-    let id: String
+@Model
+final class HealthLog {
+    var id: UUID
     var date: Date
     var sleepHours: Double
     var moodScore: Int
     var steps: Int
     var energyLevel: Int
 
-    init(id: String = UUID().uuidString, date: Date = .now, sleepHours: Double = 0, moodScore: Int = 5, steps: Int = 0, energyLevel: Int = 50) {
+    init(id: UUID = UUID(), date: Date = .now, sleepHours: Double = 0, moodScore: Int = 5, steps: Int = 0, energyLevel: Int = 50) {
         self.id = id
         self.date = date
         self.sleepHours = sleepHours

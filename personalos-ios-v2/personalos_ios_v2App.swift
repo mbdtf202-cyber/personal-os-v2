@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 @main
 struct personalos_ios_v2App: App {
@@ -16,6 +17,7 @@ struct personalos_ios_v2App: App {
         WindowGroup {
             MainTabView()
         }
+        .modelContainer(for: [TodoItem.self, TradeRecord.self, SocialPost.self, HealthLog.self])
     }
 }
 

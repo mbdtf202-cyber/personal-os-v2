@@ -268,4 +268,5 @@ struct DashboardView: View {
 
 #Preview {
     DashboardView()
+        .modelContainer(for: TodoItem.self, inMemory: true)
 }

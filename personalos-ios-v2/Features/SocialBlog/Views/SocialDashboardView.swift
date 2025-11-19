@@ -1,9 +1,19 @@
 import SwiftUI
+import SwiftData
 
 struct SocialDashboardView: View {
-    @State private var manager = ContentManager()
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \SocialPost.date, order: .reverse) private var posts: [SocialPost]
     @State private var showEditor = false
     @State private var newPost = SocialPost(title: "", platform: .twitter, status: .idea, date: Date(), content: "", views: 0, likes: 0)
+
+    private var upcomingPosts: [SocialPost] {
+        posts.filter { $0.status == .scheduled }.sorted { $0.date < $1.date }
+    }
+
+    private var drafts: [SocialPost] {
+        posts.filter { $0.status == .draft || $0.status == .idea }
+    }
     
     var body: some View {
         NavigationStack {
@@ -16,21 +26,21 @@ struct SocialDashboardView: View {
                         statsHeader
                         
                         // 2. Calendar
-                        ContentCalendarView(posts: manager.posts)
+                        ContentCalendarView(posts: posts)
                         
                         // 3. Up Next (Scheduled)
                         sectionHeader(title: "Up Next", icon: "clock.fill", color: .blue)
-                        if manager.upcomingPosts.isEmpty {
+                        if upcomingPosts.isEmpty {
                             SocialEmptyStateView(message: "No scheduled posts.")
                         } else {
-                            ForEach(manager.upcomingPosts) { post in
+                            ForEach(upcomingPosts) { post in
                                 PostRowView(post: post)
                             }
                         }
 
                         // 4. Drafts & Ideas
                         sectionHeader(title: "Drafts & Ideas", icon: "lightbulb.fill", color: .orange)
-                        ForEach(manager.drafts) { post in
+                        ForEach(drafts) { post in
                             PostRowView(post: post)
                         }
                         
@@ -64,10 +74,11 @@ struct SocialDashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showEditor) {
                 MarkdownEditorView(post: $newPost, onSave: { post in
-                    manager.addPost(post)
+                    savePost(post)
                 })
             }
         }
+        .onAppear(perform: seedPostsIfNeeded)
     }
     
     // MARK: - Components
@@ -88,6 +99,17 @@ struct SocialDashboardView: View {
                 .foregroundStyle(AppTheme.primaryText)
             Spacer()
         }
+    }
+
+    private func savePost(_ post: SocialPost) {
+        modelContext.insert(post)
+        try? modelContext.save()
+    }
+
+    private func seedPostsIfNeeded() {
+        guard posts.isEmpty else { return }
+        SocialPost.defaultPosts.forEach { modelContext.insert($0) }
+        try? modelContext.save()
     }
 }
 
@@ -189,4 +211,5 @@ struct SocialEmptyStateView: View {
 
 #Preview {
     SocialDashboardView()
+        .modelContainer(for: SocialPost.self, inMemory: true)
 }
