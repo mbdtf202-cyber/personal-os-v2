@@ -11,17 +11,33 @@ class PortfolioViewModel {
     var assets: [AssetItem] = []
     var equityCurve: [EquityPoint] = []
     var trades: [TradeRecord] = []
+    
+    let priceService = StockPriceService()
 
-    init() {}
+    init() {
+        loadTrades()
+    }
 
     func recalculate(with trades: [TradeRecord]) {
         self.trades = trades
         recalculatePortfolio()
     }
-
+    
+    func refreshPrices() async {
+        let symbols = Array(Set(trades.map { $0.symbol }))
+        await priceService.fetchMultipleQuotes(symbols: symbols)
+        recalculatePortfolio()
+    }
+    
     func addTrade(symbol: String, type: TradeType, price: Double, quantity: Double, emotion: TradeEmotion, note: String, assetType: AssetType) {
         let record = TradeRecord(symbol: symbol.uppercased(), type: type, price: price, quantity: quantity, assetType: assetType, emotion: emotion, note: note)
         trades.append(record)
+        saveTrades()
+        recalculatePortfolio()
+    }
+    
+    func deleteTrade(_ trade: TradeRecord) {
+        trades.removeAll { $0.id == trade.id }
         saveTrades()
         recalculatePortfolio()
     }
@@ -36,8 +52,11 @@ class PortfolioViewModel {
         if let data = UserDefaults.standard.data(forKey: "tradingJournalTrades"),
            let decoded = try? JSONDecoder().decode([TradeRecord].self, from: data) {
             trades = decoded
-            recalculatePortfolio()
+        } else {
+            trades = Self.seedSampleTrades()
+            saveTrades()
         }
+        recalculatePortfolio()
     }
 
     // MARK: - Private Helpers
@@ -73,10 +92,14 @@ class PortfolioViewModel {
         assets = holdings.compactMap { symbol, snapshot in
             guard snapshot.quantity > 0 else { return nil }
             let avgCost = snapshot.quantity > 0 ? snapshot.totalCost / snapshot.quantity : 0
+            
+            // Use real-time price if available, otherwise use last trade price
+            let currentPrice = priceService.quotes[symbol]?.price ?? priceService.getMockPrice(for: symbol)
+            
             return AssetItem(symbol: symbol,
                              name: symbol,
                              quantity: snapshot.quantity,
-                             currentPrice: snapshot.latestPrice,
+                             currentPrice: currentPrice,
                              avgCost: avgCost,
                              type: snapshot.assetType)
         }

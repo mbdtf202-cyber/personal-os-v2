@@ -23,6 +23,13 @@ struct TradingDashboardView: View {
             .navigationTitle("Trading Journal")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { Task { await viewModel.refreshPrices() } }) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 18))
+                            .foregroundStyle(AppTheme.primaryText)
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { showLogForm = true }) {
                         Image(systemName: "plus.circle.fill")

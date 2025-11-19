@@ -1,0 +1,87 @@
+import Foundation
+import HealthKit
+
+@MainActor
+class HealthKitService: ObservableObject {
+    private let healthStore = HKHealthStore()
+    
+    @Published var isAuthorized = false
+    @Published var todaySteps: Int = 0
+    @Published var lastNightSleep: Double = 0.0
+    @Published var heartRate: Int = 0
+    
+    func requestAuthorization() async {
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+        
+        let typesToRead: Set<HKObjectType> = [
+            HKObjectType.quantityType(forIdentifier: .stepCount)!,
+            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
+            HKObjectType.quantityType(forIdentifier: .heartRate)!
+        ]
+        
+        do {
+            try await healthStore.requestAuthorization(toShare: [], read: typesToRead)
+            isAuthorized = true
+            await fetchTodaySteps()
+            await fetchLastNightSleep()
+            await fetchLatestHeartRate()
+        } catch {
+            print("HealthKit authorization failed: \(error)")
+        }
+    }
+    
+    func fetchTodaySteps() async {
+        guard let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) else { return }
+        
+        let now = Date()
+        let startOfDay = Calendar.current.startOfDay(for: now)
+        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: now, options: .strictStartDate)
+        
+        let query = HKStatisticsQuery(quantityType: stepType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
+            guard let result = result, let sum = result.sumQuantity() else { return }
+            Task { @MainActor in
+                self.todaySteps = Int(sum.doubleValue(for: HKUnit.count()))
+            }
+        }
+        
+        healthStore.execute(query)
+    }
+    
+    func fetchLastNightSleep() async {
+        guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else { return }
+        
+        let now = Date()
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now)!
+        let predicate = HKQuery.predicateForSamples(withStart: yesterday, end: now, options: .strictStartDate)
+        
+        let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
+            guard let samples = samples as? [HKCategorySample] else { return }
+            
+            let sleepHours = samples
+                .filter { $0.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue }
+                .reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) / 3600 }
+            
+            Task { @MainActor in
+                self.lastNightSleep = sleepHours
+            }
+        }
+        
+        healthStore.execute(query)
+    }
+    
+    func fetchLatestHeartRate() async {
+        guard let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return }
+        
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        
+        let query = HKSampleQuery(sampleType: heartRateType, predicate: nil, limit: 1, sortDescriptors: [sortDescriptor]) { _, samples, _ in
+            guard let sample = samples?.first as? HKQuantitySample else { return }
+            
+            Task { @MainActor in
+                self.heartRate = Int(sample.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute())))
+            }
+        }
+        
+        healthStore.execute(query)
+    }
+}
