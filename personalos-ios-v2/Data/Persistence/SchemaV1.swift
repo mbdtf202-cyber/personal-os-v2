@@ -1,18 +1,17 @@
 import Foundation
+import SwiftData
 
 // MARK: - Data Models
-/// 使用 UserDefaults 持久化的核心模型定义
-
-struct TodoItem: Identifiable, Codable {
-    let id: String
+/// 使用 SwiftData 持久化待办
+@Model
+final class TodoItem {
     var title: String
     var createdAt: Date
     var isCompleted: Bool
     var category: String
     var priority: Int
 
-    init(id: String = UUID().uuidString, title: String, createdAt: Date = .now, isCompleted: Bool = false, category: String = "Life", priority: Int = 1) {
-        self.id = id
+    init(title: String, createdAt: Date = .now, isCompleted: Bool = false, category: String = "Life", priority: Int = 1) {
         self.title = title
         self.createdAt = createdAt
         self.isCompleted = isCompleted

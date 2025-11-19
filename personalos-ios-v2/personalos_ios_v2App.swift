@@ -1,5 +1,4 @@
 import SwiftUI
-import SwiftData
 
 @main
 struct personalos_ios_v2App: App {
@@ -17,7 +16,6 @@ struct personalos_ios_v2App: App {
         WindowGroup {
             MainTabView()
         }
-        .modelContainer(for: [TodoItem.self, HealthLog.self, TradeRecord.self])
     }
 }
 
@@ -73,7 +71,9 @@ struct MainTabView: View {
             }
         }
         .onAppear { AppTheme.apply(style: themeStyle) }
-        .onChange(of: themeStyle) { AppTheme.apply(style: $0) }
+        .onChange(of: themeStyle) { _, newStyle in
+            AppTheme.apply(style: newStyle)
+        }
     }
 }
 
@@ -133,4 +133,3 @@ struct ModuleCard: View {
         .shadow(color: AppTheme.shadow, radius: 8, y: 4)
     }
 }
-

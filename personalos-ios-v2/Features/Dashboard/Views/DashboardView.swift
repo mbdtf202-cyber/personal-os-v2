@@ -9,6 +9,8 @@ struct DashboardView: View {
     @State private var newTaskTitle = ""
     @State private var quickActionMessage: String?
 
+    init() {}
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -249,7 +251,6 @@ struct DashboardView: View {
 
         items.forEach { item in
             let task = TodoItem(
-                id: item.id ?? UUID(),
                 title: item.title,
                 createdAt: item.createdAt ?? .now,
                 isCompleted: item.isCompleted ?? false,

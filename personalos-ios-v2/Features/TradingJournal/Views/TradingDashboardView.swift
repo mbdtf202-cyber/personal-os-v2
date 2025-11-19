@@ -66,7 +66,9 @@ struct TradingDashboardView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 20)
-        .glassCard()
+        .background(Color.white.opacity(0.1))
+        .backdrop(blur: 10)
+        .cornerRadius(20)
     }
     
     private var equityChart: some View {
@@ -114,7 +116,10 @@ struct TradingDashboardView: View {
                 }
             }
         }
-        .glassCard()
+        .padding(16)
+        .background(Color.white.opacity(0.1))
+        .backdrop(blur: 10)
+        .cornerRadius(20)
     }
     
     private var holdingsList: some View {
