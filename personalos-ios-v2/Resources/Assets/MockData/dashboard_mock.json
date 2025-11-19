@@ -1,0 +1,32 @@
+{
+  "date": "2025-11-20T00:00:00Z",
+  "todayTasks": 8,
+  "completedTasks": 5,
+  "healthCheckIn": true,
+  "mood": "良好",
+  "recentNews": [
+    {
+      "id": "1",
+      "title": "AI 技术最新突破",
+      "source": "TechCrunch",
+      "publishedAt": "2025-11-20T08:00:00Z",
+      "category": "AI"
+    },
+    {
+      "id": "2",
+      "title": "Web3 发展趋势分析",
+      "source": "CoinDesk",
+      "publishedAt": "2025-11-20T07:30:00Z",
+      "category": "Web3"
+    }
+  ],
+  "upcomingSocialPosts": [
+    {
+      "id": "1",
+      "platform": "小红书",
+      "title": "iOS 开发技巧分享",
+      "scheduledAt": "2025-11-21T10:00:00Z",
+      "status": "scheduled"
+    }
+  ]
+}

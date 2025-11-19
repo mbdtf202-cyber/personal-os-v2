@@ -1,0 +1,33 @@
+{
+  "date": "2025-11-20T00:00:00Z",
+  "sleepHours": 7.5,
+  "exerciseMinutes": 45,
+  "moodScore": 8,
+  "energyLevel": 7,
+  "stressLevel": 4,
+  "habits": [
+    {
+      "id": "1",
+      "name": "早起",
+      "completed": true,
+      "streak": 15
+    },
+    {
+      "id": "2",
+      "name": "运动",
+      "completed": true,
+      "streak": 8
+    },
+    {
+      "id": "3",
+      "name": "阅读",
+      "completed": false,
+      "streak": 5
+    }
+  ],
+  "weeklyTrend": {
+    "averageSleep": 7.2,
+    "averageExercise": 40,
+    "averageMood": 7.5
+  }
+}
