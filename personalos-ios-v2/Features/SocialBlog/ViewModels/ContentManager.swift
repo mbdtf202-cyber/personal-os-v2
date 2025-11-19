@@ -14,10 +14,10 @@ class ContentManager {
     }
 
     func loadPosts() async {
-        let defaults = UserDefaults.standard
+        let storeKey = self.storeKey
         let decoded = await withCheckedContinuation { continuation in
             persistenceQueue.async {
-                let data = defaults.data(forKey: storeKey)
+                let data = UserDefaults.standard.data(forKey: storeKey)
                 let posts = data.flatMap { try? JSONDecoder().decode([SocialPost].self, from: $0) }
                 continuation.resume(returning: posts)
             }
@@ -53,7 +53,8 @@ class ContentManager {
 
     func savePosts() {
         let snapshot = posts
-        persistenceQueue.async { [storeKey] in
+        let storeKey = self.storeKey
+        persistenceQueue.async {
             guard let encoded = try? JSONEncoder().encode(snapshot) else { return }
             UserDefaults.standard.set(encoded, forKey: storeKey)
         }
