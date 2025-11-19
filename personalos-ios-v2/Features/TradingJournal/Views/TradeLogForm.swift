@@ -78,12 +78,12 @@ struct TradeLogForm: View {
               let quantityValue = Double(quantity) else { return }
 
         viewModel.addTrade(symbol: trimmedSymbol,
-                           type: type,
-                           price: priceValue,
-                           quantity: quantityValue,
-                           emotion: emotion,
-                           note: note,
-                           assetType: assetType)
+                          type: type,
+                          price: priceValue,
+                          quantity: quantityValue,
+                          emotion: emotion,
+                          note: note,
+                          assetType: assetType)
         dismiss()
     }
 }
