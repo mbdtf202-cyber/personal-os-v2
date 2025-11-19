@@ -4,6 +4,7 @@ import SwiftData
 
 struct TradeLogForm: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.modelContext) private var modelContext
     var viewModel: PortfolioViewModel
     @State private var symbol: String = ""
     @State private var type: TradeType = .buy
@@ -78,13 +79,18 @@ struct TradeLogForm: View {
               let priceValue = Double(price),
               let quantityValue = Double(quantity) else { return }
 
-        viewModel.addTrade(symbol: trimmedSymbol,
-                          type: type,
-                          price: priceValue,
-                          quantity: quantityValue,
-                          emotion: emotion,
-                          note: note,
-                          assetType: assetType)
+        do {
+            try viewModel.addTrade(symbol: trimmedSymbol,
+                                   type: type,
+                                   price: priceValue,
+                                   quantity: quantityValue,
+                                   emotion: emotion,
+                                   note: note,
+                                   assetType: assetType,
+                                   in: modelContext)
+        } catch {
+            print("Failed to save trade: \(error)")
+        }
         dismiss()
     }
 }
