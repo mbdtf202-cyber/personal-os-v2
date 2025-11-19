@@ -170,10 +170,51 @@ struct TradingDashboardView: View {
 
     private func handleTradesChanged(_ trades: [TradeRecord]) {
         if trades.isEmpty {
+            if migrateLegacyTradesIfNeeded() {
+                return
+            }
             PortfolioViewModel.seedSampleTrades(in: modelContext)
             return
         }
         viewModel.recalculate(with: trades)
+    }
+
+    private func migrateLegacyTradesIfNeeded() -> Bool {
+        let legacyKey = "trade_records_v2"
+        guard let data = UserDefaults.standard.data(forKey: legacyKey) else { return false }
+
+        struct LegacyTrade: Codable {
+            var id: UUID?
+            var symbol: String
+            var type: TradeType
+            var price: Double
+            var quantity: Double
+            var assetType: AssetType?
+            var emotion: TradeEmotion?
+            var note: String?
+            var date: Date?
+        }
+
+        guard let records = try? JSONDecoder().decode([LegacyTrade].self, from: data), !records.isEmpty else { return false }
+
+        records.forEach { record in
+            let trade = TradeRecord(
+                id: record.id ?? UUID(),
+                symbol: record.symbol,
+                type: record.type,
+                price: record.price,
+                quantity: record.quantity,
+                assetType: record.assetType ?? .stock,
+                emotion: record.emotion ?? .neutral,
+                note: record.note ?? "",
+                date: record.date ?? .now
+            )
+            modelContext.insert(trade)
+        }
+
+        try? modelContext.save()
+        UserDefaults.standard.removeObject(forKey: legacyKey)
+        return true
     }
 }
 
