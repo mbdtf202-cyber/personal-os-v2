@@ -9,9 +9,9 @@ struct SocialDashboardView: View {
         NavigationStack {
             ZStack {
                 AppTheme.background.ignoresSafeArea()
-                
+
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 24) {
+                    LazyVStack(spacing: 24) {
                         // 1. Stats Header
                         statsHeader
                         
@@ -27,7 +27,7 @@ struct SocialDashboardView: View {
                                 PostRowView(post: post)
                             }
                         }
-                        
+
                         // 4. Drafts & Ideas
                         sectionHeader(title: "Drafts & Ideas", icon: "lightbulb.fill", color: .orange)
                         ForEach(manager.drafts) { post in
