@@ -8,8 +8,8 @@ struct HabitTrackerView: View {
             Text("Daily Habits")
                 .font(.headline)
                 .foregroundStyle(AppTheme.primaryText)
-            
-            VStack(spacing: 12) {
+
+            LazyVStack(spacing: 12) {
                 ForEach($habits) { $habit in
                     HStack(spacing: 16) {
                         // 图标背景

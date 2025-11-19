@@ -1,90 +1,102 @@
 import SwiftUI
 import Observation
 
+@MainActor
 @Observable
 class ContentManager {
+    private let storeKey = "socialPosts"
+    private let persistenceQueue = DispatchQueue(label: "app.socialPosts.persistence", qos: .userInitiated)
+
     var posts: [SocialPost] = []
-    
+
     init() {
-        loadPosts()
+        Task { await loadPosts() }
     }
-    
-    func loadPosts() {
-        if let data = UserDefaults.standard.data(forKey: "socialPosts"),
-           let decoded = try? JSONDecoder().decode([SocialPost].self, from: data) {
-            posts = decoded
-        } else {
-            posts = [
-                SocialPost(
-                    title: "Personal OS 开发日记 #1",
-                    platform: .wechat,
-                    status: .published,
-                    date: Date().addingTimeInterval(-86400 * 2),
-                    content: "今天开始了 Personal OS 的架构设计...",
-                    views: 1205,
-                    likes: 89
-                ),
-                SocialPost(
-                    title: "SwiftUI Glassmorphism Tutorial",
-                    platform: .twitter,
-                    status: .scheduled,
-                    date: Date().addingTimeInterval(86400),
-                    content: "Check out this new glass effect modifier! #SwiftUI #iOSDev",
-                    views: 0,
-                    likes: 0
-                ),
-                SocialPost(
-                    title: "如何用 30 天养成早起习惯",
-                    platform: .xiaohongshu,
-                    status: .draft,
-                    date: Date(),
-                    content: "早起的第一步不是闹钟，而是...",
-                    views: 0,
-                    likes: 0
-                ),
-                SocialPost(
-                    title: "Next Project Idea: AI Agent",
-                    platform: .twitter,
-                    status: .idea,
-                    date: Date(),
-                    content: "",
-                    views: 0,
-                    likes: 0
-                )
-            ]
+
+    func loadPosts() async {
+        let defaults = UserDefaults.standard
+        let decoded = await withCheckedContinuation { continuation in
+            persistenceQueue.async {
+                let data = defaults.data(forKey: storeKey)
+                let posts = data.flatMap { try? JSONDecoder().decode([SocialPost].self, from: $0) }
+                continuation.resume(returning: posts)
+            }
         }
+
+        posts = decoded ?? Self.defaultPosts
     }
-    
+
     var upcomingPosts: [SocialPost] {
         posts.filter { $0.status == .scheduled }.sorted { $0.date < $1.date }
     }
-    
+
     var drafts: [SocialPost] {
         posts.filter { $0.status == .draft || $0.status == .idea }
     }
-    
+
     func addPost(_ post: SocialPost) {
         posts.append(post)
         savePosts()
     }
-    
+
     func updatePost(_ post: SocialPost) {
         if let index = posts.firstIndex(where: { $0.id == post.id }) {
             posts[index] = post
             savePosts()
         }
     }
-    
+
     func deletePost(_ post: SocialPost) {
         posts.removeAll { $0.id == post.id }
         savePosts()
     }
-    
+
     func savePosts() {
-        if let encoded = try? JSONEncoder().encode(posts) {
-            UserDefaults.standard.set(encoded, forKey: "socialPosts")
+        let snapshot = posts
+        persistenceQueue.async { [storeKey] in
+            guard let encoded = try? JSONEncoder().encode(snapshot) else { return }
+            UserDefaults.standard.set(encoded, forKey: storeKey)
         }
     }
+
+    private static let defaultPosts: [SocialPost] = [
+        SocialPost(
+            title: "Personal OS 开发日记 #1",
+            platform: .wechat,
+            status: .published,
+            date: Date().addingTimeInterval(-86400 * 2),
+            content: "今天开始了 Personal OS 的架构设计...",
+            views: 1205,
+            likes: 89
+        ),
+        SocialPost(
+            title: "SwiftUI Glassmorphism Tutorial",
+            platform: .twitter,
+            status: .scheduled,
+            date: Date().addingTimeInterval(86400),
+            content: "Check out this new glass effect modifier! #SwiftUI #iOSDev",
+            views: 0,
+            likes: 0
+        ),
+        SocialPost(
+            title: "如何用 30 天养成早起习惯",
+            platform: .xiaohongshu,
+            status: .draft,
+            date: Date(),
+            content: "早起的第一步不是闹钟，而是...",
+            views: 0,
+            likes: 0
+        ),
+        SocialPost(
+            title: "Next Project Idea: AI Agent",
+            platform: .twitter,
+            status: .idea,
+            date: Date(),
+            content: "",
+            views: 0,
+            likes: 0
+        )
+    ]
 }
 
 // MARK: - Models
