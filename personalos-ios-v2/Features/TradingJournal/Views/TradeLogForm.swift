@@ -3,7 +3,7 @@ import Observation
 
 struct TradeLogForm: View {
     @Environment(\.dismiss) var dismiss
-    @Bindable var viewModel: PortfolioViewModel
+    var viewModel: PortfolioViewModel
     @State private var symbol: String = ""
     @State private var type: TradeType = .buy
     @State private var price: String = ""
