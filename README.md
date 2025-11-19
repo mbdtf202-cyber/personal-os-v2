@@ -181,14 +181,14 @@
 - 响应式布局支持
 
 **数据持久化**
-- 本地 SQLite 数据库
-- iCloud 同步支持
+- UserDefaults 本地存储
+- JSON 编解码
 - 自动备份机制
 
 **网络功能**
+- URLSession 网络请求
 - RESTful API 集成
-- 多平台数据同步
-- 离线模式支持
+- 异步并发处理
 
 **性能优化**
 - 增量更新
@@ -235,39 +235,71 @@ open personalos-ios-v2.xcodeproj
 
 ```
 personalos-ios-v2/
-├── App/                          # 应用配置和委托
-├── Core/                         # 核心模块
-│   ├── DesignSystem/            # 设计系统（颜色、组件、排版）
-│   ├── Navigation/              # 导航和路由
-│   └── Utilities/               # 工具函数
-├── Data/                        # 数据层
-│   ├── Models/                  # 数据模型
-│   ├── Networking/              # 网络请求
-│   └── Persistence/             # 本地存储
-├── Features/                    # 功能模块
-│   ├── Dashboard/               # 仪表盘
-│   ├── HealthCenter/            # 健康管理
-│   ├── TrainingSystem/          # 知识库
-│   ├── TradingJournal/          # 交易日志
-│   ├── SocialBlog/              # 社媒和博客
-│   ├── NewsAggregator/          # 资讯聚合
-│   ├── ProjectHub/              # 项目管理
-│   └── Tools/                   # 效率工具
-└── Resources/                   # 资源文件
-    ├── Assets/                  # 图片和数据
-    └── Localization/            # 本地化文件
+├── App/                              # 应用配置和委托
+│   ├── AppConfig.swift              # 应用全局配置
+│   └── AppDelegate.swift            # 应用生命周期
+├── Core/                            # 核心模块
+│   ├── DesignSystem/                # 设计系统
+│   │   ├── Colors/                  # 颜色定义
+│   │   ├── Components/              # 可复用 UI 组件
+│   │   ├── Modifiers/               # SwiftUI 修饰符
+│   │   └── Typography/              # 排版规范
+│   ├── Navigation/                  # 导航和路由
+│   │   ├── AppContainer.swift       # 应用容器
+│   │   └── AppRouter.swift          # 路由管理
+│   └── Utilities/                   # 工具函数
+│       ├── DateExtensions.swift     # 日期扩展
+│       └── HapticsManager.swift     # 触觉反馈
+├── Data/                            # 数据层
+│   ├── Models/                      # 数据模型
+│   │   ├── BaseModel.swift          # 基础模型
+│   │   └── DashboardModels.swift    # 仪表盘数据模型
+│   ├── Networking/                  # 网络请求
+│   │   └── APIClient.swift          # API 客户端
+│   └── Persistence/                 # 本地存储
+│       ├── DataManager.swift        # 数据管理器
+│       └── SchemaV1.swift           # 数据架构
+├── Features/                        # 功能模块
+│   ├── Dashboard/                   # 仪表盘
+│   │   ├── ViewModels/
+│   │   ├── Views/
+│   │   └── Components/
+│   ├── HealthCenter/                # 健康管理
+│   │   ├── ViewModels/
+│   │   └── Views/
+│   ├── TrainingSystem/              # 知识库
+│   │   ├── Models/
+│   │   ├── ViewModels/
+│   │   └── Views/
+│   ├── TradingJournal/              # 交易日志
+│   │   ├── ViewModels/
+│   │   └── Views/
+│   ├── SocialBlog/                  # 社媒和博客
+│   │   ├── ViewModels/
+│   │   └── Views/
+│   ├── NewsAggregator/              # 资讯聚合
+│   │   ├── Models/
+│   │   └── Views/
+│   ├── ProjectHub/                  # 项目管理
+│   │   └── Views/
+│   └── Tools/                       # 效率工具
+│       └── Views/
+└── Resources/                       # 资源文件
+    ├── Assets/                      # 图片和 Mock 数据
+    └── Localization/                # 本地化文件
 ```
 
 ---
 
 ## 🛠️ 技术栈
 
+- **Language**: Swift 5.9+
 - **UI Framework**: SwiftUI
-- **Architecture**: MVVM + Observation
-- **Data**: SQLite, UserDefaults
-- **Networking**: URLSession
-- **Async**: Swift Concurrency
-- **Design**: Glassmorphism UI
+- **Architecture**: MVVM + Observation Pattern
+- **Data Persistence**: UserDefaults + JSON Codable
+- **Networking**: URLSession + Swift Concurrency
+- **Async/Await**: Swift Concurrency
+- **Design Pattern**: Glassmorphism UI
 
 ---
 
