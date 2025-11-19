@@ -76,6 +76,5 @@ struct ThemeGalleryView: View {
 #Preview {
     NavigationStack {
         ThemeGalleryView(themeStyle: .constant(.glass))
-            .modelContainer(for: [TodoItem.self, HealthLog.self, TradeRecord.self])
     }
 }

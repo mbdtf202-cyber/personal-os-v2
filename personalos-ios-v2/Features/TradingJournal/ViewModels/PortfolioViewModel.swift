@@ -1,6 +1,5 @@
 import SwiftUI
 import Observation
-import SwiftData
 
 @Observable
 @MainActor
@@ -20,10 +19,25 @@ class PortfolioViewModel {
         recalculatePortfolio()
     }
 
-    func addTrade(symbol: String, type: TradeType, price: Double, quantity: Double, emotion: TradeEmotion, note: String, assetType: AssetType, context: ModelContext) {
+    func addTrade(symbol: String, type: TradeType, price: Double, quantity: Double, emotion: TradeEmotion, note: String, assetType: AssetType) {
         let record = TradeRecord(symbol: symbol.uppercased(), type: type, price: price, quantity: quantity, assetType: assetType, emotion: emotion, note: note)
-        context.insert(record)
-        try? context.save()
+        trades.append(record)
+        saveTrades()
+        recalculatePortfolio()
+    }
+
+    private func saveTrades() {
+        if let encoded = try? JSONEncoder().encode(trades) {
+            UserDefaults.standard.set(encoded, forKey: "tradingJournalTrades")
+        }
+    }
+
+    private func loadTrades() {
+        if let data = UserDefaults.standard.data(forKey: "tradingJournalTrades"),
+           let decoded = try? JSONDecoder().decode([TradeRecord].self, from: data) {
+            trades = decoded
+            recalculatePortfolio()
+        }
     }
 
     // MARK: - Private Helpers
@@ -137,18 +151,16 @@ class PortfolioViewModel {
         holdings[trade.symbol] = snapshot
     }
 
-    static func seedSampleTrades(in context: ModelContext) {
+    static func seedSampleTrades() -> [TradeRecord] {
         let calendar = Calendar.current
         let today = Date()
-        let samples = [
+        return [
             TradeRecord(symbol: "AAPL", type: .buy, price: 150, quantity: 50, assetType: .stock, emotion: .neutral, note: "Initial position", date: calendar.date(byAdding: .day, value: -6, to: today) ?? today),
             TradeRecord(symbol: "AAPL", type: .buy, price: 155, quantity: 40, assetType: .stock, emotion: .excited, note: "Breakout add", date: calendar.date(byAdding: .day, value: -4, to: today) ?? today),
             TradeRecord(symbol: "BTC", type: .buy, price: 38000, quantity: 0.2, assetType: .crypto, emotion: .neutral, note: "Dip buy", date: calendar.date(byAdding: .day, value: -3, to: today) ?? today),
             TradeRecord(symbol: "AAPL", type: .sell, price: 165, quantity: 20, assetType: .stock, emotion: .fearful, note: "Trim into strength", date: calendar.date(byAdding: .day, value: -1, to: today) ?? today),
             TradeRecord(symbol: "BTC", type: .buy, price: 42000, quantity: 0.25, assetType: .crypto, emotion: .excited, note: "Momentum entry", date: today)
         ]
-        samples.forEach { context.insert($0) }
-        try? context.save()
     }
 }
 
