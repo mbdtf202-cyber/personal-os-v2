@@ -17,10 +17,10 @@ class DashboardViewModel {
     }
     
     let quickActions = [
-        (title: "Add Note", icon: "note.text.badge.plus", color: AppTheme.mistBlue),
-        (title: "Log Trade", icon: "chart.bar.xaxis", color: AppTheme.almond),
-        (title: "Focus", icon: "moon.stars.fill", color: AppTheme.lavender),
-        (title: "Scan", icon: "qrcode.viewfinder", color: AppTheme.primaryText)
+        (title: "Add Note", subtitle: "捕捉想法并同步到知识库", icon: "note.text.badge.plus", color: AppTheme.mistBlue),
+        (title: "Log Trade", subtitle: "记录一笔新的交易复盘", icon: "chart.bar.xaxis", color: AppTheme.almond),
+        (title: "Focus", subtitle: "开启 25 分钟专注会话", icon: "moon.stars.fill", color: AppTheme.lavender),
+        (title: "Scan", subtitle: "快速扫描并存档文档", icon: "qrcode.viewfinder", color: AppTheme.primaryText)
     ]
     
     init() {
