@@ -50,12 +50,8 @@ struct SnippetDetailView: View {
                         .padding()
                         .background(Color(hex: "2D2D2D"))
                         
-                        Text(snippet.code)
-                            .font(.system(.body, design: .monospaced))
-                            .foregroundStyle(Color(hex: "E0E0E0"))
-                            .padding()
+                        CodeBlockView(code: snippet.code, language: snippet.language)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color(hex: "1E1E1E"))
                     }
                     .cornerRadius(16)
                     .padding(.horizontal, 20)

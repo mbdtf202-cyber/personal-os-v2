@@ -58,5 +58,21 @@ struct AppContainer: View {
             }
             .tint(AppTheme.primaryText)
         }
+        .onAppear {
+            setupKeyboardShortcuts()
+        }
+    }
+    
+    private func setupKeyboardShortcuts() {
+        #if targetEnvironment(macCatalyst) || os(macOS)
+        // Cmd+K for global search
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "k" {
+                router.selectedTab = .dashboard
+                return nil
+            }
+            return event
+        }
+        #endif
     }
 }
