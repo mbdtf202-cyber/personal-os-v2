@@ -1,56 +1,67 @@
 import Foundation
+import SwiftData
 
-// MARK: - Schema Definition (使用 Codable 而不是 @Model)
+// MARK: - SwiftData Schema V1
+/// 使用 SwiftData 持久化的核心模型定义
+@Model
+final class TodoItem {
+    @Attribute(.unique) var id: UUID
+    var title: String
+    var createdAt: Date
+    var isCompleted: Bool
+    var category: String
+    var priority: Int
 
-class SchemaV1 {
-    // 1. 待办事项
-    struct TodoItem: Identifiable, Codable {
-        var id: String
-        var title: String
-        var createdAt: Date = Date()
-        var isCompleted: Bool = false
-        var category: String = "Life"
-        var priority: Int = 1
-        
-        init(title: String, category: String = "Life", priority: Int = 1) {
-            self.id = UUID().uuidString
-            self.title = title
-            self.category = category
-            self.priority = priority
-        }
+    init(id: UUID = UUID(), title: String, createdAt: Date = .now, isCompleted: Bool = false, category: String = "Life", priority: Int = 1) {
+        self.id = id
+        self.title = title
+        self.createdAt = createdAt
+        self.isCompleted = isCompleted
+        self.category = category
+        self.priority = priority
     }
-    
-    // 2. 健康日志
-    struct HealthLog: Identifiable, Codable {
-        var id: String
-        var date: Date = Date()
-        var sleepHours: Double = 0
-        var moodScore: Int = 5
-        var steps: Int = 0
-        var energyLevel: Int = 50
-        
-        init(date: Date = Date()) {
-            self.id = UUID().uuidString
-            self.date = date
-        }
+}
+
+@Model
+final class HealthLog {
+    @Attribute(.unique) var id: UUID
+    var date: Date
+    var sleepHours: Double
+    var moodScore: Int
+    var steps: Int
+    var energyLevel: Int
+
+    init(id: UUID = UUID(), date: Date = .now, sleepHours: Double = 0, moodScore: Int = 5, steps: Int = 0, energyLevel: Int = 50) {
+        self.id = id
+        self.date = date
+        self.sleepHours = sleepHours
+        self.moodScore = moodScore
+        self.steps = steps
+        self.energyLevel = energyLevel
     }
-    
-    // 3. 交易记录
-    struct TradeRecord: Identifiable, Codable {
-        var id: String
-        var symbol: String
-        var type: String
-        var price: Double
-        var quantity: Double
-        var date: Date = Date()
-        var note: String = ""
-        
-        init(symbol: String, type: String, price: Double, quantity: Double) {
-            self.id = UUID().uuidString
-            self.symbol = symbol
-            self.type = type
-            self.price = price
-            self.quantity = quantity
-        }
+}
+
+@Model
+final class TradeRecord {
+    @Attribute(.unique) var id: UUID
+    var symbol: String
+    var type: TradeType
+    var price: Double
+    var quantity: Double
+    var assetType: AssetType
+    var emotion: TradeEmotion
+    var note: String
+    var date: Date
+
+    init(id: UUID = UUID(), symbol: String, type: TradeType, price: Double, quantity: Double, assetType: AssetType, emotion: TradeEmotion, note: String, date: Date = .now) {
+        self.id = id
+        self.symbol = symbol
+        self.type = type
+        self.price = price
+        self.quantity = quantity
+        self.assetType = assetType
+        self.emotion = emotion
+        self.note = note
+        self.date = date
     }
 }

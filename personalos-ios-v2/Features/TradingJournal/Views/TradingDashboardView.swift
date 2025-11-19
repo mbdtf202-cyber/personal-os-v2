@@ -1,10 +1,13 @@
 import SwiftUI
 import Charts
+import SwiftData
 
 struct TradingDashboardView: View {
     @State private var viewModel = PortfolioViewModel()
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \TradeRecord.date) private var trades: [TradeRecord]
     @State private var showLogForm = false
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -35,6 +38,8 @@ struct TradingDashboardView: View {
                 TradeLogForm(viewModel: viewModel)
             }
         }
+        .onAppear { handleTradesChanged(trades) }
+        .onChange(of: trades, perform: handleTradesChanged)
     }
     
     // MARK: - Components
@@ -161,6 +166,14 @@ struct TradingDashboardView: View {
                 .cornerRadius(16)
             }
         }
+    }
+
+    private func handleTradesChanged(_ trades: [TradeRecord]) {
+        if trades.isEmpty {
+            PortfolioViewModel.seedSampleTrades(in: modelContext)
+            return
+        }
+        viewModel.recalculate(with: trades)
     }
 }
 
