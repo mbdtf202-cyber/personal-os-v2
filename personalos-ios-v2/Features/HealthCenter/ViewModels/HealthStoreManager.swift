@@ -24,10 +24,10 @@ class HealthStoreManager {
     }
 
     func loadHabits() async {
-        let defaults = UserDefaults.standard
+        let storeKey = self.storeKey
         let decoded = await withCheckedContinuation { continuation in
             persistenceQueue.async {
-                let data = defaults.data(forKey: storeKey)
+                let data = UserDefaults.standard.data(forKey: storeKey)
                 let habits = data.flatMap { try? JSONDecoder().decode([HabitItem].self, from: $0) }
                 continuation.resume(returning: habits)
             }
@@ -50,7 +50,8 @@ class HealthStoreManager {
 
     private func saveHabits() {
         let snapshot = habits
-        persistenceQueue.async { [storeKey] in
+        let storeKey = self.storeKey
+        persistenceQueue.async {
             guard let encoded = try? JSONEncoder().encode(snapshot) else { return }
             UserDefaults.standard.set(encoded, forKey: storeKey)
         }
