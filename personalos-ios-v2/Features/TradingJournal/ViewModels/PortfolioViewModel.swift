@@ -1,11 +1,10 @@
 import SwiftUI
 import Observation
+import SwiftData
 
 @Observable
 @MainActor
 class PortfolioViewModel {
-    private let storageKey = "trade_records_v2"
-
     var totalBalance: Double = 0
     var dayPnL: Double = 0
     var dayPnLPercent: Double = 0
@@ -14,31 +13,20 @@ class PortfolioViewModel {
     var equityCurve: [EquityPoint] = []
     var trades: [TradeRecord] = []
 
-    init() {
-        loadTrades()
+    init() {}
+
+    func recalculate(with trades: [TradeRecord]) {
+        self.trades = trades
         recalculatePortfolio()
     }
 
-    func addTrade(symbol: String, type: TradeType, price: Double, quantity: Double, emotion: TradeEmotion, note: String, assetType: AssetType) {
+    func addTrade(symbol: String, type: TradeType, price: Double, quantity: Double, emotion: TradeEmotion, note: String, assetType: AssetType, context: ModelContext) {
         let record = TradeRecord(symbol: symbol.uppercased(), type: type, price: price, quantity: quantity, assetType: assetType, emotion: emotion, note: note)
-        trades.append(record)
-        saveTrades()
-        recalculatePortfolio()
+        context.insert(record)
+        try? context.save()
     }
 
     // MARK: - Private Helpers
-
-    private func loadTrades() {
-        if let saved: [TradeRecord] = try? DataManager.shared.load([TradeRecord].self, forKey: storageKey) {
-            trades = saved
-        } else {
-            trades = PortfolioViewModel.sampleTrades
-        }
-    }
-
-    private func saveTrades() {
-        try? DataManager.shared.save(trades, forKey: storageKey)
-    }
 
     private func recalculatePortfolio() {
         recalculateHoldings()
@@ -149,16 +137,18 @@ class PortfolioViewModel {
         holdings[trade.symbol] = snapshot
     }
 
-    private static var sampleTrades: [TradeRecord] {
+    static func seedSampleTrades(in context: ModelContext) {
         let calendar = Calendar.current
         let today = Date()
-        return [
+        let samples = [
             TradeRecord(symbol: "AAPL", type: .buy, price: 150, quantity: 50, assetType: .stock, emotion: .neutral, note: "Initial position", date: calendar.date(byAdding: .day, value: -6, to: today) ?? today),
             TradeRecord(symbol: "AAPL", type: .buy, price: 155, quantity: 40, assetType: .stock, emotion: .excited, note: "Breakout add", date: calendar.date(byAdding: .day, value: -4, to: today) ?? today),
             TradeRecord(symbol: "BTC", type: .buy, price: 38000, quantity: 0.2, assetType: .crypto, emotion: .neutral, note: "Dip buy", date: calendar.date(byAdding: .day, value: -3, to: today) ?? today),
             TradeRecord(symbol: "AAPL", type: .sell, price: 165, quantity: 20, assetType: .stock, emotion: .fearful, note: "Trim into strength", date: calendar.date(byAdding: .day, value: -1, to: today) ?? today),
             TradeRecord(symbol: "BTC", type: .buy, price: 42000, quantity: 0.25, assetType: .crypto, emotion: .excited, note: "Momentum entry", date: today)
         ]
+        samples.forEach { context.insert($0) }
+        try? context.save()
     }
 }
 
@@ -227,29 +217,5 @@ enum TradeEmotion: String, CaseIterable, Codable {
         case .neutral: return .blue
         case .revenge: return .red
         }
-    }
-}
-
-struct TradeRecord: Identifiable, Codable {
-    let id: String
-    let symbol: String
-    let type: TradeType
-    let price: Double
-    let quantity: Double
-    let assetType: AssetType
-    let emotion: TradeEmotion
-    let note: String
-    let date: Date
-
-    init(symbol: String, type: TradeType, price: Double, quantity: Double, assetType: AssetType, emotion: TradeEmotion, note: String, date: Date = Date()) {
-        self.id = UUID().uuidString
-        self.symbol = symbol
-        self.type = type
-        self.price = price
-        self.quantity = quantity
-        self.assetType = assetType
-        self.emotion = emotion
-        self.note = note
-        self.date = date
     }
 }

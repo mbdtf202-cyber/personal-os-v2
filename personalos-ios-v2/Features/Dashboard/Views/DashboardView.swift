@@ -1,7 +1,10 @@
 import SwiftUI
+import SwiftData
 
 struct DashboardView: View {
     @State private var viewModel = DashboardViewModel()
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \TodoItem.createdAt, order: .reverse) private var tasks: [TodoItem]
     @State private var showAddTask = false
     @State private var newTaskTitle = ""
     @State private var quickActionMessage: String?
@@ -43,6 +46,7 @@ struct DashboardView: View {
                 Text(message)
             }
         }
+        .onAppear(perform: seedTasksIfNeeded)
     }
     
     // MARK: - Subviews
@@ -88,7 +92,7 @@ struct DashboardView: View {
                     .font(.headline)
                     .foregroundStyle(AppTheme.primaryText)
                 Spacer()
-                Text("\(viewModel.tasks.filter { !$0.isCompleted }.count) Pending")
+                Text("\(tasks.filter { !$0.isCompleted }.count) Pending")
                     .font(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -100,7 +104,7 @@ struct DashboardView: View {
                 }
             }
             
-            if viewModel.tasks.isEmpty {
+            if tasks.isEmpty {
                 HStack {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundStyle(AppTheme.matcha)
@@ -113,9 +117,9 @@ struct DashboardView: View {
                 .background(Color.white.opacity(0.5))
                 .cornerRadius(16)
             } else {
-                ForEach(viewModel.tasks.prefix(5)) { task in
+                ForEach(tasks.prefix(5)) { task in
                     HStack {
-                        Button(action: { viewModel.toggleTask(task) }) {
+                        Button(action: { viewModel.toggleTask(task, context: modelContext) }) {
                             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(task.isCompleted ? AppTheme.matcha : AppTheme.mistBlue)
                         }
@@ -123,7 +127,7 @@ struct DashboardView: View {
                             .foregroundStyle(AppTheme.primaryText)
                             .strikethrough(task.isCompleted)
                         Spacer()
-                        Button(action: { viewModel.deleteTask(task) }) {
+                        Button(action: { viewModel.deleteTask(task, context: modelContext) }) {
                             Image(systemName: "trash")
                                 .foregroundStyle(AppTheme.coral)
                                 .font(.caption)
@@ -205,13 +209,59 @@ struct DashboardView: View {
         let trimmedTitle = newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return }
 
-        viewModel.addTask(SchemaV1.TodoItem(title: trimmedTitle))
+        viewModel.addTask(title: trimmedTitle, context: modelContext)
         newTaskTitle = ""
         showAddTask = false
     }
 
     private func handleQuickAction(_ title: String) {
         quickActionMessage = "\(title) 已准备就绪，稍后将在对应模块中执行。"
+    }
+
+    private func seedTasksIfNeeded() {
+        if migrateLegacyTasksIfNeeded() {
+            return
+        }
+        guard tasks.isEmpty else { return }
+        let defaults = [
+            TodoItem(title: "完成 PersonalOS 开发", category: "Work", priority: 2),
+            TodoItem(title: "阅读技术文章", category: "Dev", priority: 1),
+            TodoItem(title: "健身打卡", category: "Life", priority: 1)
+        ]
+        defaults.forEach { modelContext.insert($0) }
+        try? modelContext.save()
+    }
+
+    private func migrateLegacyTasksIfNeeded() -> Bool {
+        let legacyKey = "tasks"
+        guard let data = UserDefaults.standard.data(forKey: legacyKey) else { return false }
+
+        struct LegacyTask: Codable {
+            var id: UUID?
+            var title: String
+            var createdAt: Date?
+            var isCompleted: Bool?
+            var category: String?
+            var priority: Int?
+        }
+
+        guard let items = try? JSONDecoder().decode([LegacyTask].self, from: data), !items.isEmpty else { return false }
+
+        items.forEach { item in
+            let task = TodoItem(
+                id: item.id ?? UUID(),
+                title: item.title,
+                createdAt: item.createdAt ?? .now,
+                isCompleted: item.isCompleted ?? false,
+                category: item.category ?? "Life",
+                priority: item.priority ?? 1
+            )
+            modelContext.insert(task)
+        }
+
+        try? modelContext.save()
+        UserDefaults.standard.removeObject(forKey: legacyKey)
+        return true
     }
 }
 

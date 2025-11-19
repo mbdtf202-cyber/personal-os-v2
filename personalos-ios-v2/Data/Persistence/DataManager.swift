@@ -1,41 +1,27 @@
 import Foundation
+import SwiftData
 
-/// 数据管理器 - 使用 UserDefaults 和本地存储
+/// 数据管理器 - 封装 SwiftData 的常用操作
 @MainActor
-class DataManager {
+final class DataManager {
     static let shared = DataManager()
-    
-    private let userDefaults = UserDefaults.standard
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
-    
-    // MARK: - Save
-    
-    func save<T: Encodable>(_ model: T, forKey key: String) throws {
-        let data = try encoder.encode(model)
-        userDefaults.set(data, forKey: key)
+
+    private init() {}
+
+    /// 通用的查询方法
+    func fetch<T: PersistentModel>(_ descriptor: FetchDescriptor<T>, in context: ModelContext) throws -> [T] {
+        try context.fetch(descriptor)
     }
-    
-    // MARK: - Load
-    
-    func load<T: Decodable>(_ type: T.Type, forKey key: String) throws -> T? {
-        guard let data = userDefaults.data(forKey: key) else {
-            return nil
-        }
-        return try decoder.decode(T.self, from: data)
+
+    /// 插入并保存
+    func insert<T: PersistentModel>(_ model: T, in context: ModelContext) throws {
+        context.insert(model)
+        try context.save()
     }
-    
-    // MARK: - Delete
-    
-    func delete(forKey key: String) {
-        userDefaults.removeObject(forKey: key)
-    }
-    
-    // MARK: - Clear All
-    
-    func clearAll() {
-        if let bundleID = Bundle.main.bundleIdentifier {
-            userDefaults.removePersistentDomain(forName: bundleID)
-        }
+
+    /// 删除模型
+    func delete<T: PersistentModel>(_ model: T, in context: ModelContext) throws {
+        context.delete(model)
+        try context.save()
     }
 }

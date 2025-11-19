@@ -1,9 +1,10 @@
 import SwiftUI
+import SwiftData
 
 @main
 struct personalos_ios_v2App: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
+
     init() {
         // 配置 UITabBar 的全局外观
         let appearance = UITabBarAppearance()
@@ -11,11 +12,12 @@ struct personalos_ios_v2App: App {
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
     }
-    
+
     var body: some Scene {
         WindowGroup {
             MainTabView()
         }
+        .modelContainer(for: [TodoItem.self, HealthLog.self, TradeRecord.self])
     }
 }
 
@@ -23,7 +25,8 @@ struct personalos_ios_v2App: App {
 struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var showQuickNote = false
-    
+    @State private var themeStyle: ThemeStyle = .glass
+
     var body: some View {
         ZStack {
             TabView(selection: $selectedTab) {
@@ -54,9 +57,9 @@ struct MainTabView: View {
                         Label("News", systemImage: "newspaper")
                     }
                     .tag(3)
-                
+
                 // 5. More Apps
-                MoreModulesView()
+                MoreModulesView(themeStyle: $themeStyle)
                     .tabItem {
                         Label("Apps", systemImage: "circle.grid.3x3.fill")
                     }
@@ -69,31 +72,37 @@ struct MainTabView: View {
                 QuickNoteOverlay(isPresented: $showQuickNote)
             }
         }
+        .onAppear { AppTheme.apply(style: themeStyle) }
+        .onChange(of: themeStyle) { AppTheme.apply(style: $0) }
     }
 }
 
 // MARK: - More Modules View
 struct MoreModulesView: View {
+    @Binding var themeStyle: ThemeStyle
+
     var body: some View {
         NavigationStack {
             ZStack {
                 AppTheme.background.ignoresSafeArea()
-                
+
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                         NavigationLink(destination: HealthHomeView()) {
                             ModuleCard(title: "Health", icon: "heart.fill", color: AppTheme.matcha)
                         }
-                        
+
                         NavigationLink(destination: TradingDashboardView()) {
                             ModuleCard(title: "Trading", icon: "chart.xyaxis.line", color: AppTheme.almond)
                         }
-                        
+
                         NavigationLink(destination: KnowledgeBaseView()) {
                             ModuleCard(title: "Knowledge", icon: "books.vertical.fill", color: .indigo)
                         }
-                        
-                        ModuleCard(title: "Settings", icon: "gear", color: .gray)
+
+                        NavigationLink(destination: ThemeGalleryView(themeStyle: $themeStyle)) {
+                            ModuleCard(title: "Themes", icon: "paintbrush", color: AppTheme.lavender)
+                        }
                     }
                     .padding(20)
                 }

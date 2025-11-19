@@ -3,6 +3,7 @@ import Observation
 
 struct TradeLogForm: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Bindable var viewModel: PortfolioViewModel
     @State private var symbol: String = ""
     @State private var type: TradeType = .buy
@@ -83,11 +84,13 @@ struct TradeLogForm: View {
                            quantity: quantityValue,
                            emotion: emotion,
                            note: note,
-                           assetType: assetType)
+                           assetType: assetType,
+                           context: modelContext)
         dismiss()
     }
 }
 
 #Preview {
     TradeLogForm(viewModel: PortfolioViewModel())
+        .modelContainer(for: [TradeRecord.self])
 }
