@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import SwiftData
 
 @Observable
 @MainActor
@@ -32,6 +33,30 @@ class PortfolioViewModel {
         let symbols = Array(Set(trades.map { $0.symbol }))
         await priceService.fetchMultipleQuotes(symbols: symbols)
         recalculate(with: trades)
+    }
+
+    func addTrade(
+        symbol: String,
+        type: TradeType,
+        price: Double,
+        quantity: Double,
+        emotion: TradeEmotion,
+        note: String,
+        assetType: AssetType,
+        in context: ModelContext
+    ) throws {
+        let record = TradeRecord(
+            symbol: symbol,
+            type: type,
+            price: price,
+            quantity: quantity,
+            assetType: assetType,
+            emotion: emotion,
+            note: note
+        )
+
+        context.insert(record)
+        try context.save()
     }
 
     static func seedSampleTrades() -> [TradeRecord] {
@@ -92,49 +117,4 @@ struct HoldingSnapshot {
     var totalCost: Double = 0
     var latestPrice: Double = 0
     var assetType: AssetType
-}
-
-enum TradeType: String, CaseIterable, Codable {
-    case buy = "Buy"
-    case sell = "Sell"
-}
-
-enum TradeEmotion: String, CaseIterable, Codable {
-    case excited = "Excited"
-    case fearful = "Fearful"
-    case neutral = "Neutral"
-    case revenge = "Revenge"
-
-    var color: Color {
-        switch self {
-        case .excited: return .orange
-        case .fearful: return .purple
-        case .neutral: return .blue
-        case .revenge: return .red
-        }
-    }
-}
-
-struct TradeRecord: Identifiable, Codable {
-    let id: String
-    var symbol: String
-    var type: TradeType
-    var price: Double
-    var quantity: Double
-    var assetType: AssetType
-    var emotion: TradeEmotion
-    var note: String
-    var date: Date
-
-    init(id: String = UUID().uuidString, symbol: String, type: TradeType, price: Double, quantity: Double, assetType: AssetType, emotion: TradeEmotion, note: String, date: Date = Date()) {
-        self.id = id
-        self.symbol = symbol
-        self.type = type
-        self.price = price
-        self.quantity = quantity
-        self.assetType = assetType
-        self.emotion = emotion
-        self.note = note
-        self.date = date
-    }
 }
