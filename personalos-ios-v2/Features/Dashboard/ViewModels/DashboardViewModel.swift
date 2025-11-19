@@ -22,10 +22,16 @@ class DashboardViewModel {
         (title: "Focus", subtitle: "开启 25 分钟专注会话", icon: "moon.stars.fill", color: AppTheme.lavender),
         (title: "Scan", subtitle: "快速扫描并存档文档", icon: "qrcode.viewfinder", color: AppTheme.primaryText)
     ]
-    
+
     func addTask(title: String, context: ModelContext) {
         let item = TodoItem(title: title)
-        try? DataManager.shared.insert(item, in: context)
+        context.insert(item)
+
+        do {
+            try context.save()
+        } catch {
+            assertionFailure("Failed to save new task: \(error.localizedDescription)")
+        }
     }
 
     func toggleTask(_ task: TodoItem, context: ModelContext) {
