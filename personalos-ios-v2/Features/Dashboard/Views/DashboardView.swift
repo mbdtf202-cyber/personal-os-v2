@@ -4,7 +4,8 @@ struct DashboardView: View {
     @State private var viewModel = DashboardViewModel()
     @State private var showAddTask = false
     @State private var newTaskTitle = ""
-    
+    @State private var quickActionMessage: String?
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -26,6 +27,20 @@ struct DashboardView: View {
                 if viewModel.showGlobalSearch {
                     GlobalSearchView(isPresented: $viewModel.showGlobalSearch)
                 }
+            }
+        }
+        .alert("Action Ready", isPresented: Binding(
+            get: { quickActionMessage != nil },
+            set: { isPresented in
+                if !isPresented { quickActionMessage = nil }
+            }
+        )) {
+            Button("OK") {
+                quickActionMessage = nil
+            }
+        } message: {
+            if let message = quickActionMessage {
+                Text(message)
             }
         }
     }
@@ -136,12 +151,9 @@ struct DashboardView: View {
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Add") {
-                            if !newTaskTitle.isEmpty {
-                                viewModel.addTask(SchemaV1.TodoItem(title: newTaskTitle))
-                                newTaskTitle = ""
-                                showAddTask = false
-                            }
+                            addTaskIfNeeded()
                         }
+                        .disabled(!isNewTaskValid)
                     }
                 }
             }
@@ -151,24 +163,55 @@ struct DashboardView: View {
     private var quickAccessGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
             ForEach(viewModel.quickActions, id: \.title) { action in
-                HStack {
-                    Image(systemName: action.icon)
-                        .foregroundStyle(action.color)
-                        .font(.title3)
-                        .frame(width: 40, height: 40)
-                        .background(action.color.opacity(0.1))
-                        .clipShape(Circle())
-                    Text(action.title)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    Spacer()
+                Button {
+                    handleQuickAction(action.title)
+                } label: {
+                    HStack {
+                        Image(systemName: action.icon)
+                            .foregroundStyle(action.color)
+                            .font(.title3)
+                            .frame(width: 40, height: 40)
+                            .background(action.color.opacity(0.1))
+                            .clipShape(Circle())
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(action.title)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(AppTheme.primaryText)
+                            Text(action.subtitle)
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.tertiaryText)
+                    }
+                    .padding()
+                    .background(Color.white)
+                    .cornerRadius(16)
+                    .shadow(color: AppTheme.shadow, radius: 5, y: 2)
                 }
-                .padding()
-                .background(Color.white)
-                .cornerRadius(16)
-                .shadow(color: AppTheme.shadow, radius: 5, y: 2)
+                .buttonStyle(.plain)
             }
         }
+    }
+
+    private var isNewTaskValid: Bool {
+        !newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func addTaskIfNeeded() {
+        let trimmedTitle = newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+
+        viewModel.addTask(SchemaV1.TodoItem(title: trimmedTitle))
+        newTaskTitle = ""
+        showAddTask = false
+    }
+
+    private func handleQuickAction(_ title: String) {
+        quickActionMessage = "\(title) 已准备就绪，稍后将在对应模块中执行。"
     }
 }
 
