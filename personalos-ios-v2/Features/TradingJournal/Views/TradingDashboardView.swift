@@ -1,7 +1,10 @@
 import SwiftUI
+import SwiftData
 import Charts
 
 struct TradingDashboardView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \TradeRecord.date, order: .reverse) private var trades: [TradeRecord]
     @State private var viewModel = PortfolioViewModel()
     @State private var showLogForm = false
 
@@ -42,8 +45,13 @@ struct TradingDashboardView: View {
                 TradeLogForm(viewModel: viewModel)
             }
         }
+        .onAppear(perform: seedTradesIfNeeded)
+        .onChange(of: trades) { _, newTrades in
+            viewModel.recalculate(with: newTrades)
+        }
         .onAppear {
-            viewModel.recalculate(with: PortfolioViewModel.seedSampleTrades())
+            viewModel.recalculate(with: trades)
+            Task { await viewModel.refreshPrices() }
         }
     }
     
@@ -175,9 +183,15 @@ struct TradingDashboardView: View {
             }
         }
     }
-    
+
+    private func seedTradesIfNeeded() {
+        guard trades.isEmpty else { return }
+        PortfolioViewModel.seedSampleTrades().forEach { modelContext.insert($0) }
+        try? modelContext.save()
+    }
 }
 
 #Preview {
     TradingDashboardView()
+        .modelContainer(for: TradeRecord.self, inMemory: true)
 }

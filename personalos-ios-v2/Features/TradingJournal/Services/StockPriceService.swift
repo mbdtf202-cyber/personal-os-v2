@@ -57,7 +57,7 @@ class StockPriceService: ObservableObject {
     }
     
     // Fallback: Use mock data if API key not configured
-    func getMockPrice(for symbol: String) -> Double {
+    func getMockPrice(for symbol: String, fallback: Double? = nil) -> Double {
         let mockPrices: [String: Double] = [
             "AAPL": 175.50,
             "GOOGL": 140.25,
@@ -66,6 +66,6 @@ class StockPriceService: ObservableObject {
             "BTC": 42000.00,
             "ETH": 2200.00
         ]
-        return mockPrices[symbol] ?? 100.0
+        return mockPrices[symbol] ?? fallback ?? 100.0
     }
 }

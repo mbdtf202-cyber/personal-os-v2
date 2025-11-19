@@ -13,165 +13,25 @@ class PortfolioViewModel {
     var trades: [TradeRecord] = []
     
     let priceService = StockPriceService()
-
-    init() {
-        loadTrades()
-    }
+    private let calculator = PortfolioCalculator()
 
     func recalculate(with trades: [TradeRecord]) {
         self.trades = trades
-        recalculatePortfolio()
+        let result = calculator.calculate(with: trades) { symbol, fallback in
+            priceService.quotes[symbol]?.price ?? priceService.getMockPrice(for: symbol, fallback: fallback)
+        }
+
+        assets = result.assets
+        totalBalance = result.totalBalance
+        equityCurve = result.equityCurve
+        dayPnL = result.dayPnL
+        dayPnLPercent = result.dayPnLPercent
     }
-    
+
     func refreshPrices() async {
         let symbols = Array(Set(trades.map { $0.symbol }))
         await priceService.fetchMultipleQuotes(symbols: symbols)
-        recalculatePortfolio()
-    }
-    
-    func addTrade(symbol: String, type: TradeType, price: Double, quantity: Double, emotion: TradeEmotion, note: String, assetType: AssetType) {
-        let record = TradeRecord(symbol: symbol.uppercased(), type: type, price: price, quantity: quantity, assetType: assetType, emotion: emotion, note: note)
-        trades.append(record)
-        saveTrades()
-        recalculatePortfolio()
-    }
-    
-    func deleteTrade(_ trade: TradeRecord) {
-        trades.removeAll { $0.id == trade.id }
-        saveTrades()
-        recalculatePortfolio()
-    }
-
-    private func saveTrades() {
-        if let encoded = try? JSONEncoder().encode(trades) {
-            UserDefaults.standard.set(encoded, forKey: "tradingJournalTrades")
-        }
-    }
-
-    private func loadTrades() {
-        if let data = UserDefaults.standard.data(forKey: "tradingJournalTrades"),
-           let decoded = try? JSONDecoder().decode([TradeRecord].self, from: data) {
-            trades = decoded
-        } else {
-            trades = Self.seedSampleTrades()
-            saveTrades()
-        }
-        recalculatePortfolio()
-    }
-
-    // MARK: - Private Helpers
-
-    private func recalculatePortfolio() {
-        recalculateHoldings()
-        recalculateEquity()
-    }
-
-    private func recalculateHoldings() {
-        var holdings: [String: HoldingSnapshot] = [:]
-        let sortedTrades = trades.sorted { $0.date < $1.date }
-
-        for trade in sortedTrades {
-            var snapshot = holdings[trade.symbol] ?? HoldingSnapshot(assetType: trade.assetType)
-            snapshot.assetType = trade.assetType
-            snapshot.latestPrice = trade.price
-
-            switch trade.type {
-            case .buy:
-                snapshot.totalCost += trade.price * trade.quantity
-                snapshot.quantity += trade.quantity
-            case .sell:
-                let quantityToSell = min(trade.quantity, snapshot.quantity)
-                let averageCost = snapshot.quantity > 0 ? snapshot.totalCost / snapshot.quantity : trade.price
-                snapshot.totalCost -= averageCost * quantityToSell
-                snapshot.quantity -= quantityToSell
-            }
-
-            holdings[trade.symbol] = snapshot
-        }
-
-        assets = holdings.compactMap { symbol, snapshot in
-            guard snapshot.quantity > 0 else { return nil }
-            let avgCost = snapshot.quantity > 0 ? snapshot.totalCost / snapshot.quantity : 0
-            
-            // Use real-time price if available, otherwise use last trade price
-            let currentPrice = priceService.quotes[symbol]?.price ?? priceService.getMockPrice(for: symbol)
-            
-            return AssetItem(symbol: symbol,
-                             name: symbol,
-                             quantity: snapshot.quantity,
-                             currentPrice: currentPrice,
-                             avgCost: avgCost,
-                             type: snapshot.assetType)
-        }
-        .sorted { $0.symbol < $1.symbol }
-
-        totalBalance = assets.reduce(0) { $0 + $1.marketValue }
-    }
-
-    private func recalculateEquity() {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let dayStarts = (0..<7)
-            .compactMap { calendar.date(byAdding: .day, value: -$0, to: today) }
-            .sorted()
-
-        let sortedTrades = trades.sorted { $0.date < $1.date }
-        var holdings: [String: HoldingSnapshot] = [:]
-        var tradeIndex = 0
-
-        if let earliestDay = dayStarts.first {
-            while tradeIndex < sortedTrades.count, sortedTrades[tradeIndex].date < earliestDay {
-                apply(sortedTrades[tradeIndex], to: &holdings)
-                tradeIndex += 1
-            }
-        }
-
-        var points: [EquityPoint] = []
-
-        for dayStart in dayStarts {
-            let nextDay = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
-
-            while tradeIndex < sortedTrades.count, sortedTrades[tradeIndex].date < nextDay {
-                apply(sortedTrades[tradeIndex], to: &holdings)
-                tradeIndex += 1
-            }
-
-            let equity = holdings.values.reduce(0) { partialResult, snapshot in
-                partialResult + snapshot.quantity * snapshot.latestPrice
-            }
-
-            let symbol = calendar.shortWeekdaySymbols[calendar.component(.weekday, from: dayStart) - 1]
-            points.append(EquityPoint(day: symbol, value: equity))
-        }
-
-        equityCurve = points
-
-        if let latest = points.last?.value, let previous = points.dropLast().last?.value {
-            dayPnL = latest - previous
-            dayPnLPercent = previous != 0 ? (dayPnL / previous) * 100 : 0
-        } else {
-            dayPnL = 0
-            dayPnLPercent = 0
-        }
-    }
-
-    private func apply(_ trade: TradeRecord, to holdings: inout [String: HoldingSnapshot]) {
-        var snapshot = holdings[trade.symbol] ?? HoldingSnapshot(assetType: trade.assetType)
-        snapshot.assetType = trade.assetType
-        snapshot.latestPrice = trade.price
-
-        switch trade.type {
-        case .buy:
-            snapshot.totalCost += trade.price * trade.quantity
-            snapshot.quantity += trade.quantity
-        case .sell:
-            let quantityToSell = min(trade.quantity, snapshot.quantity)
-            let averageCost = snapshot.quantity > 0 ? snapshot.totalCost / snapshot.quantity : trade.price
-            snapshot.totalCost -= averageCost * quantityToSell
-            snapshot.quantity -= quantityToSell
-        }
-
-        holdings[trade.symbol] = snapshot
+        recalculate(with: trades)
     }
 
     static func seedSampleTrades() -> [TradeRecord] {

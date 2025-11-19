@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import SwiftData
 
 struct TradeLogForm: View {
     @Environment(\.dismiss) var dismiss

@@ -1,7 +1,10 @@
 import SwiftUI
+import SwiftData
 import Charts
 
 struct HealthHomeView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \HabitItem.title) private var habits: [HabitItem]
     @State private var manager = HealthStoreManager()
     
     var body: some View {
@@ -15,7 +18,7 @@ struct HealthHomeView: View {
                         metricsGrid
                         sleepChartSection
                         MoodLogView(energyLevel: $manager.energyLevel)
-                        HabitTrackerView(habits: $manager.habits)
+                        HabitTrackerView(habits: habits, onToggle: toggleHabit)
                         Spacer(minLength: 100)
                     }
                     .padding(20)
@@ -24,6 +27,7 @@ struct HealthHomeView: View {
             .navigationTitle("Health Center")
             .navigationBarTitleDisplayMode(.inline)
         }
+        .onAppear(perform: seedHabitsIfNeeded)
     }
     
     // MARK: - Components
@@ -84,6 +88,17 @@ struct HealthHomeView: View {
         }
         .glassCard()
     }
+
+    private func toggleHabit(_ habit: HabitItem) {
+        habit.isCompleted.toggle()
+        try? modelContext.save()
+    }
+
+    private func seedHabitsIfNeeded() {
+        guard habits.isEmpty else { return }
+        HabitItem.defaultHabits.forEach { modelContext.insert($0) }
+        try? modelContext.save()
+    }
 }
 
 struct MetricCard: View {
@@ -115,4 +130,5 @@ struct MetricCard: View {
 
 #Preview {
     HealthHomeView()
+        .modelContainer(for: HabitItem.self, inMemory: true)
 }
