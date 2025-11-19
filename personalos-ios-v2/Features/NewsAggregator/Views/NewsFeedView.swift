@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct NewsFeedView: View {
+    @StateObject private var newsService = NewsService()
     @State private var selectedCategory = "All"
+    @State private var news: [NewsItem] = []
     
-    let news: [NewsItem] = [
+    let mockNews: [NewsItem] = [
         NewsItem(
             source: "The Verge",
             title: "Apple announces new AI features for iOS 18",
@@ -63,16 +65,50 @@ struct NewsFeedView: View {
                     
                     // News List
                     ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: 20) {
-                            ForEach(news) { item in
-                                NewsCard(item: item)
+                        if newsService.isLoading {
+                            ProgressView("Loading news...")
+                                .padding()
+                        } else {
+                            LazyVStack(spacing: 20) {
+                                ForEach(news) { item in
+                                    NewsCard(item: item)
+                                }
                             }
+                            .padding(20)
                         }
-                        .padding(20)
                     }
                 }
             }
             .navigationTitle("Briefing")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: { Task { await refreshNews() } }) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+            }
+            .onAppear {
+                if news.isEmpty {
+                    news = mockNews
+                }
+            }
+        }
+    }
+    
+    private func refreshNews() async {
+        await newsService.fetchTopHeadlines(category: selectedCategory.lowercased())
+        if !newsService.articles.isEmpty {
+            news = newsService.articles.map { article in
+                NewsItem(
+                    source: article.source.name,
+                    title: article.title,
+                    summary: article.description ?? "",
+                    category: selectedCategory,
+                    image: "newspaper.fill",
+                    date: Date(),
+                    url: article.url
+                )
+            }
         }
     }
 }

@@ -17,9 +17,12 @@ struct AppConfig {
     // MARK: - Feature Flags
     struct Features {
         static let enableGlobalSearch = true
-        static let enableDarkMode = false
+        static let enableDarkMode = true
         static let enableNotifications = true
         static let enableCloudSync = false
+        static let enableHealthKit = true
+        static let enableGitHubSync = true
+        static let enableRealTimePrices = true
     }
     
     // MARK: - UI Configuration

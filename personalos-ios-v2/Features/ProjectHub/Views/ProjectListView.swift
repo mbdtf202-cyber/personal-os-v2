@@ -25,12 +25,10 @@ enum ProjectStatus: String {
 }
 
 struct ProjectListView: View {
-    let projects = [
-        ProjectItem(name: "Personal OS", description: "An all-in-one iOS life operating system.", language: "Swift", stars: 124, status: .active, progress: 0.65),
-        ProjectItem(name: "AI Agent API", description: "Python backend for LLM processing.", language: "Python", stars: 45, status: .active, progress: 0.3),
-        ProjectItem(name: "Portfolio Site", description: "Next.js static site.", language: "TypeScript", stars: 12, status: .done, progress: 1.0),
-        ProjectItem(name: "Smart Home Hub", description: "IoT control center ideas.", language: "C++", stars: 0, status: .idea, progress: 0.0)
-    ]
+    @StateObject private var githubService = GitHubService()
+    @State private var projects: [ProjectItem] = []
+    @State private var showGitHubSync = false
+    @State private var githubUsername = ""
     
     var body: some View {
         NavigationStack {
@@ -54,9 +52,14 @@ struct ProjectListView: View {
                         }
                         
                         // GitHub Sync Button
-                        Button(action: {}) {
+                        Button(action: { showGitHubSync = true }) {
                             HStack {
-                                Image(systemName: "arrow.triangle.2.circlepath")
+                                if githubService.isLoading {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                }
                                 Text("Sync with GitHub")
                             }
                             .font(.headline)
@@ -67,11 +70,86 @@ struct ProjectListView: View {
                             .cornerRadius(16)
                             .shadow(radius: 5)
                         }
+                        .disabled(githubService.isLoading)
                     }
                     .padding(20)
                 }
             }
             .navigationTitle("Project Hub")
+            .sheet(isPresented: $showGitHubSync) {
+                GitHubSyncSheet(githubService: githubService, projects: $projects)
+            }
+            .onAppear {
+                loadProjects()
+            }
+        }
+    }
+    
+    private func loadProjects() {
+        if projects.isEmpty {
+            projects = [
+                ProjectItem(name: "Personal OS", description: "An all-in-one iOS life operating system.", language: "Swift", stars: 124, status: .active, progress: 0.65),
+                ProjectItem(name: "AI Agent API", description: "Python backend for LLM processing.", language: "Python", stars: 45, status: .active, progress: 0.3),
+                ProjectItem(name: "Portfolio Site", description: "Next.js static site.", language: "TypeScript", stars: 12, status: .done, progress: 1.0),
+                ProjectItem(name: "Smart Home Hub", description: "IoT control center ideas.", language: "C++", stars: 0, status: .idea, progress: 0.0)
+            ]
+        }
+    }
+}
+
+struct GitHubSyncSheet: View {
+    @ObservedObject var githubService: GitHubService
+    @Binding var projects: [ProjectItem]
+    @Environment(\.dismiss) var dismiss
+    @State private var username = ""
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                TextField("GitHub Username", text: $username)
+                    .textFieldStyle(.roundedBorder)
+                    .padding()
+                
+                Button("Sync Repositories") {
+                    Task {
+                        await githubService.fetchUserRepos(username: username)
+                        syncProjects()
+                        dismiss()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(username.isEmpty || githubService.isLoading)
+                
+                if githubService.isLoading {
+                    ProgressView("Fetching repositories...")
+                }
+                
+                if let error = githubService.error {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.caption)
+                }
+            }
+            .navigationTitle("Sync with GitHub")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+    }
+    
+    private func syncProjects() {
+        projects = githubService.repos.map { repo in
+            ProjectItem(
+                name: repo.name,
+                description: repo.description ?? "No description",
+                language: repo.language ?? "Unknown",
+                stars: repo.stargazersCount,
+                status: .active,
+                progress: 0.5
+            )
         }
     }
 }
