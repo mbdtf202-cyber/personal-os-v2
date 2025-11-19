@@ -231,3 +231,27 @@ enum TradeEmotion: String, CaseIterable, Codable {
         }
     }
 }
+
+struct TradeRecord: Identifiable, Codable {
+    let id: String
+    var symbol: String
+    var type: TradeType
+    var price: Double
+    var quantity: Double
+    var assetType: AssetType
+    var emotion: TradeEmotion
+    var note: String
+    var date: Date
+
+    init(id: String = UUID().uuidString, symbol: String, type: TradeType, price: Double, quantity: Double, assetType: AssetType, emotion: TradeEmotion, note: String, date: Date = Date()) {
+        self.id = id
+        self.symbol = symbol
+        self.type = type
+        self.price = price
+        self.quantity = quantity
+        self.assetType = assetType
+        self.emotion = emotion
+        self.note = note
+        self.date = date
+    }
+}
