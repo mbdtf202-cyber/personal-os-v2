@@ -32,7 +32,7 @@ struct TradingDashboardView: View {
                 }
             }
             .sheet(isPresented: $showLogForm) {
-                TradeLogForm()
+                TradeLogForm(viewModel: viewModel)
             }
         }
     }
@@ -40,6 +40,8 @@ struct TradingDashboardView: View {
     // MARK: - Components
     
     private var balanceCard: some View {
+        let isPositive = viewModel.dayPnL >= 0
+
         VStack(spacing: 8) {
             Text("Total Balance")
                 .font(.subheadline)
@@ -48,15 +50,15 @@ struct TradingDashboardView: View {
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .foregroundStyle(AppTheme.primaryText)
             HStack {
-                Image(systemName: "arrow.up.right")
-                Text("+\(viewModel.dayPnL, specifier: "%.2f") (\(viewModel.dayPnLPercent, specifier: "%.2f")%)")
+                Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
+                Text("\(isPositive ? "+" : "-")$\(abs(viewModel.dayPnL), specifier: "%.2f") (\(abs(viewModel.dayPnLPercent), specifier: "%.2f")%)")
             }
             .font(.caption)
             .fontWeight(.semibold)
-            .foregroundStyle(AppTheme.matcha)
+            .foregroundStyle(isPositive ? AppTheme.matcha : AppTheme.coral)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(AppTheme.matcha.opacity(0.15))
+            .background((isPositive ? AppTheme.matcha : AppTheme.coral).opacity(0.15))
             .clipShape(Capsule())
         }
         .frame(maxWidth: .infinity)
@@ -70,36 +72,42 @@ struct TradingDashboardView: View {
                 .font(.headline)
                 .foregroundStyle(AppTheme.primaryText)
             
-            Chart {
-                ForEach(viewModel.equityCurve) { point in
-                    LineMark(
-                        x: .value("Day", point.day),
-                        y: .value("Value", point.value)
-                    )
-                    .interpolationMethod(.catmullRom)
-                    .foregroundStyle(AppTheme.almond)
-                    .symbol(Circle())
-                    
-                    AreaMark(
-                        x: .value("Day", point.day),
-                        y: .value("Value", point.value)
-                    )
-                    .interpolationMethod(.catmullRom)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [AppTheme.almond.opacity(0.3), .clear],
-                            startPoint: .top,
-                            endPoint: .bottom
+            if viewModel.equityCurve.isEmpty {
+                Text("Log trades to view your equity curve.")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.secondaryText)
+            } else {
+                Chart {
+                    ForEach(viewModel.equityCurve) { point in
+                        LineMark(
+                            x: .value("Day", point.day),
+                            y: .value("Value", point.value)
                         )
-                    )
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(AppTheme.almond)
+                        .symbol(Circle())
+
+                        AreaMark(
+                            x: .value("Day", point.day),
+                            y: .value("Value", point.value)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [AppTheme.almond.opacity(0.3), .clear],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                    }
                 }
-            }
-            .frame(height: 200)
-            .chartYAxis {
-                AxisMarks(position: .leading) { value in
-                    AxisGridLine()
-                    AxisValueLabel()
-                        .font(.caption2)
+                .frame(height: 200)
+                .chartYAxis {
+                    AxisMarks(position: .leading) { value in
+                        AxisGridLine()
+                        AxisValueLabel()
+                            .font(.caption2)
+                    }
                 }
             }
         }

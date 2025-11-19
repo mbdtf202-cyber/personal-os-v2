@@ -1,35 +1,17 @@
 import SwiftUI
+import Observation
 
 struct TradeLogForm: View {
     @Environment(\.dismiss) var dismiss
+    @Bindable var viewModel: PortfolioViewModel
     @State private var symbol: String = ""
     @State private var type: TradeType = .buy
     @State private var price: String = ""
     @State private var quantity: String = ""
     @State private var emotion: TradeEmotion = .neutral
+    @State private var assetType: AssetType = .stock
     @State private var note: String = ""
-    
-    enum TradeType: String, CaseIterable {
-        case buy = "Buy"
-        case sell = "Sell"
-    }
-    
-    enum TradeEmotion: String, CaseIterable {
-        case excited = "Excited"
-        case fearful = "Fearful"
-        case neutral = "Neutral"
-        case revenge = "Revenge"
-        
-        var color: Color {
-            switch self {
-            case .excited: return .orange
-            case .fearful: return .purple
-            case .neutral: return .blue
-            case .revenge: return .red
-            }
-        }
-    }
-    
+
     var body: some View {
         NavigationView {
             Form {
@@ -48,8 +30,14 @@ struct TradeLogForm: View {
                         TextField("Quantity", text: $quantity)
                             .keyboardType(.decimalPad)
                     }
+
+                    Picker("Asset Type", selection: $assetType) {
+                        ForEach(AssetType.allCases, id: \.self) { type in
+                            Label(type.label, systemImage: type.icon).tag(type)
+                        }
+                    }
                 }
-                
+
                 Section(header: Text("Psychology & Notes")) {
                     Picker("Emotion State", selection: $emotion) {
                         ForEach(TradeEmotion.allCases, id: \.self) { emo in
@@ -75,15 +63,31 @@ struct TradeLogForm: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { dismiss() }
+                    Button("Save") { saveTrade() }
                         .fontWeight(.bold)
                         .foregroundStyle(AppTheme.primaryText)
                 }
             }
         }
     }
+
+    private func saveTrade() {
+        let trimmedSymbol = symbol.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedSymbol.isEmpty,
+              let priceValue = Double(price),
+              let quantityValue = Double(quantity) else { return }
+
+        viewModel.addTrade(symbol: trimmedSymbol,
+                           type: type,
+                           price: priceValue,
+                           quantity: quantityValue,
+                           emotion: emotion,
+                           note: note,
+                           assetType: assetType)
+        dismiss()
+    }
 }
 
 #Preview {
-    TradeLogForm()
+    TradeLogForm(viewModel: PortfolioViewModel())
 }
