@@ -45,7 +45,7 @@ struct TradingDashboardView: View {
     private var balanceCard: some View {
         let isPositive = viewModel.dayPnL >= 0
 
-        VStack(spacing: 8) {
+        return VStack(spacing: 8) {
             Text("Total Balance")
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.secondaryText)
