@@ -67,7 +67,6 @@ struct TradingDashboardView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 20)
         .background(Color.white.opacity(0.1))
-        .backdrop(blur: 10)
         .cornerRadius(20)
     }
     
@@ -118,7 +117,6 @@ struct TradingDashboardView: View {
         }
         .padding(16)
         .background(Color.white.opacity(0.1))
-        .backdrop(blur: 10)
         .cornerRadius(20)
     }
     
