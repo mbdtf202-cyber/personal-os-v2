@@ -2,10 +2,10 @@ import SwiftUI
 
 struct ToolsView: View {
     private let tools: [ToolItem] = [
+        .init(title: "二维码生成", subtitle: "文本/链接转二维码", icon: "qrcode.viewfinder", accent: AppTheme.mistBlue, primaryAction: "生成二维码"),
         .init(title: "工作流", subtitle: "创建可重复的自动化任务", icon: "bolt.badge.clock", accent: AppTheme.lavender, primaryAction: "创建新的自动化"),
-        .init(title: "书签管理", subtitle: "结构化管理网络资源", icon: "bookmark.circle", accent: AppTheme.mistBlue, primaryAction: "添加书签"),
-        .init(title: "闪念笔记", subtitle: "随时记录瞬时灵感", icon: "lightbulb", accent: AppTheme.almond, primaryAction: "记录灵感"),
-        .init(title: "数据同步", subtitle: "跨设备保持资料一致", icon: "arrow.triangle.2.circlepath", accent: AppTheme.matcha, primaryAction: "立即同步")
+        .init(title: "书签管理", subtitle: "结构化管理网络资源", icon: "bookmark.circle", accent: AppTheme.almond, primaryAction: "添加书签"),
+        .init(title: "闪念笔记", subtitle: "随时记录瞬时灵感", icon: "lightbulb", accent: AppTheme.coral, primaryAction: "记录灵感")
     ]
 
     var body: some View {
@@ -13,38 +13,20 @@ struct ToolsView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     ForEach(tools) { tool in
-                        NavigationLink {
-                            ToolDetailView(tool: tool)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: tool.icon)
-                                        .font(.title2)
-                                        .foregroundStyle(tool.accent)
-                                        .frame(width: 44, height: 44)
-                                        .background(tool.accent.opacity(0.15))
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text(tool.title)
-                                            .font(Typography.headlineSmall)
-                                            .foregroundColor(MorandiColors.textPrimary)
-                                        Text(tool.subtitle)
-                                            .font(Typography.bodySmall)
-                                            .foregroundColor(MorandiColors.textSecondary)
-                                    }
-
-                                    Spacer()
-
-                                    Image(systemName: "chevron.right")
-                                        .font(.footnote)
-                                        .foregroundStyle(MorandiColors.textSecondary)
-                                }
+                        // ⚡️ 修复：二维码工具直接跳转到专用页面
+                        if tool.icon == "qrcode.viewfinder" {
+                            NavigationLink(destination: QRCodeGeneratorView()) {
+                                ToolRowView(tool: tool)
                             }
-                            .glassCard()
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("打开 \(tool.title) 工具")
+                        } else {
+                            NavigationLink(destination: ToolDetailView(tool: tool)) {
+                                ToolRowView(tool: tool)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("打开 \(tool.title) 工具")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("打开 \(tool.title) 工具")
                     }
                 }
                 .padding(16)
@@ -62,6 +44,39 @@ struct ToolItem: Identifiable, Hashable {
     let icon: String
     let accent: Color
     let primaryAction: String
+}
+
+struct ToolRowView: View {
+    let tool: ToolItem
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: tool.icon)
+                    .font(.title2)
+                    .foregroundStyle(tool.accent)
+                    .frame(width: 44, height: 44)
+                    .background(tool.accent.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(tool.title)
+                        .font(Typography.headlineSmall)
+                        .foregroundColor(MorandiColors.textPrimary)
+                    Text(tool.subtitle)
+                        .font(Typography.bodySmall)
+                        .foregroundColor(MorandiColors.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote)
+                    .foregroundStyle(MorandiColors.textSecondary)
+            }
+        }
+        .glassCard()
+    }
 }
 
 struct ToolDetailView: View {
@@ -88,31 +103,6 @@ struct ToolDetailView: View {
                             .foregroundColor(MorandiColors.textSecondary)
                     }
                 }
-
-                // 二维码工具
-                NavigationLink(destination: QRCodeGeneratorView()) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Image(systemName: "qrcode.viewfinder")
-                                .font(.title2)
-                                .foregroundColor(MorandiColors.textPrimary)
-                            Spacer()
-                            Image(systemName: "arrow.up.right")
-                                .font(.caption)
-                                .foregroundColor(MorandiColors.textSecondary)
-                        }
-                        
-                        Text("二维码生成")
-                            .font(Typography.headlineSmall)
-                            .foregroundColor(MorandiColors.textPrimary)
-                        
-                        Text("文本/链接转二维码")
-                            .font(Typography.bodySmall)
-                            .foregroundColor(MorandiColors.textSecondary)
-                    }
-                    .glassCard()
-                }
-                .buttonStyle(.plain)
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("快捷操作")
