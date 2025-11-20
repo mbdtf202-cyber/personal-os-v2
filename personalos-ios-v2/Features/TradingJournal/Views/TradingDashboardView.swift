@@ -8,6 +8,7 @@ struct TradingDashboardView: View {
     @Query(sort: \TradeRecord.date, order: .reverse) private var trades: [TradeRecord]
     @State private var viewModel = PortfolioViewModel()
     @State private var showLogForm = false
+    @State private var showPriceError = false
 
     var body: some View {
         NavigationStack {
@@ -16,6 +17,30 @@ struct TradingDashboardView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
+                        // Price Error Banner
+                        if let error = stockPriceService.error, showPriceError {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(AppTheme.coral)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Price Update Failed")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                    Text(error)
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.secondaryText)
+                                }
+                                Spacer()
+                                Button(action: { showPriceError = false }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(AppTheme.tertiaryText)
+                                }
+                            }
+                            .padding()
+                            .background(AppTheme.coral.opacity(0.1))
+                            .cornerRadius(12)
+                        }
+                        
                         balanceCard
                         equityChart
                         holdingsList
@@ -28,11 +53,19 @@ struct TradingDashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { Task { await viewModel.refreshPrices(for: trades) } }) {
+                    Button(action: {
+                        Task {
+                            await viewModel.refreshPrices(for: trades)
+                            if stockPriceService.error != nil {
+                                showPriceError = true
+                            }
+                        }
+                    }) {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 18))
                             .foregroundStyle(AppTheme.primaryText)
                     }
+                    .disabled(stockPriceService.isLoading)
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { showLogForm = true }) {
@@ -52,7 +85,12 @@ struct TradingDashboardView: View {
         .onAppear {
             viewModel.priceService = stockPriceService
             viewModel.recalculatePortfolio(from: trades)
-            Task { await viewModel.refreshPrices(for: trades) }
+            Task {
+                await viewModel.refreshPrices(for: trades)
+                if stockPriceService.error != nil {
+                    showPriceError = true
+                }
+            }
         }
     }
     

@@ -1,10 +1,10 @@
 import SwiftUI
-import Combine
 
 struct NewsFeedView: View {
     @Environment(NewsService.self) private var newsService
     @State private var selectedCategory = "All"
     @State private var news: [NewsItem] = []
+    @State private var showError = false
     
     let mockNews: [NewsItem] = [
         NewsItem(
@@ -71,6 +71,34 @@ struct NewsFeedView: View {
                                 .padding()
                         } else {
                             LazyVStack(spacing: 20) {
+                                // Error Banner
+                                if let error = newsService.error {
+                                    HStack {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundStyle(AppTheme.coral)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("Failed to load news")
+                                                .font(.subheadline)
+                                                .fontWeight(.semibold)
+                                            Text(error)
+                                                .font(.caption)
+                                                .foregroundStyle(AppTheme.secondaryText)
+                                        }
+                                        Spacer()
+                                        Button("Retry") {
+                                            Task { await refreshNews() }
+                                        }
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(AppTheme.mistBlue)
+                                    }
+                                    .padding()
+                                    .background(AppTheme.coral.opacity(0.1))
+                                    .cornerRadius(12)
+                                    .padding(.horizontal, 20)
+                                    .padding(.top, 10)
+                                }
+                                
                                 ForEach(news) { item in
                                     NewsCard(item: item)
                                 }
@@ -86,6 +114,7 @@ struct NewsFeedView: View {
                     Button(action: { Task { await refreshNews() } }) {
                         Image(systemName: "arrow.clockwise")
                     }
+                    .disabled(newsService.isLoading)
                 }
             }
             .onAppear {
@@ -110,6 +139,9 @@ struct NewsFeedView: View {
                     url: URL(string: article.url)
                 )
             }
+        } else if newsService.error == nil && !APIConfig.hasValidNewsAPIKey {
+            // Show info banner for missing API key
+            showError = true
         }
     }
 }

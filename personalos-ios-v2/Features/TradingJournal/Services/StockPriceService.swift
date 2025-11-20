@@ -13,6 +13,7 @@ struct StockQuote: Codable {
 class StockPriceService {
     var quotes: [String: StockQuote] = [:]
     var isLoading = false
+    var error: String?
     
     private var apiKey: String {
         APIConfig.stockAPIKey
@@ -20,6 +21,7 @@ class StockPriceService {
     
     func fetchQuote(symbol: String) async {
         isLoading = true
+        error = nil
         
         // Use mock data if API key not configured
         guard APIConfig.hasValidStockAPIKey else {
@@ -29,11 +31,13 @@ class StockPriceService {
                 change: Double.random(in: -5...5),
                 changePercent: Double.random(in: -2...2)
             )
+            Logger.debug("Stock API key not configured, using mock data for \(symbol)", category: .trading)
             isLoading = false
             return
         }
         
         guard let url = URL(string: "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=\(symbol)&apikey=\(apiKey)") else {
+            error = "Invalid URL"
             isLoading = false
             return
         }
@@ -52,10 +56,15 @@ class StockPriceService {
                 
                 let quote = StockQuote(symbol: symbol, price: price, change: change, changePercent: changePercent)
                 quotes[symbol] = quote
+                Logger.log("Successfully fetched quote for \(symbol): $\(price)", category: .trading)
+            } else {
+                error = "Failed to parse stock data"
+                Logger.error("Failed to parse stock data for \(symbol)", category: .trading)
             }
             
             isLoading = false
         } catch {
+            self.error = error.localizedDescription
             Logger.error("Failed to fetch quote for \(symbol): \(error.localizedDescription)", category: .trading)
             isLoading = false
         }
