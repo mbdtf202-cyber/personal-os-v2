@@ -22,13 +22,13 @@ struct personalos_ios_v2App: App {
             }
         }
         .modelContainer(for: [
-            TodoItem.self,
-            HealthLog.self,
-            SocialPost.self,
-            ProjectItem.self,
-            NewsItem.self,
-            TradeRecord.self,
-            AssetItem.self
+            SchemaV1.TodoItem.self,
+            SchemaV1.HealthLog.self,
+            SchemaV1.SocialPost.self,
+            SchemaV1.ProjectItem.self,
+            SchemaV1.NewsItem.self,
+            SchemaV1.TradeRecord.self,
+            SchemaV1.AssetItem.self
         ])
     }
 }

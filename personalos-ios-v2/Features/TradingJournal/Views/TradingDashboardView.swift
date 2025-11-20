@@ -4,7 +4,7 @@ import Charts
 
 struct TradingDashboardView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \TradeRecord.date, order: .reverse) private var trades: [TradeRecord]
+    @Query(sort: \SchemaV1.TradeRecord.date, order: .reverse) private var trades: [SchemaV1.TradeRecord]
     @State private var viewModel = PortfolioViewModel()
     @State private var showLogForm = false
 
@@ -47,10 +47,10 @@ struct TradingDashboardView: View {
         }
         .onAppear(perform: seedTradesIfNeeded)
         .onChange(of: trades) { _, newTrades in
-            viewModel.recalculate(with: newTrades)
+            viewModel.recalculatePortfolio(from: newTrades)
         }
         .onAppear {
-            viewModel.recalculate(with: trades)
+            viewModel.recalculatePortfolio(from: trades)
             Task { await viewModel.refreshPrices(for: trades) }
         }
     }
@@ -192,5 +192,5 @@ struct TradingDashboardView: View {
 
 #Preview {
     TradingDashboardView()
-        .modelContainer(for: TradeRecord.self, inMemory: true)
+        .modelContainer(for: SchemaV1.TradeRecord.self, inMemory: true)
 }
