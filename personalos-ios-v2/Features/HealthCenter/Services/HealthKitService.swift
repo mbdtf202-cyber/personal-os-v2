@@ -16,11 +16,13 @@ class HealthKitService {
     func requestAuthorization() async {
         guard HKHealthStore.isHealthDataAvailable() else { return }
         
-        let typesToRead: Set<HKObjectType> = [
-            HKObjectType.quantityType(forIdentifier: .stepCount)!,
-            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
-            HKObjectType.quantityType(forIdentifier: .heartRate)!
-        ]
+        guard let stepType = HKObjectType.quantityType(forIdentifier: .stepCount),
+              let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
+              let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate) else {
+            return
+        }
+        
+        let typesToRead: Set<HKObjectType> = [stepType, sleepType, heartRateType]
         
         do {
             try await healthStore.requestAuthorization(toShare: [], read: typesToRead)
@@ -54,7 +56,7 @@ class HealthKitService {
         guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else { return }
         
         let now = Date()
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now)!
+        guard let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now) else { return }
         let predicate = HKQuery.predicateForSamples(withStart: yesterday, end: now, options: .strictStartDate)
         
         let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in

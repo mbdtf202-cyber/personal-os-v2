@@ -4,6 +4,7 @@ import SwiftData
 
 struct TradingDashboardView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(StockPriceService.self) private var stockPriceService
     @Query(sort: \TradeRecord.date, order: .reverse) private var trades: [TradeRecord]
     @State private var viewModel = PortfolioViewModel()
     @State private var showLogForm = false
@@ -49,6 +50,7 @@ struct TradingDashboardView: View {
             viewModel.recalculatePortfolio(from: newTrades)
         }
         .onAppear {
+            viewModel.priceService = stockPriceService
             viewModel.recalculatePortfolio(from: trades)
             Task { await viewModel.refreshPrices(for: trades) }
         }

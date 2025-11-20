@@ -36,12 +36,12 @@ class HealthStoreManager {
         var history: [(day: String, hours: Double)] = []
         
         for offset in (0..<7).reversed() {
-            let date = calendar.date(byAdding: .day, value: -offset, to: today)!
+            guard let date = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
             let daySymbol = calendar.shortWeekdaySymbols[calendar.component(.weekday, from: date) - 1]
             
             // Fetch real sleep data for this date
             let startOfDay = calendar.startOfDay(for: date)
-            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+            guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else { continue }
             let hours = await healthKitService.fetchSleepHours(from: startOfDay, to: endOfDay)
             
             history.append((daySymbol, hours))

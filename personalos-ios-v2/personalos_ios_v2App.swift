@@ -8,6 +8,7 @@ struct personalos_ios_v2App: App {
     @State private var healthManager = HealthStoreManager()
     @State private var githubService = GitHubService()
     @State private var newsService = NewsService()
+    @State private var stockPriceService = StockPriceService()
 
     init() {
         // 配置 UITabBar 的全局外观
@@ -38,6 +39,7 @@ struct personalos_ios_v2App: App {
         .environment(healthManager)
         .environment(githubService)
         .environment(newsService)
+        .environment(stockPriceService)
     }
 }
 

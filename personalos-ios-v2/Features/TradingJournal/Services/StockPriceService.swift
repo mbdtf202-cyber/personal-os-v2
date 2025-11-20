@@ -1,5 +1,5 @@
 import Foundation
-import Combine
+import Observation
 
 struct StockQuote: Codable {
     let symbol: String
@@ -9,9 +9,10 @@ struct StockQuote: Codable {
 }
 
 @MainActor
-class StockPriceService: ObservableObject {
-    @Published var quotes: [String: StockQuote] = [:]
-    @Published var isLoading = false
+@Observable
+class StockPriceService {
+    var quotes: [String: StockQuote] = [:]
+    var isLoading = false
     
     private var apiKey: String {
         APIConfig.stockAPIKey
