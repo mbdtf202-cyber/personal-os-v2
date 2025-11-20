@@ -194,41 +194,44 @@ struct TradingDashboardView: View {
                     .padding()
             } else {
                 ForEach(viewModel.assets) { asset in
-                    HStack(spacing: 12) {
-                        Image(systemName: asset.type.icon)
-                            .font(.title2)
-                            .foregroundStyle(AppTheme.primaryText)
-                            .frame(width: 48, height: 48)
-                            .background(Color.white)
-                            .clipShape(Circle())
-                            .shadow(color: AppTheme.shadow, radius: 4, y: 2)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(asset.symbol)
-                                .font(.headline)
+                    NavigationLink(destination: AssetDetailView(asset: asset, trades: recentTrades)) {
+                        HStack(spacing: 12) {
+                            Image(systemName: asset.type.icon)
+                                .font(.title2)
                                 .foregroundStyle(AppTheme.primaryText)
-                            Text("\(asset.quantity, specifier: "%.2f") shares")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.secondaryText)
-                        }
-                        
-                        Spacer()
-                        
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("$\(asset.marketValue, specifier: "%.2f")")
-                                .fontWeight(.bold)
-                                .foregroundStyle(AppTheme.primaryText)
-                            HStack(spacing: 4) {
-                                Image(systemName: asset.pnl >= 0 ? "arrow.up" : "arrow.down")
-                                Text("\(abs(asset.pnlPercent * 100), specifier: "%.2f")%")
+                                .frame(width: 48, height: 48)
+                                .background(Color.white)
+                                .clipShape(Circle())
+                                .shadow(color: AppTheme.shadow, radius: 4, y: 2)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(asset.symbol)
+                                    .font(.headline)
+                                    .foregroundStyle(AppTheme.primaryText)
+                                Text("\(asset.quantity, specifier: "%.2f") shares")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.secondaryText)
                             }
-                            .font(.caption)
-                            .foregroundStyle(asset.pnl >= 0 ? AppTheme.matcha : AppTheme.coral)
+                            
+                            Spacer()
+                            
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("$\(asset.marketValue, specifier: "%.2f")")
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(AppTheme.primaryText)
+                                HStack(spacing: 4) {
+                                    Image(systemName: asset.pnl >= 0 ? "arrow.up" : "arrow.down")
+                                    Text("\(abs(asset.pnlPercent * 100), specifier: "%.2f")%")
+                                }
+                                .font(.caption)
+                                .foregroundStyle(asset.pnl >= 0 ? AppTheme.matcha : AppTheme.coral)
+                            }
                         }
+                        .padding(12)
+                        .background(Color.white.opacity(0.6))
+                        .cornerRadius(16)
                     }
-                    .padding(12)
-                    .background(Color.white.opacity(0.6))
-                    .cornerRadius(16)
+                    .buttonStyle(.plain)
                 }
             }
         }

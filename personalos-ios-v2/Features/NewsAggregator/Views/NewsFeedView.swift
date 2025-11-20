@@ -216,13 +216,20 @@ struct NewsCard: View {
                 
                 Spacer()
                 
-                Button(action: {}) {
+                Button(action: {
+                    // TODO: Implement bookmark functionality
+                    HapticsManager.shared.light()
+                }) {
                     Image(systemName: "bookmark")
                         .font(.caption)
                         .foregroundStyle(AppTheme.primaryText)
                 }
                 
-                Button(action: {}) {
+                Button(action: {
+                    if let url = item.url {
+                        shareArticle(url: url, title: item.title)
+                    }
+                }) {
                     Image(systemName: "arrow.up.right.square")
                         .font(.caption)
                         .foregroundStyle(AppTheme.primaryText)
@@ -242,6 +249,22 @@ struct NewsCard: View {
         }
         .frame(height: 160)
         .cornerRadius(12)
+    }
+    
+    private func shareArticle(url: URL, title: String) {
+        let activityVC = UIActivityViewController(
+            activityItems: [title, url],
+            applicationActivities: nil
+        )
+        
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootVC = window.rootViewController {
+            activityVC.popoverPresentationController?.sourceView = window
+            rootVC.present(activityVC, animated: true)
+        }
+        
+        HapticsManager.shared.light()
     }
 }
 

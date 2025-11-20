@@ -1,9 +1,11 @@
 import SwiftUI
+import SwiftData
 
 struct QuickNoteOverlay: View {
     @Binding var isPresented: Bool
     @State private var noteText: String = ""
     @FocusState private var isFocused: Bool
+    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         ZStack {
@@ -22,11 +24,13 @@ struct QuickNoteOverlay: View {
                             .font(.headline)
                             .foregroundStyle(AppTheme.primaryText)
                         Spacer()
-                        Button("Done") {
+                        Button("Save") {
+                            saveNote()
                             withAnimation { isPresented = false }
                         }
                         .fontWeight(.bold)
                         .foregroundStyle(AppTheme.mistBlue)
+                        .disabled(noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     
                     TextEditor(text: $noteText)
@@ -39,10 +43,16 @@ struct QuickNoteOverlay: View {
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border, lineWidth: 1))
                     
                     HStack(spacing: 20) {
-                        Button(action: {}) {
+                        Button(action: {
+                            // TODO: Implement document scanning
+                            HapticsManager.shared.light()
+                        }) {
                             Label("Scan", systemImage: "doc.viewfinder")
                         }
-                        Button(action: {}) {
+                        Button(action: {
+                            // TODO: Implement image picker
+                            HapticsManager.shared.light()
+                        }) {
                             Label("Image", systemImage: "photo")
                         }
                         Spacer()
@@ -59,6 +69,26 @@ struct QuickNoteOverlay: View {
             }
         }
         .onAppear { isFocused = true }
+    }
+    
+    private func saveNote() {
+        let trimmedText = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else { return }
+        
+        // Save as a code snippet in knowledge base
+        let snippet = CodeSnippet(
+            title: "Quick Note - \(Date().formatted(date: .abbreviated, time: .shortened))",
+            language: "Markdown",
+            code: trimmedText,
+            summary: String(trimmedText.prefix(100)),
+            category: .note
+        )
+        
+        modelContext.insert(snippet)
+        try? modelContext.save()
+        
+        HapticsManager.shared.success()
+        Logger.log("Quick note saved to knowledge base", category: Logger.general)
     }
 }
 
