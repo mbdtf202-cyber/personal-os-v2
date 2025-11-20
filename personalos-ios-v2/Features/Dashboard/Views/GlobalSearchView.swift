@@ -196,7 +196,7 @@ struct GlobalSearchView: View {
                 SearchResult(
                     type: .trade,
                     title: trade.symbol,
-                    subtitle: "\(trade.type.rawValue) - $\(trade.price, specifier: "%.2f")",
+                    subtitle: String(format: "%@ - $%.2f", trade.type.rawValue, trade.price),
                     icon: "chart.line.uptrend.xyaxis",
                     color: AppTheme.matcha
                 )
