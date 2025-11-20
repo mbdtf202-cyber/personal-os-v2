@@ -89,7 +89,7 @@ struct FocusTimerView: View {
                 timeRemaining -= 1
             } else {
                 stopTimer()
-                HapticsManager.shared.notification(type: .success)
+                HapticsManager.shared.success()
             }
         }
     }
