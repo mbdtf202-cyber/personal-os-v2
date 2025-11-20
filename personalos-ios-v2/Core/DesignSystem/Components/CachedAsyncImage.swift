@@ -50,14 +50,16 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
 
 #Preview {
     CachedAsyncImage(
-        url: URL(string: "https://picsum.photos/400/300")
-    ) { image in
-        image
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-    } placeholder: {
-        ProgressView()
-    }
+        url: URL(string: "https://picsum.photos/400/300"),
+        content: { image in
+            image
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+        },
+        placeholder: {
+            ProgressView()
+        }
+    )
     .frame(width: 200, height: 150)
     .cornerRadius(12)
 }
