@@ -65,7 +65,7 @@ struct AssetDetailView: View {
                             .padding()
                     } else {
                         ForEach(assetTrades) { trade in
-                            TradeHistoryRow(trade: trade)
+                            AssetTradeRow(trade: trade)
                         }
                     }
                 }
@@ -102,7 +102,7 @@ struct StatItem: View {
     }
 }
 
-struct TradeHistoryRow: View {
+struct AssetTradeRow: View {
     let trade: TradeRecord
     
     var body: some View {
