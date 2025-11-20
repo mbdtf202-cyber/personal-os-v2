@@ -14,6 +14,7 @@ struct TradingDashboardView: View {
     @State private var viewModel = PortfolioViewModel()
     @State private var showLogForm = false
     @State private var showPriceError = false
+    @State private var showAllHistory = false
 
     var body: some View {
         NavigationStack {
@@ -84,6 +85,9 @@ struct TradingDashboardView: View {
             }
             .sheet(isPresented: $showLogForm) {
                 TradeLogForm()
+            }
+            .sheet(isPresented: $showAllHistory) {
+                TradeHistoryListView()
             }
         }
         .onChange(of: recentTrades) { _, newTrades in
@@ -183,9 +187,28 @@ struct TradingDashboardView: View {
     
     private var holdingsList: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Holdings")
-                .font(.headline)
-                .foregroundStyle(AppTheme.primaryText)
+            HStack {
+                Text("Holdings")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.primaryText)
+                
+                Spacer()
+                
+                Button(action: { showAllHistory = true }) {
+                    HStack(spacing: 4) {
+                        Text("All History")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(AppTheme.mistBlue)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.mistBlue.opacity(0.1))
+                    .clipShape(Capsule())
+                }
+            }
             
             if viewModel.assets.isEmpty {
                 Text("No assets. Tap + to log a trade.")
