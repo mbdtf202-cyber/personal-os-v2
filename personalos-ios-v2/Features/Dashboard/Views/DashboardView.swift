@@ -227,9 +227,6 @@ struct DashboardView: View {
     }
 
     private func seedTasksIfNeeded() {
-        if migrateLegacyTasksIfNeeded() {
-            return
-        }
         guard tasks.isEmpty else { return }
         let defaults = [
             TodoItem(title: "完成 PersonalOS 开发", category: "Work", priority: 2),
@@ -238,37 +235,6 @@ struct DashboardView: View {
         ]
         defaults.forEach { modelContext.insert($0) }
         try? modelContext.save()
-    }
-
-    private func migrateLegacyTasksIfNeeded() -> Bool {
-        let legacyKey = "tasks"
-        guard let data = UserDefaults.standard.data(forKey: legacyKey) else { return false }
-
-        struct LegacyTask: Codable {
-            var id: UUID?
-            var title: String
-            var createdAt: Date?
-            var isCompleted: Bool?
-            var category: String?
-            var priority: Int?
-        }
-
-        guard let items = try? JSONDecoder().decode([LegacyTask].self, from: data), !items.isEmpty else { return false }
-
-        items.forEach { item in
-            let task = TodoItem(
-                title: item.title,
-                createdAt: item.createdAt ?? .now,
-                isCompleted: item.isCompleted ?? false,
-                category: item.category ?? "Life",
-                priority: item.priority ?? 1
-            )
-            modelContext.insert(task)
-        }
-
-        try? modelContext.save()
-        UserDefaults.standard.removeObject(forKey: legacyKey)
-        return true
     }
 }
 
