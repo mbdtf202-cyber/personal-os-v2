@@ -2,7 +2,7 @@ import SwiftUI
 import Charts
 
 struct AssetDetailView: View {
-    let asset: AssetHolding
+    let asset: AssetItem
     let trades: [TradeRecord]
     
     private var assetTrades: [TradeRecord] {
@@ -144,7 +144,7 @@ struct TradeHistoryRow: View {
 #Preview {
     NavigationStack {
         AssetDetailView(
-            asset: AssetHolding(
+            asset: AssetItem(
                 symbol: "AAPL",
                 type: .stock,
                 quantity: 10,
