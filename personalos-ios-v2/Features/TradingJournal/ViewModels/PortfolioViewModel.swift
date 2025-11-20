@@ -16,7 +16,7 @@ class PortfolioViewModel {
     let priceService = StockPriceService()
     private let calculator = PortfolioCalculator()
 
-    func recalculate(with trades: [TradeRecord]) {
+    func recalculatePortfolio(from trades: [TradeRecord]) {
         let result = calculator.calculate(with: trades) { symbol, fallback in
             priceService.quotes[symbol]?.price ?? priceService.getMockPrice(for: symbol, fallback: fallback)
         }
@@ -31,7 +31,7 @@ class PortfolioViewModel {
     func refreshPrices(for trades: [TradeRecord]) async {
         let symbols = Array(Set(trades.map { $0.symbol }))
         await priceService.fetchMultipleQuotes(symbols: symbols)
-        recalculate(with: trades)
+        recalculatePortfolio(from: trades)
     }
 }
 

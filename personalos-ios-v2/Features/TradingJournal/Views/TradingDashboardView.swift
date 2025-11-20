@@ -47,10 +47,10 @@ struct TradingDashboardView: View {
         }
         .onAppear(perform: seedTradesIfNeeded)
         .onChange(of: trades) { _, newTrades in
-            viewModel.recalculate(with: newTrades)
+            viewModel.recalculatePortfolio(from: newTrades)
         }
         .onAppear {
-            viewModel.recalculate(with: trades)
+            viewModel.recalculatePortfolio(from: trades)
             Task { await viewModel.refreshPrices(for: trades) }
         }
     }
