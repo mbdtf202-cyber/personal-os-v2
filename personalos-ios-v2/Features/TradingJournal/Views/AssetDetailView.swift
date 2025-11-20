@@ -146,13 +146,11 @@ struct TradeHistoryRow: View {
         AssetDetailView(
             asset: AssetItem(
                 symbol: "AAPL",
-                type: .stock,
+                name: "Apple Inc.",
                 quantity: 10,
-                avgCost: 150,
                 currentPrice: 175,
-                marketValue: 1750,
-                pnl: 250,
-                pnlPercent: 0.1667
+                avgCost: 150,
+                type: .stock
             ),
             trades: []
         )
