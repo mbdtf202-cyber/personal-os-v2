@@ -41,10 +41,10 @@ struct AssetDetailView: View {
                     
                     // Stats Grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        StatItem(title: "Quantity", value: "\(asset.quantity, specifier: "%.2f")")
-                        StatItem(title: "Avg Cost", value: "$\(asset.avgCost, specifier: "%.2f")")
-                        StatItem(title: "Market Value", value: "$\(asset.marketValue, specifier: "%.2f")")
-                        StatItem(title: "P&L", value: "$\(asset.pnl, specifier: "%.2f")", color: asset.pnl >= 0 ? AppTheme.matcha : AppTheme.coral)
+                        StatItem(title: "Quantity", value: String(format: "%.2f", asset.quantity))
+                        StatItem(title: "Avg Cost", value: String(format: "$%.2f", asset.avgCost))
+                        StatItem(title: "Market Value", value: String(format: "$%.2f", asset.marketValue))
+                        StatItem(title: "P&L", value: String(format: "$%.2f", asset.pnl), color: asset.pnl >= 0 ? AppTheme.matcha : AppTheme.coral)
                     }
                 }
                 .padding()
