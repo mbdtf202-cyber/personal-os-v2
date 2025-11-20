@@ -3,8 +3,9 @@ import SwiftUI
 // Models moved to UnifiedSchema.swift
 
 struct ProjectListView: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(GitHubService.self) private var githubService
-    @State private var projects: [ProjectItem] = []
+    @Query(sort: \ProjectItem.name) private var projects: [ProjectItem]
     @State private var showGitHubSync = false
     @State private var githubUsername = ""
     
@@ -32,12 +33,8 @@ struct ProjectListView: View {
                         // GitHub Sync Button
                         Button(action: { showGitHubSync = true }) {
                             HStack {
-                                if githubService.isLoading {
-                                    ProgressView()
-                                        .tint(.white)
-                                } else {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                }
+                                Image(systemName: githubService.isLoading ? "arrow.triangle.2.circlepath" : "arrow.triangle.2.circlepath")
+                                    .symbolEffect(.rotate, isActive: githubService.isLoading)
                                 Text("Sync with GitHub")
                             }
                             .font(.headline)
@@ -55,29 +52,30 @@ struct ProjectListView: View {
             }
             .navigationTitle("Project Hub")
             .sheet(isPresented: $showGitHubSync) {
-                GitHubSyncSheet(projects: $projects)
+                GitHubSyncSheet()
             }
             .onAppear {
-                loadProjects()
+                seedProjectsIfNeeded()
             }
         }
     }
     
-    private func loadProjects() {
-        if projects.isEmpty {
-            projects = [
-                ProjectItem(name: "Personal OS", details: "An all-in-one iOS life operating system.", language: "Swift", stars: 124, status: .active, progress: 0.65),
-                ProjectItem(name: "AI Agent API", details: "Python backend for LLM processing.", language: "Python", stars: 45, status: .active, progress: 0.3),
-                ProjectItem(name: "Portfolio Site", details: "Next.js static site.", language: "TypeScript", stars: 12, status: .done, progress: 1.0),
-                ProjectItem(name: "Smart Home Hub", details: "IoT control center ideas.", language: "C++", stars: 0, status: .idea, progress: 0.0)
-            ]
-        }
+    private func seedProjectsIfNeeded() {
+        guard projects.isEmpty else { return }
+        let defaults = [
+            ProjectItem(name: "Personal OS", details: "An all-in-one iOS life operating system.", language: "Swift", stars: 124, status: .active, progress: 0.65),
+            ProjectItem(name: "AI Agent API", details: "Python backend for LLM processing.", language: "Python", stars: 45, status: .active, progress: 0.3),
+            ProjectItem(name: "Portfolio Site", details: "Next.js static site.", language: "TypeScript", stars: 12, status: .done, progress: 1.0),
+            ProjectItem(name: "Smart Home Hub", details: "IoT control center ideas.", language: "C++", stars: 0, status: .idea, progress: 0.0)
+        ]
+        defaults.forEach { modelContext.insert($0) }
+        try? modelContext.save()
     }
 }
 
 struct GitHubSyncSheet: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(GitHubService.self) private var githubService
-    @Binding var projects: [ProjectItem]
     @Environment(\.dismiss) var dismiss
     @State private var username = ""
     
@@ -99,7 +97,8 @@ struct GitHubSyncSheet: View {
                 .disabled(username.isEmpty || githubService.isLoading)
                 
                 if githubService.isLoading {
-                    ProgressView("Fetching repositories...")
+                    LoadingView(message: "Fetching repositories...")
+                        .frame(height: 100)
                 }
                 
                 if let error = githubService.error {
@@ -119,8 +118,15 @@ struct GitHubSyncSheet: View {
     }
     
     private func syncProjects() {
-        projects = githubService.repos.map { repo in
-            ProjectItem(
+        // Clear existing projects before syncing
+        let fetchDescriptor = FetchDescriptor<ProjectItem>()
+        if let existingProjects = try? modelContext.fetch(fetchDescriptor) {
+            existingProjects.forEach { modelContext.delete($0) }
+        }
+        
+        // Insert new projects from GitHub
+        githubService.repos.forEach { repo in
+            let project = ProjectItem(
                 name: repo.name,
                 details: repo.description ?? "No description",
                 language: repo.language ?? "Unknown",
@@ -128,7 +134,11 @@ struct GitHubSyncSheet: View {
                 status: .active,
                 progress: 0.5
             )
+            modelContext.insert(project)
         }
+        
+        try? modelContext.save()
+        Logger.log("Synced \(githubService.repos.count) projects from GitHub", category: .general)
     }
 }
 

@@ -159,17 +159,19 @@ final class NewsItem {
     var title: String
     var summary: String
     var category: String
-    var image: String
+    var image: String // SF Symbol fallback
+    var imageURL: String? // Remote image URL
     var date: Date
     var url: URL?
 
-    init(id: UUID = UUID(), source: String, title: String, summary: String, category: String, image: String, date: Date, url: URL? = nil) {
+    init(id: UUID = UUID(), source: String, title: String, summary: String, category: String, image: String, imageURL: String? = nil, date: Date, url: URL? = nil) {
         self.id = id
         self.source = source
         self.title = title
         self.summary = summary
         self.category = category
         self.image = image
+        self.imageURL = imageURL
         self.date = date
         self.url = url
     }

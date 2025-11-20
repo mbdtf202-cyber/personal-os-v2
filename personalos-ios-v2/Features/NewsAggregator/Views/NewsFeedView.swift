@@ -67,8 +67,7 @@ struct NewsFeedView: View {
                     // News List
                     ScrollView(showsIndicators: false) {
                         if newsService.isLoading {
-                            ProgressView("Loading news...")
-                                .padding()
+                            LoadingView(message: "Loading news...")
                         } else {
                             LazyVStack(spacing: 20) {
                                 // Error Banner
@@ -135,12 +134,12 @@ struct NewsFeedView: View {
                     summary: article.description ?? "",
                     category: selectedCategory,
                     image: "newspaper.fill",
+                    imageURL: article.urlToImage,
                     date: Date(),
                     url: URL(string: article.url)
                 )
             }
         } else if newsService.error == nil && !APIConfig.hasValidNewsAPIKey {
-            // Show info banner for missing API key
             showError = true
         }
     }
@@ -151,6 +150,28 @@ struct NewsCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // Image Header
+            if let imageURLString = item.imageURL, let imageURL = URL(string: imageURLString) {
+                AsyncImage(url: imageURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 160)
+                            .clipped()
+                    case .failure:
+                        placeholderImage
+                    case .empty:
+                        ProgressView()
+                            .frame(height: 160)
+                    @unknown default:
+                        placeholderImage
+                    }
+                }
+                .cornerRadius(12)
+            }
+            
             // Header
             HStack {
                 Image(systemName: item.image)
@@ -206,6 +227,17 @@ struct NewsCard: View {
             .padding(.top, 8)
         }
         .glassCard()
+    }
+    
+    private var placeholderImage: some View {
+        ZStack {
+            Color.gray.opacity(0.2)
+            Image(systemName: "photo")
+                .font(.largeTitle)
+                .foregroundStyle(AppTheme.tertiaryText)
+        }
+        .frame(height: 160)
+        .cornerRadius(12)
     }
 }
 
