@@ -85,38 +85,7 @@ struct DashboardView: View {
     }
     
     private var healthSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 16) {
-                ProgressRing(
-                    progress: min(Double(healthManager.steps) / 10000.0, 1.0),
-                    color: AppTheme.matcha,
-                    icon: "figure.walk",
-                    title: "Steps",
-                    value: "\(healthManager.steps)",
-                    unit: ""
-                )
-                ProgressRing(
-                    progress: min(healthManager.sleepHours / 8.0, 1.0),
-                    color: AppTheme.mistBlue,
-                    icon: "bed.double.fill",
-                    title: "Sleep",
-                    value: String(format: "%.1f", healthManager.sleepHours),
-                    unit: "h"
-                )
-                ProgressRing(
-                    progress: healthManager.energyLevel,
-                    color: AppTheme.coral,
-                    icon: "flame.fill",
-                    title: "Energy",
-                    value: "\(Int(healthManager.energyLevel * 100))",
-                    unit: "%"
-                )
-            }
-            .padding(.vertical, 10)
-        }
-        .task {
-            await healthManager.syncHealthData()
-        }
+        HealthMetricsSection(healthManager: healthManager)
     }
     
     private var tasksSection: some View {
@@ -263,6 +232,46 @@ struct DashboardView: View {
         ]
         defaults.forEach { modelContext.insert($0) }
         try? modelContext.save()
+    }
+}
+
+// MARK: - Health Metrics Section (Optimized for minimal redraws)
+struct HealthMetricsSection: View {
+    let healthManager: HealthStoreManager
+    
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 16) {
+                ProgressRing(
+                    progress: min(Double(healthManager.steps) / 10000.0, 1.0),
+                    color: AppTheme.matcha,
+                    icon: "figure.walk",
+                    title: "Steps",
+                    value: "\(healthManager.steps)",
+                    unit: ""
+                )
+                ProgressRing(
+                    progress: min(healthManager.sleepHours / 8.0, 1.0),
+                    color: AppTheme.mistBlue,
+                    icon: "bed.double.fill",
+                    title: "Sleep",
+                    value: String(format: "%.1f", healthManager.sleepHours),
+                    unit: "h"
+                )
+                ProgressRing(
+                    progress: healthManager.energyLevel,
+                    color: AppTheme.coral,
+                    icon: "flame.fill",
+                    title: "Energy",
+                    value: "\(Int(healthManager.energyLevel * 100))",
+                    unit: "%"
+                )
+            }
+            .padding(.vertical, 10)
+        }
+        .task {
+            await healthManager.syncHealthData()
+        }
     }
 }
 

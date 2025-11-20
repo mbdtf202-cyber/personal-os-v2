@@ -50,10 +50,14 @@ struct TradeLogForm: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveTrade() } // ⚠️ 调用保存
+                    Button("Save") { saveTrade() }
                         .fontWeight(.bold)
                         .foregroundStyle(AppTheme.primaryText)
                 }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                hideKeyboard()
             }
         }
     }

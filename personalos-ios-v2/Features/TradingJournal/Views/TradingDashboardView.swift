@@ -5,7 +5,14 @@ import SwiftData
 struct TradingDashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(StockPriceService.self) private var stockPriceService
-    @Query(sort: \TradeRecord.date, order: .reverse) private var trades: [TradeRecord]
+    @Query(
+        filter: #Predicate<TradeRecord> { trade in
+            // Only load trades from last 90 days for performance
+            trade.date > Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? Date()
+        },
+        sort: \TradeRecord.date,
+        order: .reverse
+    ) private var recentTrades: [TradeRecord]
     @State private var viewModel = PortfolioViewModel()
     @State private var showLogForm = false
     @State private var showPriceError = false
@@ -55,7 +62,7 @@ struct TradingDashboardView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
                         Task {
-                            await viewModel.refreshPrices(for: trades)
+                            await viewModel.refreshPrices(for: recentTrades)
                             if stockPriceService.error != nil {
                                 showPriceError = true
                             }
@@ -81,14 +88,14 @@ struct TradingDashboardView: View {
                 TradeLogForm()
             }
         }
-        .onChange(of: trades) { _, newTrades in
+        .onChange(of: recentTrades) { _, newTrades in
             viewModel.recalculatePortfolio(from: newTrades)
         }
         .onAppear {
             viewModel.priceService = stockPriceService
-            viewModel.recalculatePortfolio(from: trades)
+            viewModel.recalculatePortfolio(from: recentTrades)
             Task {
-                await viewModel.refreshPrices(for: trades)
+                await viewModel.refreshPrices(for: recentTrades)
                 if stockPriceService.error != nil {
                     showPriceError = true
                 }

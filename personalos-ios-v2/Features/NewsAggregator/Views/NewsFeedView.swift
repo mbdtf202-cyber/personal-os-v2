@@ -153,24 +153,16 @@ struct NewsCard: View {
         VStack(alignment: .leading, spacing: 12) {
             // Image Header
             if let imageURLString = item.imageURL, let imageURL = URL(string: imageURLString) {
-                AsyncImage(url: imageURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(height: 160)
-                            .clipped()
-                    case .failure:
-                        placeholderImage
-                    case .empty:
-                        ProgressView()
-                            .frame(height: 160)
-                    @unknown default:
-                        placeholderImage
-                    }
+                CachedAsyncImage(url: imageURL) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 160)
+                        .clipped()
+                        .cornerRadius(12)
+                } placeholder: {
+                    placeholderImage
                 }
-                .cornerRadius(12)
             }
             
             // Header

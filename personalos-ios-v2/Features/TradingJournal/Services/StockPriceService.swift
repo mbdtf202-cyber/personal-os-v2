@@ -71,11 +71,20 @@ class StockPriceService {
     }
     
     func fetchMultipleQuotes(symbols: [String]) async {
-        await withTaskGroup(of: Void.self) { group in
-            for symbol in symbols {
-                group.addTask {
-                    await self.fetchQuote(symbol: symbol)
-                }
+        // Rate limiting: Alpha Vantage free tier allows 5 requests per minute
+        let batchSize = 5
+        let delayBetweenBatches: UInt64 = 60_000_000_000 // 60 seconds in nanoseconds
+        
+        for (index, symbol) in symbols.enumerated() {
+            await fetchQuote(symbol: symbol)
+            
+            // Add delay after every 5 requests
+            if (index + 1) % batchSize == 0 && index < symbols.count - 1 {
+                Logger.log("Rate limit: waiting 60s before next batch", category: .trading)
+                try? await Task.sleep(nanoseconds: delayBetweenBatches)
+            } else if index < symbols.count - 1 {
+                // Small delay between individual requests
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             }
         }
     }
