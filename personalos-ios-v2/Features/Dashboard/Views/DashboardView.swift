@@ -700,6 +700,61 @@ struct PreviewCard: View {
     }
 }
 
+// MARK: - DashboardView Extension
+extension DashboardView {
+    private func seedTasksIfNeeded() {
+        guard tasks.isEmpty else { return }
+        
+        let defaultTasks = [
+            TodoItem(title: "Review Dashboard", category: "Work", priority: 1),
+            TodoItem(title: "Check Health Metrics", category: "Health", priority: 2),
+            TodoItem(title: "Read Latest News", category: "Learning", priority: 2)
+        ]
+        
+        defaultTasks.forEach { modelContext.insert($0) }
+        try? modelContext.save()
+    }
+    
+    private func updateActivityData() {
+        let calendar = Calendar.current
+        let today = Date()
+        
+        // Generate data for last 7 days
+        var weekData: [(String, Double)] = []
+        
+        for dayOffset in (0..<7).reversed() {
+            guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: today) else { continue }
+            let dayName = date.formatted(.dateTime.weekday(.abbreviated))
+            
+            // Calculate activity score for this day
+            let dayStart = calendar.startOfDay(for: date)
+            let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? date
+            
+            // Count tasks completed on this day
+            let completedTasks = tasks.filter { task in
+                task.isCompleted && task.createdAt >= dayStart && task.createdAt < dayEnd
+            }.count
+            
+            // Count posts created on this day
+            let postsCreated = posts.filter { post in
+                post.date >= dayStart && post.date < dayEnd
+            }.count
+            
+            // Count trades made on this day
+            let tradesMade = trades.filter { trade in
+                trade.date >= dayStart && trade.date < dayEnd
+            }.count
+            
+            // Calculate activity score (0-100)
+            let activityScore = min(Double(completedTasks * 20 + postsCreated * 30 + tradesMade * 25), 100.0)
+            
+            weekData.append((dayName, activityScore))
+        }
+        
+        activityData = weekData
+    }
+}
+
 #Preview {
     DashboardView()
         .modelContainer(for: TodoItem.self, inMemory: true)
