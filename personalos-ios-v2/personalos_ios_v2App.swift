@@ -35,6 +35,7 @@ struct personalos_ios_v2App: App {
 
 // MARK: - Main Tab View
 struct MainTabView: View {
+    @State private var router = AppRouter()
     @State private var selectedTab = 0
     @State private var showQuickNote = false
     @State private var themeStyle: ThemeStyle = .glass
@@ -78,6 +79,7 @@ struct MainTabView: View {
                     .tag(4)
             }
             .tint(AppTheme.primaryText)
+            .environment(router)
             
             // Quick Note Overlay
             if showQuickNote {

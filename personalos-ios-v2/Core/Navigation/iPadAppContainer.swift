@@ -56,17 +56,17 @@ struct iPadAppContainer: View {
                 case .dashboard:
                     DashboardView()
                 case .health:
-                    HealthCenterView()
+                    HealthHomeView()
                 case .training:
-                    TrainingSystemView()
+                    KnowledgeBaseView()
                 case .trading:
-                    TradingJournalView()
+                    TradingDashboardView()
                 case .social:
-                    SocialBlogView()
+                    SocialDashboardView()
                 case .news:
-                    NewsAggregatorView()
+                    NewsFeedView()
                 case .projects:
-                    ProjectHubView()
+                    ProjectListView()
                 case .tools:
                     ToolsView()
                 }
