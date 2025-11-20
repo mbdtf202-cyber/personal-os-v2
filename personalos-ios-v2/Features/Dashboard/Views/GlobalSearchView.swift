@@ -83,15 +83,15 @@ struct GlobalSearchView: View {
                             .buttonStyle(.plain)
                             
                             Button(action: {
-                                router.navigate(to: .health)
+                                router.navigate(to: .growth)
                                 isPresented = false
                             }) {
-                                ActionRow(icon: "figure.run", title: "Log workout")
+                                ActionRow(icon: "hammer.fill", title: "View projects")
                             }
                             .buttonStyle(.plain)
                             
                             Button(action: {
-                                router.navigate(to: .trading)
+                                router.navigate(to: .wealth)
                                 isPresented = false
                             }) {
                                 ActionRow(icon: "chart.line.uptrend.xyaxis", title: "Log trade")

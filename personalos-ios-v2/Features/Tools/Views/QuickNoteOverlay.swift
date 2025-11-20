@@ -4,6 +4,7 @@ import SwiftData
 struct QuickNoteOverlay: View {
     @Binding var isPresented: Bool
     @State private var noteText: String = ""
+    @State private var saveAsPost: Bool = false
     @FocusState private var isFocused: Bool
     @Environment(\.modelContext) private var modelContext
     
@@ -42,23 +43,28 @@ struct QuickNoteOverlay: View {
                         .cornerRadius(12)
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border, lineWidth: 1))
                     
-                    HStack(spacing: 20) {
-                        Button(action: {
-                            // TODO: Implement document scanning
-                            HapticsManager.shared.light()
-                        }) {
-                            Label("Scan", systemImage: "doc.viewfinder")
-                        }
-                        Button(action: {
-                            // TODO: Implement image picker
-                            HapticsManager.shared.light()
-                        }) {
-                            Label("Image", systemImage: "photo")
+                    // Save options
+                    HStack(spacing: 12) {
+                        Button(action: { saveAsPost.toggle() }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: saveAsPost ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(saveAsPost ? AppTheme.lavender : AppTheme.secondaryText)
+                                Text("Save as Social Post")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.primaryText)
+                            }
                         }
                         Spacer()
                     }
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.secondaryText)
+                    
+                    Divider()
+                    
+                    HStack(spacing: 20) {
+                        Text(saveAsPost ? "Will be saved to Social tab" : "Will be saved as Task")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.secondaryText)
+                        Spacer()
+                    }
                 }
                 .padding(24)
                 .background(Color.white)
@@ -75,18 +81,34 @@ struct QuickNoteOverlay: View {
         let trimmedText = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
         
-        // Save as a todo item for now
-        let todo = TodoItem(
-            title: trimmedText.components(separatedBy: .newlines).first ?? trimmedText,
-            category: "Note",
-            priority: 1
-        )
+        if saveAsPost {
+            // Save as Social Post (Idea status)
+            let title = trimmedText.components(separatedBy: .newlines).first ?? trimmedText
+            let post = SocialPost(
+                title: title,
+                platform: .blog,
+                status: .idea,
+                date: Date(),
+                content: trimmedText,
+                views: 0,
+                likes: 0
+            )
+            modelContext.insert(post)
+            Logger.log("Quick note saved as Social Post", category: Logger.general)
+        } else {
+            // Save as Todo Item
+            let title = trimmedText.components(separatedBy: .newlines).first ?? trimmedText
+            let todo = TodoItem(
+                title: title,
+                category: "Note",
+                priority: 1
+            )
+            modelContext.insert(todo)
+            Logger.log("Quick note saved as Task", category: Logger.general)
+        }
         
-        modelContext.insert(todo)
         try? modelContext.save()
-        
         HapticsManager.shared.success()
-        Logger.log("Quick note saved", category: Logger.general)
     }
 }
 

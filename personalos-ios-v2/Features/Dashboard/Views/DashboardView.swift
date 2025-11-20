@@ -16,8 +16,7 @@ struct DashboardView: View {
     @State private var showQuickNote = false
     @State private var showTradeLog = false
     @State private var showQRScanner = false
-    @State private var focusTimer: Timer?
-    @State private var focusTimeRemaining = 25 * 60
+    @State private var focusEndTime: Date?
     @State private var isFocusActive = false
     @State private var activityData: [(String, Double)] = []
 
@@ -102,9 +101,13 @@ struct DashboardView: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(AppTheme.primaryText)
-                Text("\(focusTimeRemaining / 60):\(String(format: "%02d", focusTimeRemaining % 60)) remaining")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.secondaryText)
+                
+                if let endTime = focusEndTime {
+                    Text(endTime, style: .timer)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                        .monospacedDigit()
+                }
             }
             
             Spacer()
@@ -403,26 +406,25 @@ struct DashboardView: View {
         guard !isFocusActive else { return }
         
         isFocusActive = true
-        focusTimeRemaining = 25 * 60
+        focusEndTime = Date().addingTimeInterval(25 * 60) // 25 minutes from now
         HapticsManager.shared.success()
         
-        focusTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            if focusTimeRemaining > 0 {
-                focusTimeRemaining -= 1
-            } else {
+        Logger.log("Focus session started (25 min)", category: Logger.general)
+        
+        // Schedule notification for when focus ends (optional)
+        Task {
+            try? await Task.sleep(nanoseconds: 25 * 60 * 1_000_000_000)
+            if isFocusActive {
                 stopFocusSession()
                 HapticsManager.shared.success()
             }
         }
-        
-        Logger.log("Focus session started (25 min)", category: Logger.general)
     }
     
     private func stopFocusSession() {
-        focusTimer?.invalidate()
-        focusTimer = nil
         isFocusActive = false
-        focusTimeRemaining = 25 * 60
+        focusEndTime = nil
+        Logger.log("Focus session ended", category: Logger.general)
     }
     
     private func priorityColor(for priority: Int) -> Color {
