@@ -86,3 +86,27 @@ class HealthKitService: ObservableObject {
         healthStore.execute(query)
     }
 }
+
+    
+    func fetchSleepHours(from startDate: Date, to endDate: Date) async -> Double {
+        guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else { return 0 }
+        
+        return await withCheckedContinuation { continuation in
+            let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+            
+            let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
+                guard let samples = samples as? [HKCategorySample] else {
+                    continuation.resume(returning: 0)
+                    return
+                }
+                
+                let sleepHours = samples
+                    .filter { $0.value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue }
+                    .reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) / 3600 }
+                
+                continuation.resume(returning: sleepHours)
+            }
+            
+            self.healthStore.execute(query)
+        }
+    }

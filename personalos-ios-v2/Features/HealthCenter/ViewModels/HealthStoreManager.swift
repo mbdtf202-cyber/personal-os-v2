@@ -26,15 +26,28 @@ class HealthStoreManager {
         sleepHours = healthKitService.lastNightSleep
         heartRate = healthKitService.heartRate
         
-        // Generate sleep history from last 7 days
+        // Fetch real sleep history from last 7 days
+        await fetchSleepHistory()
+    }
+    
+    private func fetchSleepHistory() async {
         let calendar = Calendar.current
         let today = Date()
-        sleepHistory = (0..<7).reversed().map { offset in
+        var history: [(day: String, hours: Double)] = []
+        
+        for offset in (0..<7).reversed() {
             let date = calendar.date(byAdding: .day, value: -offset, to: today)!
             let daySymbol = calendar.shortWeekdaySymbols[calendar.component(.weekday, from: date) - 1]
-            let hours = Double.random(in: 6.0...9.0) // TODO: Fetch real data
-            return (daySymbol, hours)
+            
+            // Fetch real sleep data for this date
+            let startOfDay = calendar.startOfDay(for: date)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+            let hours = await healthKitService.fetchSleepHours(from: startOfDay, to: endOfDay)
+            
+            history.append((daySymbol, hours))
         }
+        
+        sleepHistory = history
     }
 }
 

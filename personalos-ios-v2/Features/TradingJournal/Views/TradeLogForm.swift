@@ -58,14 +58,17 @@ struct TradeLogForm: View {
     private func saveTrade() {
         let p = Double(price) ?? 0.0
         let q = Double(quantity) ?? 0.0
-        let newTrade = SchemaV1.TradeRecord(
+        let tradeType: TradeType = (type == .buy) ? .buy : .sell
+        let newTrade = TradeRecord(
             symbol: symbol.uppercased(),
-            type: type.rawValue,
+            type: tradeType,
             price: p,
             quantity: q,
+            assetType: .stock,
+            emotion: .neutral,
             note: note
         )
-        modelContext.insert(newTrade) // ⚠️ 写入
+        modelContext.insert(newTrade)
         dismiss()
     }
 }

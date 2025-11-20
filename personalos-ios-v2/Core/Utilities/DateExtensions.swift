@@ -24,18 +24,18 @@ extension Date {
     /// 格式化为友好的字符串
     var friendlyString: String {
         if isToday {
-            return "今天"
+            return NSLocalizedString("Today", comment: "")
         } else if isYesterday {
-            return "昨天"
+            return NSLocalizedString("Yesterday", comment: "")
         } else if isThisWeek {
             let formatter = DateFormatter()
             formatter.dateFormat = "EEEE"
-            formatter.locale = Locale(identifier: "zh_CN")
+            formatter.locale = Locale.current
             return formatter.string(from: self)
         } else {
             let formatter = DateFormatter()
-            formatter.dateFormat = "MM月dd日"
-            formatter.locale = Locale(identifier: "zh_CN")
+            formatter.dateStyle = .short
+            formatter.locale = Locale.current
             return formatter.string(from: self)
         }
     }
@@ -43,8 +43,9 @@ extension Date {
     /// 格式化为完整日期时间
     var fullDateTimeString: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy年MM月dd日 HH:mm"
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateStyle = .long
+        formatter.timeStyle = .short
+        formatter.locale = Locale.current
         return formatter.string(from: self)
     }
     

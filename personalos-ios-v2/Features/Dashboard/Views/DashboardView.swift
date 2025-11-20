@@ -4,6 +4,7 @@ import SwiftData
 
 struct DashboardView: View {
     @State private var viewModel = DashboardViewModel()
+    @State private var healthManager = HealthStoreManager()
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TodoItem.createdAt, order: .reverse) private var tasks: [TodoItem]
     @State private var showAddTask = false
@@ -85,11 +86,35 @@ struct DashboardView: View {
     private var healthSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
-                ProgressRing(progress: 0.75, color: AppTheme.matcha, icon: "figure.walk", title: "Steps", value: "6,540", unit: "")
-                ProgressRing(progress: 0.85, color: AppTheme.mistBlue, icon: "bed.double.fill", title: "Sleep", value: "7.5", unit: "h")
-                ProgressRing(progress: 0.4, color: AppTheme.coral, icon: "flame.fill", title: "Cals", value: "420", unit: "kcal")
+                ProgressRing(
+                    progress: min(Double(healthManager.steps) / 10000.0, 1.0),
+                    color: AppTheme.matcha,
+                    icon: "figure.walk",
+                    title: "Steps",
+                    value: "\(healthManager.steps)",
+                    unit: ""
+                )
+                ProgressRing(
+                    progress: min(healthManager.sleepHours / 8.0, 1.0),
+                    color: AppTheme.mistBlue,
+                    icon: "bed.double.fill",
+                    title: "Sleep",
+                    value: String(format: "%.1f", healthManager.sleepHours),
+                    unit: "h"
+                )
+                ProgressRing(
+                    progress: healthManager.energyLevel,
+                    color: AppTheme.coral,
+                    icon: "flame.fill",
+                    title: "Energy",
+                    value: "\(Int(healthManager.energyLevel * 100))",
+                    unit: "%"
+                )
             }
             .padding(.vertical, 10)
+        }
+        .task {
+            await healthManager.syncHealthData()
         }
     }
     
