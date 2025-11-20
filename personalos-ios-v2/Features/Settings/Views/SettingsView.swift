@@ -192,7 +192,6 @@ struct SettingsView: View {
                 try modelContext.delete(model: ProjectItem.self)
                 try modelContext.delete(model: SocialPost.self)
                 try modelContext.delete(model: CodeSnippet.self)
-                try modelContext.delete(model: HabitLog.self)
                 
                 try modelContext.save()
                 
