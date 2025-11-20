@@ -21,7 +21,15 @@ struct personalos_ios_v2App: App {
                 MainTabView()
             }
         }
-        .modelContainer(for: [TodoItem.self, TradeRecord.self, SocialPost.self, HealthLog.self, HabitItem.self])
+        .modelContainer(for: [
+            TodoItem.self,
+            HealthLog.self,
+            SocialPost.self,
+            ProjectItem.self,
+            NewsItem.self,
+            TradeRecord.self,
+            AssetItem.self
+        ])
     }
 }
 

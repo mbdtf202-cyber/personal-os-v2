@@ -7,7 +7,10 @@ struct iPadAppContainer: View {
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             // Sidebar
-            List(selection: $router.selectedTab) {
+            List(selection: Binding(
+                get: { router.selectedTab },
+                set: { if let value = $0 { router.selectedTab = value } }
+            )) {
                 Section("Core") {
                     NavigationLink(value: AppRouter.Tab.dashboard) {
                         Label("Dashboard", systemImage: "square.grid.2x2")

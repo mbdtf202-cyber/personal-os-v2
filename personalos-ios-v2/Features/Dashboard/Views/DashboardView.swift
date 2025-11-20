@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import SwiftData
 
 struct DashboardView: View {
@@ -33,6 +34,11 @@ struct DashboardView: View {
                     GlobalSearchView(isPresented: $viewModel.showGlobalSearch)
                 }
             }
+        }
+        .alert("Error", isPresented: $viewModel.isError) {
+            Button("OK") { viewModel.clearError() }
+        } message: {
+            Text(viewModel.errorMessage ?? "Unknown error")
         }
         .alert("Action Ready", isPresented: Binding(
             get: { quickActionMessage != nil },

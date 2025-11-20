@@ -27,7 +27,7 @@ struct TradingDashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { Task { await viewModel.refreshPrices() } }) {
+                    Button(action: { Task { await viewModel.refreshPrices(for: trades) } }) {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 18))
                             .foregroundStyle(AppTheme.primaryText)
@@ -36,13 +36,13 @@ struct TradingDashboardView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { showLogForm = true }) {
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 22))
-                            .foregroundStyle(AppTheme.almond)
+                        .font(.system(size: 22))
+                        .foregroundStyle(AppTheme.almond)
                     }
                 }
             }
             .sheet(isPresented: $showLogForm) {
-                TradeLogForm(viewModel: viewModel)
+                TradeLogForm()
             }
         }
         .onAppear(perform: seedTradesIfNeeded)
@@ -51,7 +51,7 @@ struct TradingDashboardView: View {
         }
         .onAppear {
             viewModel.recalculate(with: trades)
-            Task { await viewModel.refreshPrices() }
+            Task { await viewModel.refreshPrices(for: trades) }
         }
     }
     
@@ -184,10 +184,9 @@ struct TradingDashboardView: View {
         }
     }
 
+    // Seed logic removed
     private func seedTradesIfNeeded() {
-        guard trades.isEmpty else { return }
-        PortfolioViewModel.seedSampleTrades().forEach { modelContext.insert($0) }
-        try? modelContext.save()
+        // No-op
     }
 }
 

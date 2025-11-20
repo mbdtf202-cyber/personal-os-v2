@@ -16,7 +16,7 @@ struct ToolsView: View {
                         NavigationLink {
                             ToolDetailView(tool: tool)
                         } label: {
-                            FrostedCard {
+                            VStack(alignment: .leading, spacing: 12) {
                                 HStack(spacing: 12) {
                                     Image(systemName: tool.icon)
                                         .font(.title2)
@@ -41,6 +41,7 @@ struct ToolsView: View {
                                         .foregroundStyle(MorandiColors.textSecondary)
                                 }
                             }
+                            .glassCard()
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("打开 \(tool.title) 工具")
@@ -88,44 +89,108 @@ struct ToolDetailView: View {
                     }
                 }
 
-                FrostedCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("快捷操作")
-                            .font(Typography.titleSmall)
+                // OCR 工具
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "doc.text.viewfinder")
+                            .font(.title2)
                             .foregroundColor(MorandiColors.textPrimary)
-                        Text("通过快捷操作快速启动或记录你的工作，所有操作都会记录到历史活动中，避免遗漏。")
-                            .font(Typography.bodySmall)
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption)
                             .foregroundColor(MorandiColors.textSecondary)
-
-                        Button {
-                            showConfirmation = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "play.circle.fill")
-                                Text(tool.primaryAction)
-                                    .fontWeight(.semibold)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(tool.accent.opacity(0.2))
+                    }
+                    
+                    Text("OCR 扫描")
+                        .font(Typography.headlineSmall)
+                        .foregroundColor(MorandiColors.textPrimary)
+                    
+                    Text("提取图片中的文字")
+                        .font(Typography.bodySmall)
+                        .foregroundColor(MorandiColors.textSecondary)
+                }
+                .glassCard()
+                
+                // PDF 工具
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "doc.on.doc")
+                            .font(.title2)
                             .foregroundColor(MorandiColors.textPrimary)
-                            .cornerRadius(12)
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption)
+                            .foregroundColor(MorandiColors.textSecondary)
+                    }
+                    
+                    Text("PDF 合并")
+                        .font(Typography.headlineSmall)
+                        .foregroundColor(MorandiColors.textPrimary)
+                    
+                    Text("多文件快速合并")
+                        .font(Typography.bodySmall)
+                        .foregroundColor(MorandiColors.textSecondary)
+                }
+                .glassCard()
+                
+                // 二维码工具
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "qrcode.viewfinder")
+                            .font(.title2)
+                            .foregroundColor(MorandiColors.textPrimary)
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption)
+                            .foregroundColor(MorandiColors.textSecondary)
+                    }
+                    
+                    Text("二维码生成")
+                        .font(Typography.headlineSmall)
+                        .foregroundColor(MorandiColors.textPrimary)
+                    
+                    Text("文本/链接转二维码")
+                        .font(Typography.bodySmall)
+                        .foregroundColor(MorandiColors.textSecondary)
+                }
+                .glassCard()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("快捷操作")
+                        .font(Typography.titleSmall)
+                        .foregroundColor(MorandiColors.textPrimary)
+                    Text("通过快捷操作快速启动或记录你的工作，所有操作都会记录到历史活动中，避免遗漏。")
+                        .font(Typography.bodySmall)
+                        .foregroundColor(MorandiColors.textSecondary)
+
+                    Button {
+                        showConfirmation = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "play.circle.fill")
+                            Text(tool.primaryAction)
+                                .fontWeight(.semibold)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("执行 \(tool.primaryAction)")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(tool.accent.opacity(0.2))
+                        .foregroundColor(MorandiColors.textPrimary)
+                        .cornerRadius(12)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("执行 \(tool.primaryAction)")
                 }
+                .glassCard()
 
-                FrostedCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("使用建议")
-                            .font(Typography.titleSmall)
-                            .foregroundColor(MorandiColors.textPrimary)
-                        Text("为每个工具设置每周目标和提醒时间，确保定期复盘。你也可以在仪表盘添加对应的快捷入口。")
-                            .font(Typography.bodySmall)
-                            .foregroundColor(MorandiColors.textSecondary)
-                    }
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("使用建议")
+                        .font(Typography.titleSmall)
+                        .foregroundColor(MorandiColors.textPrimary)
+                    Text("为每个工具设置每周目标和提醒时间，确保定期复盘。你也可以在仪表盘添加对应的快捷入口。")
+                        .font(Typography.bodySmall)
+                        .foregroundColor(MorandiColors.textSecondary)
                 }
+                .glassCard()
             }
             .padding(16)
         }

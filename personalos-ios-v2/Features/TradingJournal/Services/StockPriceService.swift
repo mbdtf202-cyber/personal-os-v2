@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 struct StockQuote: Codable {
     let symbol: String

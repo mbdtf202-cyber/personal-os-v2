@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct MoodLogView: View {
     @Binding var energyLevel: Double // 0.0 - 1.0

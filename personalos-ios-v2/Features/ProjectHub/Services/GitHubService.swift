@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 struct GitHubRepo: Codable, Identifiable {
     let id: Int

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Combine
 
 @Model
 final class HabitItem {

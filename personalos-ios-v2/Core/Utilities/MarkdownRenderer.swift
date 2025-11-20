@@ -18,7 +18,7 @@ struct MarkdownText: View {
             
             for match in matches.reversed() {
                 if let range = Range(match.range, in: content) {
-                    let codeText = String(content[range])
+                    _ = String(content[range])
                     if let attrRange = Range(match.range, in: result) {
                         result[attrRange].font = .system(.body, design: .monospaced)
                         result[attrRange].backgroundColor = Color.gray.opacity(0.2)
@@ -33,7 +33,7 @@ struct MarkdownText: View {
             let matches = boldRegex.matches(in: content, range: NSRange(location: 0, length: nsString.length))
             
             for match in matches.reversed() {
-                if let range = Range(match.range, in: content) {
+                if Range(match.range, in: content) != nil {
                     if let attrRange = Range(match.range, in: result) {
                         result[attrRange].font = .system(.body).bold()
                     }
@@ -89,7 +89,7 @@ struct CodeBlockView: View {
                     let matches = regex.matches(in: code, range: NSRange(location: 0, length: nsString.length))
                     
                     for match in matches {
-                        if let range = Range(match.range, in: code) {
+                        if Range(match.range, in: code) != nil {
                             if let attrRange = Range(match.range, in: result) {
                                 result[attrRange].foregroundColor = Color(hex: "FC6A5D")
                             }

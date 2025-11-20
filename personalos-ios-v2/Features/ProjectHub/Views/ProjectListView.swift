@@ -1,28 +1,6 @@
 import SwiftUI
 
-struct ProjectItem: Identifiable {
-    let id = UUID()
-    var name: String
-    var description: String
-    var language: String
-    var stars: Int
-    var status: ProjectStatus
-    var progress: Double
-}
-
-enum ProjectStatus: String {
-    case active = "Active"
-    case idea = "Idea"
-    case done = "Done"
-    
-    var color: Color {
-        switch self {
-        case .active: return AppTheme.mistBlue
-        case .idea: return AppTheme.almond
-        case .done: return AppTheme.matcha
-        }
-    }
-}
+// Models moved to UnifiedSchema.swift
 
 struct ProjectListView: View {
     @StateObject private var githubService = GitHubService()
@@ -88,10 +66,10 @@ struct ProjectListView: View {
     private func loadProjects() {
         if projects.isEmpty {
             projects = [
-                ProjectItem(name: "Personal OS", description: "An all-in-one iOS life operating system.", language: "Swift", stars: 124, status: .active, progress: 0.65),
-                ProjectItem(name: "AI Agent API", description: "Python backend for LLM processing.", language: "Python", stars: 45, status: .active, progress: 0.3),
-                ProjectItem(name: "Portfolio Site", description: "Next.js static site.", language: "TypeScript", stars: 12, status: .done, progress: 1.0),
-                ProjectItem(name: "Smart Home Hub", description: "IoT control center ideas.", language: "C++", stars: 0, status: .idea, progress: 0.0)
+                ProjectItem(name: "Personal OS", details: "An all-in-one iOS life operating system.", language: "Swift", stars: 124, status: .active, progress: 0.65),
+                ProjectItem(name: "AI Agent API", details: "Python backend for LLM processing.", language: "Python", stars: 45, status: .active, progress: 0.3),
+                ProjectItem(name: "Portfolio Site", details: "Next.js static site.", language: "TypeScript", stars: 12, status: .done, progress: 1.0),
+                ProjectItem(name: "Smart Home Hub", details: "IoT control center ideas.", language: "C++", stars: 0, status: .idea, progress: 0.0)
             ]
         }
     }
@@ -144,7 +122,7 @@ struct GitHubSyncSheet: View {
         projects = githubService.repos.map { repo in
             ProjectItem(
                 name: repo.name,
-                description: repo.description ?? "No description",
+                details: repo.description ?? "No description",
                 language: repo.language ?? "Unknown",
                 stars: repo.stargazersCount,
                 status: .active,
@@ -187,7 +165,7 @@ struct ProjectRow: View {
                     Text(project.name)
                         .font(.headline)
                         .foregroundStyle(AppTheme.primaryText)
-                    Text(project.description)
+                    Text(project.details)
                         .font(.caption)
                         .foregroundStyle(AppTheme.secondaryText)
                         .lineLimit(1)

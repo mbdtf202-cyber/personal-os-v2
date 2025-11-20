@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct NewsFeedView: View {
     @StateObject private var newsService = NewsService()
@@ -106,7 +107,7 @@ struct NewsFeedView: View {
                     category: selectedCategory,
                     image: "newspaper.fill",
                     date: Date(),
-                    url: article.url
+                    url: URL(string: article.url)
                 )
             }
         }
