@@ -13,11 +13,24 @@ class StockPriceService: ObservableObject {
     @Published var quotes: [String: StockQuote] = [:]
     @Published var isLoading = false
     
-    // Using Alpha Vantage API - Get free key at https://www.alphavantage.co/support/#api-key
-    private let apiKey = "YOUR_API_KEY_HERE" // TODO: Replace with real key
+    private var apiKey: String {
+        APIConfig.stockAPIKey
+    }
     
     func fetchQuote(symbol: String) async {
         isLoading = true
+        
+        // Use mock data if API key not configured
+        guard APIConfig.hasValidStockAPIKey else {
+            quotes[symbol] = StockQuote(
+                symbol: symbol,
+                price: getMockPrice(for: symbol),
+                change: Double.random(in: -5...5),
+                changePercent: Double.random(in: -2...2)
+            )
+            isLoading = false
+            return
+        }
         
         guard let url = URL(string: "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=\(symbol)&apikey=\(apiKey)") else {
             isLoading = false
