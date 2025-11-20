@@ -65,7 +65,10 @@ struct TradeLogForm: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveTrade() }
+                    Button("Save") {
+                        saveTrade()
+                        dismiss()
+                    }
                         .fontWeight(.bold)
                         .foregroundStyle(AppTheme.primaryText)
                 }
@@ -79,7 +82,7 @@ struct TradeLogForm: View {
               let priceValue = Double(price),
               let quantityValue = Double(quantity) else { return }
 
-        let newTrade = TradeRecord(
+        let newTrade = SchemaV1.TradeRecord(
             symbol: trimmedSymbol,
             type: type,
             price: priceValue,
@@ -88,9 +91,8 @@ struct TradeLogForm: View {
             emotion: emotion,
             note: note
         )
-        
+
         modelContext.insert(newTrade)
-        dismiss()
     }
 }
 
