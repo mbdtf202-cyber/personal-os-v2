@@ -4,7 +4,7 @@ import Charts
 
 struct TradingDashboardView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \TradeRecord.date, order: .reverse) private var trades: [TradeRecord]
+    @Query(sort: \SchemaV1.TradeRecord.date, order: .reverse) private var trades: [SchemaV1.TradeRecord]
     @State private var viewModel = PortfolioViewModel()
     @State private var showLogForm = false
 
@@ -192,5 +192,5 @@ struct TradingDashboardView: View {
 
 #Preview {
     TradingDashboardView()
-        .modelContainer(for: TradeRecord.self, inMemory: true)
+        .modelContainer(for: SchemaV1.TradeRecord.self, inMemory: true)
 }
