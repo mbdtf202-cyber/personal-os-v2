@@ -42,7 +42,7 @@ class NewsService {
         
         // Use mock data if API key not configured
         guard APIConfig.hasValidNewsAPIKey else {
-            Logger.debug("News API key not configured, skipping fetch", category: .network)
+            Logger.debug("News API key not configured, skipping fetch", category: Logger.network)
             isLoading = false
             return
         }
@@ -58,7 +58,7 @@ class NewsService {
             
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 error = "Failed to fetch news"
-                Logger.error("News API request failed with status: \((response as? HTTPURLResponse)?.statusCode ?? 0)", category: .network)
+                Logger.error("News API request failed with status: \((response as? HTTPURLResponse)?.statusCode ?? 0)", category: Logger.network)
                 isLoading = false
                 return
             }
@@ -66,11 +66,11 @@ class NewsService {
             let decoder = JSONDecoder()
             let newsResponse = try decoder.decode(NewsResponse.self, from: data)
             articles = newsResponse.articles
-            Logger.log("Successfully fetched \(articles.count) news articles", category: .network)
+            Logger.log("Successfully fetched \(articles.count) news articles", category: Logger.network)
             isLoading = false
         } catch {
             self.error = error.localizedDescription
-            Logger.error("Failed to fetch news: \(error.localizedDescription)", category: .network)
+            Logger.error("Failed to fetch news: \(error.localizedDescription)", category: Logger.network)
             isLoading = false
         }
     }

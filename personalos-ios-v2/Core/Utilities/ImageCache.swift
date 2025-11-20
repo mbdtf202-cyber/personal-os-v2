@@ -66,7 +66,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
                 image = downloadedImage
             }
         } catch {
-            Logger.error("Failed to load image: \(error.localizedDescription)", category: .network)
+            Logger.error("Failed to load image: \(error.localizedDescription)", category: Logger.network)
         }
         
         isLoading = false

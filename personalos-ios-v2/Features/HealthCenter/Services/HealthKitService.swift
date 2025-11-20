@@ -34,7 +34,7 @@ class HealthKitService {
             await fetchLatestHeartRate()
         } catch {
             authorizationDenied = true
-            Logger.error("HealthKit authorization failed: \(error.localizedDescription)", category: .health)
+            Logger.error("HealthKit authorization failed: \(error.localizedDescription)", category: Logger.health)
         }
     }
     

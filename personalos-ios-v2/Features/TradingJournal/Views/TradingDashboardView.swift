@@ -5,14 +5,12 @@ import SwiftData
 struct TradingDashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(StockPriceService.self) private var stockPriceService
-    @Query(
-        filter: #Predicate<TradeRecord> { trade in
-            // Only load trades from last 90 days for performance
-            trade.date > Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? Date()
-        },
-        sort: \TradeRecord.date,
-        order: .reverse
-    ) private var recentTrades: [TradeRecord]
+    @Query(sort: \TradeRecord.date, order: .reverse) private var allTrades: [TradeRecord]
+    
+    private var recentTrades: [TradeRecord] {
+        let ninetyDaysAgo = Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? Date()
+        return allTrades.filter { $0.date > ninetyDaysAgo }
+    }
     @State private var viewModel = PortfolioViewModel()
     @State private var showLogForm = false
     @State private var showPriceError = false

@@ -5,11 +5,17 @@ import SwiftData
 struct DashboardView: View {
     @State private var viewModel = DashboardViewModel()
     @Environment(HealthStoreManager.self) private var healthManager
+    @Environment(AppRouter.self) private var router
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TodoItem.createdAt, order: .reverse) private var tasks: [TodoItem]
     @State private var showAddTask = false
     @State private var newTaskTitle = ""
-    @State private var quickActionMessage: String?
+    @State private var showQuickNote = false
+    @State private var showTradeLog = false
+    @State private var showQRScanner = false
+    @State private var focusTimer: Timer?
+    @State private var focusTimeRemaining = 25 * 60
+    @State private var isFocusActive = false
 
     init() {}
 
@@ -21,6 +27,11 @@ struct DashboardView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
                         headerSection
+                        
+                        // Focus Session Indicator
+                        if isFocusActive {
+                            focusSessionBanner
+                        }
                         
                         // Configuration prompt if API keys not set
                         if !APIConfig.hasValidStockAPIKey || !APIConfig.hasValidNewsAPIKey {
@@ -47,24 +58,60 @@ struct DashboardView: View {
         } message: {
             Text(viewModel.errorMessage ?? "Unknown error")
         }
-        .alert("Action Ready", isPresented: Binding(
-            get: { quickActionMessage != nil },
-            set: { isPresented in
-                if !isPresented { quickActionMessage = nil }
-            }
-        )) {
-            Button("OK") {
-                quickActionMessage = nil
-            }
-        } message: {
-            if let message = quickActionMessage {
-                Text(message)
-            }
+        .sheet(isPresented: $showQuickNote) {
+            QuickNoteOverlay(isPresented: $showQuickNote)
+        }
+        .sheet(isPresented: $showTradeLog) {
+            TradeLogForm()
+        }
+        .sheet(isPresented: $showQRScanner) {
+            QRCodeGeneratorView()
         }
         .onAppear(perform: seedTasksIfNeeded)
     }
     
     // MARK: - Subviews
+    
+    private var focusSessionBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "moon.stars.fill")
+                .font(.title2)
+                .foregroundStyle(AppTheme.lavender)
+                .frame(width: 44, height: 44)
+                .background(AppTheme.lavender.opacity(0.15))
+                .clipShape(Circle())
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Focus Mode Active")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppTheme.primaryText)
+                Text("\(focusTimeRemaining / 60):\(String(format: "%02d", focusTimeRemaining % 60)) remaining")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+            
+            Spacer()
+            
+            Button(action: stopFocusSession) {
+                Text("Stop")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.coral)
+                    .cornerRadius(8)
+            }
+        }
+        .padding()
+        .background(AppTheme.lavender.opacity(0.1))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(AppTheme.lavender.opacity(0.3), lineWidth: 1)
+        )
+    }
     
     private var configurationPrompt: some View {
         NavigationLink(destination: SettingsView()) {
@@ -263,7 +310,50 @@ struct DashboardView: View {
     }
 
     private func handleQuickAction(_ title: String) {
-        quickActionMessage = "\(title) 已准备就绪，稍后将在对应模块中执行。"
+        HapticsManager.shared.light()
+        
+        switch title {
+        case "Add Note":
+            showQuickNote = true
+            
+        case "Log Trade":
+            showTradeLog = true
+            
+        case "Focus":
+            startFocusSession()
+            
+        case "Scan":
+            showQRScanner = true
+            
+        default:
+            break
+        }
+    }
+    
+    private func startFocusSession() {
+        guard !isFocusActive else { return }
+        
+        isFocusActive = true
+        focusTimeRemaining = 25 * 60
+        HapticsManager.shared.success()
+        
+        focusTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            if focusTimeRemaining > 0 {
+                focusTimeRemaining -= 1
+            } else {
+                stopFocusSession()
+                HapticsManager.shared.success()
+            }
+        }
+        
+        Logger.log("Focus session started (25 min)", category: Logger.general)
+    }
+    
+    private func stopFocusSession() {
+        focusTimer?.invalidate()
+        focusTimer = nil
+        isFocusActive = false
+        focusTimeRemaining = 25 * 60
     }
 
     private func seedTasksIfNeeded() {

@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct SettingsView: View {
     @AppStorage("stockAPIKey") private var stockAPIKey = ""
@@ -123,7 +124,7 @@ struct SettingsView: View {
             }
         }
         
-        Logger.log("API keys updated", category: .general)
+        Logger.log("API keys updated", category: Logger.general)
     }
     
     private func exportData() {
@@ -164,10 +165,10 @@ struct SettingsView: View {
                     }
                     
                     HapticsManager.shared.success()
-                    Logger.log("Data exported successfully", category: .general)
+                    Logger.log("Data exported successfully", category: Logger.general)
                 }
             } catch {
-                Logger.error("Failed to export data: \(error.localizedDescription)", category: .general)
+                Logger.error("Failed to export data: \(error.localizedDescription)", category: Logger.general)
             }
         }
     }

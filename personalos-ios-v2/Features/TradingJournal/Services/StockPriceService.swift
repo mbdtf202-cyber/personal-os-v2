@@ -31,7 +31,7 @@ class StockPriceService {
                 change: Double.random(in: -5...5),
                 changePercent: Double.random(in: -2...2)
             )
-            Logger.debug("Stock API key not configured, using mock data for \(symbol)", category: .trading)
+            Logger.debug("Stock API key not configured, using mock data for \(symbol)", category: Logger.trading)
             isLoading = false
             return
         }
@@ -56,16 +56,16 @@ class StockPriceService {
                 
                 let quote = StockQuote(symbol: symbol, price: price, change: change, changePercent: changePercent)
                 quotes[symbol] = quote
-                Logger.log("Successfully fetched quote for \(symbol): $\(price)", category: .trading)
+                Logger.log("Successfully fetched quote for \(symbol): $\(price)", category: Logger.trading)
             } else {
                 error = "Failed to parse stock data"
-                Logger.error("Failed to parse stock data for \(symbol)", category: .trading)
+                Logger.error("Failed to parse stock data for \(symbol)", category: Logger.trading)
             }
             
             isLoading = false
         } catch {
             self.error = error.localizedDescription
-            Logger.error("Failed to fetch quote for \(symbol): \(error.localizedDescription)", category: .trading)
+            Logger.error("Failed to fetch quote for \(symbol): \(error.localizedDescription)", category: Logger.trading)
             isLoading = false
         }
     }
@@ -80,7 +80,7 @@ class StockPriceService {
             
             // Add delay after every 5 requests
             if (index + 1) % batchSize == 0 && index < symbols.count - 1 {
-                Logger.log("Rate limit: waiting 60s before next batch", category: .trading)
+                Logger.log("Rate limit: waiting 60s before next batch", category: Logger.trading)
                 try? await Task.sleep(nanoseconds: delayBetweenBatches)
             } else if index < symbols.count - 1 {
                 // Small delay between individual requests

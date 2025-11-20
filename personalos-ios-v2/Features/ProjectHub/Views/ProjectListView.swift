@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 // Models moved to UnifiedSchema.swift
 
@@ -33,8 +34,12 @@ struct ProjectListView: View {
                         // GitHub Sync Button
                         Button(action: { showGitHubSync = true }) {
                             HStack {
-                                Image(systemName: githubService.isLoading ? "arrow.triangle.2.circlepath" : "arrow.triangle.2.circlepath")
-                                    .symbolEffect(.rotate, isActive: githubService.isLoading)
+                                if githubService.isLoading {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                }
                                 Text("Sync with GitHub")
                             }
                             .font(.headline)
@@ -139,7 +144,7 @@ struct GitHubSyncSheet: View {
         
         try? modelContext.save()
         HapticsManager.shared.success()
-        Logger.log("Synced \(githubService.repos.count) projects from GitHub", category: .general)
+        Logger.log("Synced \(githubService.repos.count) projects from GitHub", category: Logger.general)
     }
 }
 
@@ -230,5 +235,9 @@ struct StatusBadge: View {
 }
 
 #Preview {
+    let container = try! ModelContainer(for: ProjectItem.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    
     ProjectListView()
+        .modelContainer(container)
+        .environment(GitHubService())
 }
