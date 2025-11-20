@@ -13,12 +13,25 @@ class HealthStoreManager {
     var heartRate: Int = 0
 
     var sleepHistory: [(day: String, hours: Double)] = []
+    
+    var isHealthKitAvailable: Bool {
+        #if targetEnvironment(macCatalyst)
+        return false
+        #else
+        return true
+        #endif
+    }
 
     init() {
         Task {
             await healthKitService.requestAuthorization()
             await syncHealthData()
         }
+    }
+    
+    func requestHealthKitAuthorization() async {
+        await healthKitService.requestAuthorization()
+        await syncHealthData()
     }
     
     func syncHealthData() async {

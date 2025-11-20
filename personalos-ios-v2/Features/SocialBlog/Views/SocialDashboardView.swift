@@ -7,13 +7,38 @@ struct SocialDashboardView: View {
     @State private var showEditor = false
     @State private var newPost = SocialPost(title: "", platform: .twitter, status: .idea, date: Date(), content: "", views: 0, likes: 0)
     @State private var selectedPost: SocialPost?
+    @State private var selectedDate: Date?
 
     private var upcomingPosts: [SocialPost] {
-        posts.filter { $0.status == .scheduled }.sorted { $0.date < $1.date }
+        let filtered = posts.filter { $0.status == .scheduled }
+        if let date = selectedDate {
+            return filtered.filter { Calendar.current.isDate($0.date, inSameDayAs: date) }.sorted { $0.date < $1.date }
+        }
+        return filtered.sorted { $0.date < $1.date }
     }
 
     private var drafts: [SocialPost] {
-        posts.filter { $0.status == .draft || $0.status == .idea }
+        let filtered = posts.filter { $0.status == .draft || $0.status == .idea }
+        if let date = selectedDate {
+            return filtered.filter { Calendar.current.isDate($0.date, inSameDayAs: date) }
+        }
+        return filtered
+    }
+    
+    private var totalViews: String {
+        let total = posts.reduce(0) { $0 + $1.views }
+        if total >= 1000 {
+            return String(format: "%.1fK", Double(total) / 1000.0)
+        }
+        return "\(total)"
+    }
+    
+    private var engagementRate: String {
+        let totalViews = posts.reduce(0) { $0 + $1.views }
+        let totalLikes = posts.reduce(0) { $0 + $1.likes }
+        guard totalViews > 0 else { return "0%" }
+        let rate = (Double(totalLikes) / Double(totalViews)) * 100
+        return String(format: "%.1f%%", rate)
     }
     
     var body: some View {
@@ -27,7 +52,28 @@ struct SocialDashboardView: View {
                         statsHeader
                         
                         // 2. Calendar
-                        ContentCalendarView(posts: posts)
+                        VStack(alignment: .leading, spacing: 8) {
+                            ContentCalendarView(posts: posts, selectedDate: $selectedDate)
+                            
+                            if selectedDate != nil {
+                                Button(action: { 
+                                    selectedDate = nil
+                                    HapticsManager.shared.light()
+                                }) {
+                                    HStack {
+                                        Image(systemName: "xmark.circle.fill")
+                                        Text("Clear filter")
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.white.opacity(0.5))
+                                    .clipShape(Capsule())
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
                         
                         // 3. Up Next (Scheduled)
                         sectionHeader(title: "Up Next", icon: "clock.fill", color: .blue)
@@ -40,17 +86,27 @@ struct SocialDashboardView: View {
                                         selectedPost = post
                                         HapticsManager.shared.light()
                                     }
+                                    .contextMenu {
+                                        statusContextMenu(for: post)
+                                    }
                             }
                         }
 
                         // 4. Drafts & Ideas
                         sectionHeader(title: "Drafts & Ideas", icon: "lightbulb.fill", color: .orange)
-                        ForEach(drafts) { post in
-                            PostRowView(post: post)
-                                .onTapGesture {
-                                    selectedPost = post
-                                    HapticsManager.shared.light()
-                                }
+                        if drafts.isEmpty && selectedDate != nil {
+                            SocialEmptyStateView(message: "No drafts for this date.")
+                        } else {
+                            ForEach(drafts) { post in
+                                PostRowView(post: post)
+                                    .onTapGesture {
+                                        selectedPost = post
+                                        HapticsManager.shared.light()
+                                    }
+                                    .contextMenu {
+                                        statusContextMenu(for: post)
+                                    }
+                            }
                         }
                         
                         Spacer(minLength: 100)
@@ -97,8 +153,39 @@ struct SocialDashboardView: View {
     
     private var statsHeader: some View {
         HStack(spacing: 16) {
-            StatBox(title: "Total Views", value: "12.5K", icon: "eye.fill", color: AppTheme.almond)
-            StatBox(title: "Engagement", value: "8.2%", icon: "chart.line.uptrend.xyaxis", color: AppTheme.matcha)
+            StatBox(title: "Total Views", value: totalViews, icon: "eye.fill", color: AppTheme.almond)
+            StatBox(title: "Engagement", value: engagementRate, icon: "chart.line.uptrend.xyaxis", color: AppTheme.matcha)
+        }
+    }
+    
+    @ViewBuilder
+    private func statusContextMenu(for post: SocialPost) -> some View {
+        Button(action: { selectedPost = post }) {
+            Label("Edit", systemImage: "pencil")
+        }
+        
+        Divider()
+        
+        Menu("Change Status") {
+            ForEach([PostStatus.idea, .draft, .scheduled, .published], id: \.self) { status in
+                Button(action: {
+                    post.status = status
+                    try? modelContext.save()
+                    HapticsManager.shared.light()
+                }) {
+                    Label(status.rawValue, systemImage: status == post.status ? "checkmark" : "circle")
+                }
+            }
+        }
+        
+        Divider()
+        
+        Button(role: .destructive, action: {
+            modelContext.delete(post)
+            try? modelContext.save()
+            HapticsManager.shared.light()
+        }) {
+            Label("Delete", systemImage: "trash")
         }
     }
     

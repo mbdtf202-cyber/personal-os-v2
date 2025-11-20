@@ -2,10 +2,7 @@ import SwiftUI
 import Charts
 
 struct ActivityHeatmap: View {
-    let data: [(day: String, value: Double)] = [
-        ("Mon", 45), ("Tue", 80), ("Wed", 30), ("Thu", 65),
-        ("Fri", 90), ("Sat", 50), ("Sun", 75)
-    ]
+    let data: [(day: String, value: Double)]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -50,6 +47,9 @@ struct ActivityHeatmap: View {
 #Preview {
     ZStack {
         AppTheme.background.ignoresSafeArea()
-        ActivityHeatmap().padding()
+        ActivityHeatmap(data: [
+            ("Mon", 45), ("Tue", 80), ("Wed", 30), ("Thu", 65),
+            ("Fri", 90), ("Sat", 50), ("Sun", 75)
+        ]).padding()
     }
 }

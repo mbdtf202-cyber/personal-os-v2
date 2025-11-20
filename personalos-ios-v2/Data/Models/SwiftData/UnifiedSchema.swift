@@ -77,6 +77,7 @@ final class SocialPost {
 enum SocialPlatform: String, CaseIterable, Codable {
     case xiaohongshu = "RedBook"
     case twitter = "X"
+    case weibo = "Weibo"
     case wechat = "WeChat"
     case blog = "Blog"
 
@@ -84,6 +85,7 @@ enum SocialPlatform: String, CaseIterable, Codable {
         switch self {
         case .xiaohongshu: return Color(hex: "FF2442")
         case .twitter: return Color.black
+        case .weibo: return Color(hex: "E6162D")
         case .wechat: return Color(hex: "07C160")
         case .blog: return AppTheme.mistBlue
         }
@@ -93,6 +95,7 @@ enum SocialPlatform: String, CaseIterable, Codable {
         switch self {
         case .xiaohongshu: return "book.fill"
         case .twitter: return "xmark"
+        case .weibo: return "w.circle.fill"
         case .wechat: return "message.fill"
         case .blog: return "doc.text.fill"
         }
@@ -112,6 +115,40 @@ enum PostStatus: String, CaseIterable, Codable {
         case .scheduled: return .blue
         case .published: return .green
         }
+    }
+}
+
+extension SocialPost {
+    static var defaultPosts: [SocialPost] {
+        [
+            SocialPost(
+                title: "iOS 开发技巧分享",
+                platform: .xiaohongshu,
+                status: .draft,
+                date: Date(),
+                content: "今天分享一个 SwiftUI 的实用技巧...",
+                views: 0,
+                likes: 0
+            ),
+            SocialPost(
+                title: "PersonalOS 项目进展",
+                platform: .twitter,
+                status: .scheduled,
+                date: Date().addingTimeInterval(86400),
+                content: "正在开发一个全新的个人操作系统 #SwiftUI #iOS",
+                views: 0,
+                likes: 0
+            ),
+            SocialPost(
+                title: "技术博客：MVVM 架构实践",
+                platform: .blog,
+                status: .idea,
+                date: Date().addingTimeInterval(172800),
+                content: "# MVVM 架构在 SwiftUI 中的应用\n\n本文将详细介绍...",
+                views: 0,
+                likes: 0
+            )
+        ]
     }
 }
 

@@ -8,6 +8,8 @@ struct DashboardView: View {
     @Environment(AppRouter.self) private var router
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TodoItem.createdAt, order: .reverse) private var tasks: [TodoItem]
+    @Query(sort: \SocialPost.createdAt, order: .reverse) private var posts: [SocialPost]
+    @Query(sort: \TradeRecord.entryDate, order: .reverse) private var trades: [TradeRecord]
     @State private var showAddTask = false
     @State private var newTaskTitle = ""
     @State private var showQuickNote = false
@@ -16,6 +18,7 @@ struct DashboardView: View {
     @State private var focusTimer: Timer?
     @State private var focusTimeRemaining = 25 * 60
     @State private var isFocusActive = false
+    @State private var activityData: [(String, Double)] = []
 
     init() {}
 
@@ -40,7 +43,7 @@ struct DashboardView: View {
                         
                         healthSection
                         tasksSection
-                        ActivityHeatmap()
+                        ActivityHeatmap(data: activityData)
                         quickAccessGrid
                         Spacer(minLength: 100)
                     }
@@ -67,7 +70,19 @@ struct DashboardView: View {
         .sheet(isPresented: $showQRScanner) {
             QRCodeGeneratorView()
         }
-        .onAppear(perform: seedTasksIfNeeded)
+        .onAppear {
+            seedTasksIfNeeded()
+            updateActivityData()
+        }
+        .onChange(of: tasks.count) { _, _ in
+            updateActivityData()
+        }
+        .onChange(of: posts.count) { _, _ in
+            updateActivityData()
+        }
+        .onChange(of: trades.count) { _, _ in
+            updateActivityData()
+        }
     }
     
     // MARK: - Subviews
@@ -212,15 +227,46 @@ struct DashboardView: View {
                 .cornerRadius(16)
             } else {
                 ForEach(tasks.prefix(5)) { task in
-                    HStack {
+                    HStack(spacing: 12) {
                         Button(action: { viewModel.toggleTask(task, context: modelContext) }) {
                             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(task.isCompleted ? AppTheme.matcha : AppTheme.mistBlue)
+                                .font(.title3)
+                                .foregroundStyle(task.isCompleted ? AppTheme.matcha : priorityColor(for: task.priority))
                         }
-                        Text(task.title)
-                            .foregroundStyle(AppTheme.primaryText)
-                            .strikethrough(task.isCompleted)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(task.title)
+                                .font(.body)
+                                .foregroundStyle(AppTheme.primaryText)
+                                .strikethrough(task.isCompleted)
+                            
+                            HStack(spacing: 8) {
+                                if let category = task.category {
+                                    Text(category)
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(AppTheme.primaryText)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(categoryColor(for: category).opacity(0.2))
+                                        .clipShape(Capsule())
+                                }
+                                
+                                if task.priority >= 2 {
+                                    HStack(spacing: 2) {
+                                        Image(systemName: "exclamationmark.circle.fill")
+                                            .font(.caption2)
+                                        Text("High")
+                                            .font(.caption2)
+                                            .fontWeight(.medium)
+                                    }
+                                    .foregroundStyle(AppTheme.coral)
+                                }
+                            }
+                        }
+                        
                         Spacer()
+                        
                         Button(action: { viewModel.deleteTask(task, context: modelContext) }) {
                             Image(systemName: "trash")
                                 .foregroundStyle(AppTheme.coral)
@@ -261,7 +307,7 @@ struct DashboardView: View {
     
     private var quickAccessGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-            ForEach(viewModel.quickActions, id: \.title) { action in
+            ForEach(viewModel.quickActions) { action in
                 Button {
                     handleQuickAction(action.title)
                 } label: {
@@ -355,6 +401,24 @@ struct DashboardView: View {
         isFocusActive = false
         focusTimeRemaining = 25 * 60
     }
+    
+    private func priorityColor(for priority: Int) -> Color {
+        switch priority {
+        case 2...: return AppTheme.coral
+        case 1: return AppTheme.almond
+        default: return AppTheme.mistBlue
+        }
+    }
+    
+    private func categoryColor(for category: String) -> Color {
+        switch category.lowercased() {
+        case "work": return AppTheme.mistBlue
+        case "dev", "development": return AppTheme.lavender
+        case "life", "personal": return AppTheme.matcha
+        case "health": return AppTheme.matcha
+        default: return AppTheme.almond
+        }
+    }
 
     private func seedTasksIfNeeded() {
         guard tasks.isEmpty else { return }
@@ -366,44 +430,208 @@ struct DashboardView: View {
         defaults.forEach { modelContext.insert($0) }
         try? modelContext.save()
     }
+    
+    private func updateActivityData() {
+        activityData = viewModel.calculateActivityData(tasks: tasks, posts: posts, trades: trades)
+    }
 }
 
 // MARK: - Health Metrics Section (Optimized for minimal redraws)
 struct HealthMetricsSection: View {
     let healthManager: HealthStoreManager
+    @State private var showHealthPermission = false
     
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 16) {
-                ProgressRing(
-                    progress: min(Double(healthManager.steps) / 10000.0, 1.0),
-                    color: AppTheme.matcha,
-                    icon: "figure.walk",
-                    title: "Steps",
-                    value: "\(healthManager.steps)",
-                    unit: ""
-                )
-                ProgressRing(
-                    progress: min(healthManager.sleepHours / 8.0, 1.0),
-                    color: AppTheme.mistBlue,
-                    icon: "bed.double.fill",
-                    title: "Sleep",
-                    value: String(format: "%.1f", healthManager.sleepHours),
-                    unit: "h"
-                )
-                ProgressRing(
-                    progress: healthManager.energyLevel,
-                    color: AppTheme.coral,
-                    icon: "flame.fill",
-                    title: "Energy",
-                    value: "\(Int(healthManager.energyLevel * 100))",
-                    unit: "%"
-                )
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "heart.fill")
+                    .foregroundStyle(AppTheme.coral)
+                Text("Health Overview")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.primaryText)
+                Spacer()
             }
-            .padding(.vertical, 10)
+            
+            if !healthManager.isHealthKitAvailable {
+                healthUnavailableCard
+            } else if healthManager.steps == 0 && healthManager.sleepHours == 0 {
+                connectHealthCard
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        #if !targetEnvironment(macCatalyst)
+                        ProgressRing(
+                            progress: min(Double(healthManager.steps) / 10000.0, 1.0),
+                            color: AppTheme.matcha,
+                            icon: "figure.walk",
+                            title: "Steps",
+                            value: "\(healthManager.steps)",
+                            unit: ""
+                        )
+                        #endif
+                        
+                        ProgressRing(
+                            progress: min(healthManager.sleepHours / 8.0, 1.0),
+                            color: AppTheme.mistBlue,
+                            icon: "bed.double.fill",
+                            title: "Sleep",
+                            value: String(format: "%.1f", healthManager.sleepHours),
+                            unit: "h"
+                        )
+                        ProgressRing(
+                            progress: healthManager.energyLevel,
+                            color: AppTheme.coral,
+                            icon: "flame.fill",
+                            title: "Energy",
+                            value: "\(Int(healthManager.energyLevel * 100))",
+                            unit: "%"
+                        )
+                    }
+                    .padding(.vertical, 10)
+                }
+            }
         }
         .task {
             await healthManager.syncHealthData()
+        }
+    }
+    
+    private var connectHealthCard: some View {
+        Button {
+            showHealthPermission = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "heart.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(AppTheme.coral)
+                    .frame(width: 44, height: 44)
+                    .background(AppTheme.coral.opacity(0.15))
+                    .clipShape(Circle())
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Connect Health Data")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppTheme.primaryText)
+                    Text("Track your steps, sleep, and energy levels")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.tertiaryText)
+            }
+            .padding()
+            .background(Color.white)
+            .cornerRadius(16)
+            .shadow(color: AppTheme.shadow, radius: 5, y: 2)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showHealthPermission) {
+            HealthPermissionView()
+        }
+    }
+    
+    private var healthUnavailableCard: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(AppTheme.almond)
+            
+            Text("Health data not available on this device")
+                .font(.caption)
+                .foregroundStyle(AppTheme.secondaryText)
+        }
+        .padding()
+        .background(AppTheme.almond.opacity(0.1))
+        .cornerRadius(12)
+    }
+}
+
+struct HealthPermissionView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(HealthStoreManager.self) private var healthManager
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                Image(systemName: "heart.circle.fill")
+                    .font(.system(size: 80))
+                    .foregroundStyle(AppTheme.coral)
+                
+                VStack(spacing: 12) {
+                    Text("Connect Health Data")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("Allow PersonalOS to read your health data to provide personalized insights and track your wellness journey.")
+                        .font(.body)
+                        .foregroundStyle(AppTheme.secondaryText)
+                        .multilineTextAlignment(.center)
+                }
+                
+                VStack(alignment: .leading, spacing: 16) {
+                    PermissionRow(icon: "figure.walk", title: "Steps", description: "Track daily activity")
+                    PermissionRow(icon: "bed.double.fill", title: "Sleep", description: "Monitor sleep quality")
+                    PermissionRow(icon: "heart.fill", title: "Heart Rate", description: "Measure wellness")
+                }
+                .padding()
+                .background(Color.white.opacity(0.05))
+                .cornerRadius(16)
+                
+                Spacer()
+                
+                Button {
+                    Task {
+                        await healthManager.requestHealthKitAuthorization()
+                        dismiss()
+                    }
+                } label: {
+                    Text("Allow Access")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(AppTheme.coral)
+                        .cornerRadius(12)
+                }
+                
+                Button("Maybe Later") {
+                    dismiss()
+                }
+                .foregroundStyle(AppTheme.secondaryText)
+            }
+            .padding()
+            .navigationTitle("Health Access")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+struct PermissionRow: View {
+    let icon: String
+    let title: String
+    let description: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(AppTheme.mistBlue)
+                .frame(width: 32)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+            
+            Spacer()
         }
     }
 }
