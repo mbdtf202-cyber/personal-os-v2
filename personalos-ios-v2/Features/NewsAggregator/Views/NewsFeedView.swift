@@ -2,10 +2,12 @@ import SwiftUI
 
 struct NewsFeedView: View {
     @Environment(NewsService.self) private var newsService
+    @Environment(\.modelContext) private var modelContext
     @State private var selectedCategory = "All"
     @State private var news: [NewsItem] = []
     @State private var showError = false
     @State private var selectedArticleURL: IdentifiableURL?
+    @State private var readArticleIDs: Set<UUID> = []
     
     let mockNews: [NewsItem] = [
         NewsItem(
@@ -100,17 +102,49 @@ struct NewsFeedView: View {
                                 }
                                 
                                 ForEach(news) { item in
-                                    NewsCard(item: item)
+                                    NewsCard(item: item, isRead: readArticleIDs.contains(item.id))
                                         .onTapGesture {
                                             if let url = item.url {
+                                                readArticleIDs.insert(item.id)
                                                 selectedArticleURL = IdentifiableURL(url: url)
                                                 HapticsManager.shared.light()
+                                            }
+                                        }
+                                        .contextMenu {
+                                            if let url = item.url {
+                                                Button(action: {
+                                                    UIPasteboard.general.string = url.absoluteString
+                                                    HapticsManager.shared.success()
+                                                }) {
+                                                    Label("Copy Link", systemImage: "doc.on.doc")
+                                                }
+                                                
+                                                Button(action: {
+                                                    shareArticle(url: url, title: item.title)
+                                                }) {
+                                                    Label("Share", systemImage: "square.and.arrow.up")
+                                                }
+                                                
+                                                Button(action: {
+                                                    bookmarkArticle(item)
+                                                }) {
+                                                    Label("Bookmark", systemImage: "bookmark")
+                                                }
+                                                
+                                                Button(action: {
+                                                    createTaskFromArticle(item)
+                                                }) {
+                                                    Label("Create Task", systemImage: "checkmark.circle")
+                                                }
                                             }
                                         }
                                 }
                             }
                             .padding(20)
                         }
+                    }
+                    .refreshable {
+                        await refreshNews()
                     }
                 }
             }
@@ -155,10 +189,47 @@ struct NewsFeedView: View {
             showError = true
         }
     }
+    
+    private func shareArticle(url: URL, title: String) {
+        let activityVC = UIActivityViewController(
+            activityItems: [title, url],
+            applicationActivities: nil
+        )
+        
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootVC = window.rootViewController {
+            activityVC.popoverPresentationController?.sourceView = window
+            rootVC.present(activityVC, animated: true)
+        }
+        
+        HapticsManager.shared.light()
+    }
+    
+    private func bookmarkArticle(_ item: NewsItem) {
+        // Save to SwiftData
+        modelContext.insert(item)
+        try? modelContext.save()
+        HapticsManager.shared.success()
+        Logger.log("Article bookmarked: \(item.title)", category: Logger.general)
+    }
+    
+    private func createTaskFromArticle(_ item: NewsItem) {
+        let task = TodoItem(
+            title: "Read: \(item.title)",
+            category: "Reading",
+            priority: 1
+        )
+        modelContext.insert(task)
+        try? modelContext.save()
+        HapticsManager.shared.success()
+        Logger.log("Task created from article", category: Logger.general)
+    }
 }
 
 struct NewsCard: View {
     let item: NewsItem
+    var isRead: Bool = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -200,7 +271,7 @@ struct NewsCard: View {
             // Content
             Text(item.title)
                 .font(.headline)
-                .foregroundStyle(AppTheme.primaryText)
+                .foregroundStyle(isRead ? AppTheme.secondaryText : AppTheme.primaryText)
                 .lineLimit(2)
             
             Text(item.summary)
