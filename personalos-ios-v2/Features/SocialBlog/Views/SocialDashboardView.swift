@@ -25,6 +25,14 @@ struct SocialDashboardView: View {
         return filtered
     }
     
+    private var publishedPosts: [SocialPost] {
+        let filtered = posts.filter { $0.status == .published }
+        if let date = selectedDate {
+            return filtered.filter { Calendar.current.isDate($0.date, inSameDayAs: date) }
+        }
+        return filtered.sorted { $0.date > $1.date }
+    }
+    
     private var totalViews: String {
         let total = posts.reduce(0) { $0 + $1.views }
         if total >= 1000 {
@@ -96,6 +104,8 @@ struct SocialDashboardView: View {
                         sectionHeader(title: "Drafts & Ideas", icon: "lightbulb.fill", color: .orange)
                         if drafts.isEmpty && selectedDate != nil {
                             SocialEmptyStateView(message: "No drafts for this date.")
+                        } else if drafts.isEmpty {
+                            SocialEmptyStateView(message: "No drafts. Tap + to create one.")
                         } else {
                             ForEach(drafts) { post in
                                 PostRowView(post: post)
@@ -106,6 +116,40 @@ struct SocialDashboardView: View {
                                     .contextMenu {
                                         statusContextMenu(for: post)
                                     }
+                            }
+                        }
+                        
+                        // 5. Published Posts
+                        if !publishedPosts.isEmpty {
+                            sectionHeader(title: "Published", icon: "checkmark.circle.fill", color: .green)
+                            ForEach(publishedPosts.prefix(5)) { post in
+                                PublishedPostRow(post: post)
+                                    .onTapGesture {
+                                        selectedPost = post
+                                        HapticsManager.shared.light()
+                                    }
+                                    .contextMenu {
+                                        statusContextMenu(for: post)
+                                    }
+                            }
+                            
+                            if publishedPosts.count > 5 {
+                                Button(action: {
+                                    // TODO: Navigate to full published posts list
+                                }) {
+                                    HStack {
+                                        Text("View all \(publishedPosts.count) published posts")
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.mistBlue)
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption2)
+                                            .foregroundStyle(AppTheme.mistBlue)
+                                    }
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.white)
+                                    .cornerRadius(12)
+                                }
                             }
                         }
                         
@@ -280,6 +324,80 @@ struct PostRowView: View {
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundStyle(AppTheme.tertiaryText)
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: AppTheme.shadow, radius: 5, y: 2)
+    }
+}
+
+struct PublishedPostRow: View {
+    @Bindable var post: SocialPost
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                // Platform Icon
+                ZStack {
+                    Circle()
+                        .fill(post.platform.color.opacity(0.1))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: post.platform.icon)
+                        .font(.caption)
+                        .foregroundStyle(post.platform.color)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(post.title.isEmpty ? "Untitled Post" : post.title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppTheme.primaryText)
+                        .lineLimit(1)
+                    Text(post.date.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.tertiaryText)
+            }
+            
+            // Engagement Stats
+            HStack(spacing: 16) {
+                HStack(spacing: 4) {
+                    Image(systemName: "eye.fill")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.mistBlue)
+                    TextField("Views", value: $post.views, format: .number)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                        .keyboardType(.numberPad)
+                        .frame(width: 60)
+                }
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "heart.fill")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.coral)
+                    TextField("Likes", value: $post.likes, format: .number)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                        .keyboardType(.numberPad)
+                        .frame(width: 60)
+                }
+                
+                Spacer()
+                
+                if post.views > 0 {
+                    Text("\((Double(post.likes) / Double(post.views) * 100), specifier: "%.1f")% engagement")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.matcha)
+                }
+            }
         }
         .padding()
         .background(Color.white)

@@ -112,6 +112,10 @@ struct MarkdownEditorView: View {
                             Label("Share", systemImage: "square.and.arrow.up")
                         }
                         
+                        Button(action: exportAsMarkdown) {
+                            Label("Export as Markdown", systemImage: "arrow.down.doc")
+                        }
+                        
                         Divider()
                         
                         Menu("Change Status") {
@@ -226,6 +230,32 @@ struct MarkdownEditorView: View {
            let rootVC = windowScene.windows.first?.rootViewController {
             rootVC.present(activityVC, animated: true)
         }
+    }
+    
+    private func exportAsMarkdown() {
+        let markdown = """
+        # \(post.title)
+        
+        **Platform:** \(post.platform.rawValue)
+        **Status:** \(post.status.rawValue)
+        **Date:** \(post.date.formatted(date: .long, time: .shortened))
+        
+        ---
+        
+        \(post.content)
+        """
+        
+        let activityVC = UIActivityViewController(
+            activityItems: [markdown],
+            applicationActivities: nil
+        )
+        
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            rootVC.present(activityVC, animated: true)
+        }
+        
+        HapticsManager.shared.success()
     }
 }
 
