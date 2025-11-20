@@ -1,18 +1,20 @@
 import SwiftUI
-import Observation
 import SwiftData
 
 struct TradeLogForm: View {
     @Environment(\.dismiss) var dismiss
-    @Environment(\.modelContext) private var modelContext
-    
+    @Environment(\.modelContext) private var modelContext // ⚠️ 数据库上下文
+
     @State private var symbol: String = ""
     @State private var type: TradeType = .buy
     @State private var price: String = ""
     @State private var quantity: String = ""
-    @State private var emotion: TradeEmotion = .neutral
-    @State private var assetType: AssetType = .stock
     @State private var note: String = ""
+
+    enum TradeType: String, CaseIterable {
+        case buy = "Buy"
+        case sell = "Sell"
+    }
 
     var body: some View {
         NavigationView {
@@ -32,31 +34,11 @@ struct TradeLogForm: View {
                         TextField("Quantity", text: $quantity)
                             .keyboardType(.decimalPad)
                     }
-
-                    Picker("Asset Type", selection: $assetType) {
-                        ForEach(AssetType.allCases, id: \.self) { type in
-                            Label(type.label, systemImage: type.icon).tag(type)
-                        }
-                    }
                 }
 
-                Section(header: Text("Psychology & Notes")) {
-                    Picker("Emotion State", selection: $emotion) {
-                        ForEach(TradeEmotion.allCases, id: \.self) { emo in
-                            Text(emo.rawValue)
-                                .foregroundStyle(emo.color)
-                                .tag(emo)
-                        }
-                    }
+                Section(header: Text("Notes")) {
                     TextEditor(text: $note)
                         .frame(height: 100)
-                        .overlay(
-                            Text("Strategy reasoning...")
-                                .foregroundStyle(.gray.opacity(0.5))
-                                .padding(8)
-                                .opacity(note.isEmpty ? 1 : 0),
-                            alignment: .topLeading
-                        )
                 }
             }
             .navigationTitle("Log Trade")
@@ -65,10 +47,7 @@ struct TradeLogForm: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveTrade()
-                        dismiss()
-                    }
+                    Button("Save") { saveTrade() } // ⚠️ 调用保存
                         .fontWeight(.bold)
                         .foregroundStyle(AppTheme.primaryText)
                 }
@@ -77,22 +56,17 @@ struct TradeLogForm: View {
     }
 
     private func saveTrade() {
-        let trimmedSymbol = symbol.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedSymbol.isEmpty,
-              let priceValue = Double(price),
-              let quantityValue = Double(quantity) else { return }
-
+        let p = Double(price) ?? 0.0
+        let q = Double(quantity) ?? 0.0
         let newTrade = SchemaV1.TradeRecord(
-            symbol: trimmedSymbol,
-            type: type,
-            price: priceValue,
-            quantity: quantityValue,
-            assetType: assetType,
-            emotion: emotion,
+            symbol: symbol.uppercased(),
+            type: type.rawValue,
+            price: p,
+            quantity: q,
             note: note
         )
-
-        modelContext.insert(newTrade)
+        modelContext.insert(newTrade) // ⚠️ 写入
+        dismiss()
     }
 }
 
