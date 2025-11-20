@@ -1,358 +1,261 @@
 # Personal OS v2
 
-> 一个全能的个人生活与工作管理系统，集成仪表盘、健康管理、知识库、投资交易、内容创作等多个核心功能模块。
+> Your life, organized. A comprehensive iOS life operating system built with SwiftUI.
 
-![iOS](https://img.shields.io/badge/iOS-15.0+-blue)
-![Swift](https://img.shields.io/badge/Swift-5.9+-orange)
-![SwiftUI](https://img.shields.io/badge/SwiftUI-Latest-green)
+[![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)](https://swift.org)
+[![iOS](https://img.shields.io/badge/iOS-17.0+-blue.svg)](https://www.apple.com/ios)
+[![SwiftUI](https://img.shields.io/badge/SwiftUI-5.0-green.svg)](https://developer.apple.com/xcode/swiftui/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
----
+Personal OS v2 is an all-in-one iOS application that helps you manage every aspect of your digital life. From health tracking to project management, from news aggregation to trading journals, everything you need in one elegant app.
 
-## 🧩 功能模块详解
+## ✨ Features
 
-### 1. 仪表盘 (Dashboard)
+### 🎯 Dashboard - Your Command Center
+- **Smart Overview Cards** - Real-time stats for tasks, focus time, health score, and productivity
+- **Health Score Algorithm** - Comprehensive scoring based on steps, sleep, energy, and heart rate
+- **Personalized Insights** - AI-driven recommendations based on your behavior patterns
+- **Focus Timer** - Professional Pomodoro technique implementation with 3 modes
+- **Activity Heatmap** - Visual representation of your daily activities
+- **Global Search** - Search across all modules instantly
 
-**全览视图**
-- 一屏掌握今日待办、健康打卡状态、最新资讯和社交发布计划
+### 💪 Health Center - HealthKit Integration
+- **Real-time Health Data** - Steps, sleep, active energy, heart rate, exercise time, stand hours
+- **Habit Tracking** - Build and maintain daily habits with visual progress
+- **Data Visualization** - Beautiful charts and graphs for health metrics
+- **Privacy First** - All health data stored locally on your device
 
-**数据可视化**
-- 活动热力图：展示过去一段时间的活动频率
-- 趋势分析图表：多维度数据趋势展示
-- 进度环形图：直观展示各项目标的完成进度
+### 📰 News Aggregator - Stay Informed
+- **News API Integration** - Real-time news from multiple sources
+- **RSS Feed Support** - Add custom RSS feeds for personalized content
+- **Category Filtering** - Technology, Business, Health, Science, and more
+- **Bookmark Management** - Save articles for later reading
+- **Safari Integration** - Read articles in-app with Safari View Controller
 
-**全局搜索**
-- 快捷键：⌘/Ctrl + K 唤起全局命令中心
-- 快速检索笔记、收藏、项目等资源
-- 支持模糊搜索和高级过滤
+### ✍️ Social Blog - Content Creation Platform
+- **Markdown Editor** - Write with real-time preview
+- **Content Calendar** - Plan and schedule your posts
+- **Multi-Platform Support** - Twitter, Medium, Dev.to, LinkedIn
+- **Draft System** - Auto-save and manage drafts
+- **Export Options** - Export as Markdown or HTML
+- **Statistics Dashboard** - Track articles, word count, and reading time
 
----
+### 💰 Trading Journal - Investment Tracking
+- **Trade Logging** - Record buy/sell transactions with detailed information
+- **Portfolio Management** - Track multiple assets and their performance
+- **Performance Analytics** - Win rate, average profit, best/worst trades
+- **Asset Details** - Deep dive into individual asset performance
+- **Data Visualization** - Portfolio pie charts and trend graphs
 
-### 2. 健康管理 (Health Center)
+### 🚀 Project Hub - GitHub Integration
+- **GitHub Sync** - Automatically sync repositories from GitHub
+- **Project Management** - Track project status (Idea/Active/Done)
+- **Progress Tracking** - Visual progress bars for active projects
+- **Quick Actions** - Create tasks, open GitHub, edit details
+- **Statistics Cards** - Active projects, shipped projects, total stars
 
-**每日日志**
-- 睡眠质量：记录入睡时间、睡眠时长、睡眠质量评分
-- 运动时长：记录运动类型、时长和强度
-- 心情评分：每日心情打分（1-10）
-- 能量水平：记录当日精力状态
-- 压力指数：追踪压力水平变化
+### 📚 Training System - Knowledge Base
+- **Code Snippets** - Store and organize code snippets
+- **Multi-Language Support** - 12+ programming languages
+- **Category System** - Swift, Python, DevOps, Bug Fixes, and more
+- **Search Functionality** - Search by title, summary, or code content
+- **Export & Share** - Share snippets or export as Markdown
+- **Syntax Highlighting** - Beautiful code display with syntax colors
 
-**习惯养成**
-- 定义并追踪每日/每周/每月习惯
-- 可视化打卡进度，支持连续打卡统计
-- 习惯完成率分析和趋势预测
+### 🛠️ Tools - Productivity Utilities
+- **QR Code Generator** - Create QR codes from text or URLs
+- **Password Generator** - Generate secure passwords with customizable options
+- **Unit Converter** - Convert length, weight, temperature, and volume
+- **Color Picker** - HEX/RGB/HSB color tool with quick colors
+- **Quick Notes** - Capture ideas instantly
+- **Timestamp Converter** - Unix timestamp utilities
 
-**趋势分析**
-- 通过图表发现生活习惯与身心状态的关联
-- 帮助用户优化生活方式
+### ⚙️ Settings - Customization
+- **Theme Switching** - Glass, Vibrant, and Noir themes
+- **API Configuration** - Set up News API and Stock API keys
+- **Preferences** - Haptic feedback, notifications
+- **Data Management** - Export all data as JSON or clear all data
+- **Privacy Controls** - Full control over your data
 
----
+## 🎨 Design System
 
-### 3. 技能与知识库 (Training System)
+### Morandi Color Palette
+Personal OS v2 features a sophisticated Morandi color scheme that's easy on the eyes:
 
-专为开发者和创作者设计的学习闭环系统。
+- **Matcha Green** - Success and completion states
+- **Mist Blue** - Primary actions and information
+- **Coral Orange** - Warnings and health alerts
+- **Almond Yellow** - Highlights and emphasis
+- **Lavender Purple** - Secondary actions
 
-**领域管理**
-- 产品设计、前端开发、后端开发、DevOps、AI & 机器学习等多个技术领域
+### Glass Morphism UI
+- Semi-transparent backgrounds with blur effects
+- Soft shadows and rounded corners
+- Smooth animations and transitions
+- Haptic feedback for all interactions
 
-**知识笔记**
-- 支持 Markdown 的深度技术笔记
-- 支持代码高亮和语法着色
-- 支持标签和分类管理
+## 🏗️ Architecture
 
-**代码片段 (Snippets)**
-- 收藏和复用常用的代码块
-- 支持多种编程语言
-- 快速搜索和复制功能
+### Tech Stack
+- **UI Framework**: SwiftUI
+- **Data Persistence**: SwiftData
+- **Networking**: URLSession with async/await
+- **Health Data**: HealthKit
+- **Architecture**: MVVM with Observation framework
 
-**Bug 追踪**
-- 记录遇到的 Bug 及其解决方案
-- 形成个人经验库
-- 支持标签分类和搜索
+### Project Structure
+```
+personalos-ios-v2/
+├── App/                    # App configuration and delegates
+├── Core/                   # Core components
+│   ├── DesignSystem/      # Colors, typography, components
+│   ├── Navigation/        # Navigation and routing
+│   └── Utilities/         # Helper classes and extensions
+├── Data/                   # Data layer
+│   ├── Models/            # SwiftData models
+│   ├── Networking/        # API services
+│   └── Persistence/       # Data persistence
+└── Features/              # Feature modules
+    ├── Dashboard/         # Smart dashboard
+    ├── HealthCenter/      # Health tracking
+    ├── NewsAggregator/    # News and RSS
+    ├── SocialBlog/        # Content creation
+    ├── TradingJournal/    # Investment tracking
+    ├── ProjectHub/        # Project management
+    ├── TrainingSystem/    # Knowledge base
+    ├── Tools/             # Utility tools
+    └── Settings/          # App settings
+```
 
-**资源库**
-- 整理教程、文档、视频等学习资源
-- 支持链接管理和分类
-- 支持稍后阅读功能
+## 🚀 Getting Started
 
----
+### Requirements
+- iOS 17.0+
+- Xcode 15.0+
+- Swift 5.9+
 
-### 4. 交易与投资 (Trading Journal)
+### Installation
 
-**交易复盘**
-- 入场理由：为什么进入这笔交易
-- 出场理由：为什么退出这笔交易
-- 情绪状态：交易时的心理状态
-- 策略标签：使用的交易策略分类
-
-**每日总结**
-- 记录当日盈亏
-- 市场感悟和经验总结
-- 明日计划和策略调整
-
-**资产分析**
-- 支持多市场记录：A 股、美股、Crypto 等
-- 自动生成盈亏曲线
-- 投资组合分析和风险评估
-- 收益率计算和对标分析
-
----
-
-### 5. 内容创作与社媒 (Social & Blog)
-
-**博客系统**
-- 全功能 Markdown 编辑器
-- 支持草稿、发布和归档管理
-- 支持文章分类和标签
-- SEO 优化支持
-
-**社媒运营**
-- 专为小红书/X/公众号等平台设计的内容日历
-- 多平台内容管理
-- 发布时间规划
-- 内容预览和优化建议
-
-**状态流转**
-- Idea → 草稿 → 排期 → 已发布
-
-**数据追踪**
-- 记录各平台的阅读、点赞、收藏数据
-- 分析爆款趋势
-- 内容性能对比分析
-
----
-
-### 6. 资讯聚合 (News Aggregator)
-
-**多源订阅**
-- 支持 RSS 订阅
-- 支持 API 抓取
-- 覆盖领域：AI、金融、Web3 等
-
-**智能阅读**
-- 自动提取摘要
-- 支持稍后阅读功能
-- 支持收藏和归档
-
-**链接预览**
-- 自动抓取分享链接的元数据
-- 显示标题、封面、描述
-- 支持快速分享到其他模块
-
----
-
-### 7. 项目管理 (Project Hub)
-
-**作品集展示**
-- 管理个人项目
-- 支持从 GitHub 链接自动抓取仓库信息
-- 显示 Star 数、编程语言、最后更新时间等
-
-**状态追踪**
-- Idea → In Progress → Paused → Finished → Archived
-
----
-
-### 8. 效率工具工作流 (Workflows)
-
-**自动化工作流**
-- 创建自定义自动化任务
-- 定时任务支持（如定时抓取新闻）
-- 缓存清理和数据同步
-
-**书签管理**
-- 替代浏览器收藏夹
-- 结构化管理网络资源
-- 支持分类、标签和搜索
-- 支持导入/导出
-
-**闪念笔记 (Quick Notes)**
-- 随时记录瞬时灵感
-- 支持置顶重要笔记
-- 快速转换为其他内容类型
-- 支持语音输入
-
----
-
-## 🎨 架构特点
-
-**设计系统**
-- 毛玻璃效果 (Glassmorphism) UI
-- 统一的色彩系统和排版规范
-- 响应式布局支持
-
-**数据持久化**
-- UserDefaults 本地存储
-- JSON 编解码
-- 自动备份机制
-
-**网络功能**
-- URLSession 网络请求
-- RESTful API 集成
-- 异步并发处理
-
-**性能优化**
-- 增量更新
-- 智能缓存策略
-- 后台任务处理
-
----
-
-## 🚀 快速开始
-
-### 系统要求
-- iOS 15.0+
-- iPhone 12 或更新机型
-- Xcode 14.0+
-
-### 安装
-
+1. Clone the repository:
 ```bash
-# 克隆仓库
-git clone https://github.com/mbdtf202-cyber/personal-os-v2.git
-
-# 进入项目目录
+git clone https://github.com/yourusername/personal-os-v2.git
 cd personal-os-v2
+```
 
-# 使用 Xcode 打开项目
+2. Open the project in Xcode:
+```bash
 open personalos-ios-v2.xcodeproj
 ```
 
-### 运行
+3. Configure API keys (optional):
+   - Get a free News API key from [newsapi.org](https://newsapi.org)
+   - Get a free Stock API key from [alphavantage.co](https://www.alphavantage.co)
+   - Add keys in Settings > API Configuration
 
-1. 选择目标设备或模拟器
-2. 按 Cmd+R 运行应用
+4. Build and run:
+   - Select your target device or simulator
+   - Press `Cmd + R` to build and run
 
-### 首次使用
+### HealthKit Setup
+To use health tracking features:
 
-1. 完成应用初始化
-2. 授予必要的权限（健康数据、日历等）
-3. 配置个人信息和偏好设置
-4. 开始使用各功能模块
+1. Enable HealthKit capability in Xcode
+2. The app will request permissions on first launch
+3. Grant access to the health data types you want to track
 
----
+## 📱 Usage
 
-## 📁 项目结构
+### Dashboard
+The Dashboard is your central hub. It shows:
+- Today's task completion rate
+- Focus time accumulated
+- Health score (0-100)
+- Productivity level
+- Personalized insights and recommendations
 
-```
-personalos-ios-v2/
-├── App/                              # 应用配置和委托
-│   ├── AppConfig.swift              # 应用全局配置
-│   └── AppDelegate.swift            # 应用生命周期
-├── Core/                            # 核心模块
-│   ├── DesignSystem/                # 设计系统
-│   │   ├── Colors/                  # 颜色定义
-│   │   ├── Components/              # 可复用 UI 组件
-│   │   ├── Modifiers/               # SwiftUI 修饰符
-│   │   └── Typography/              # 排版规范
-│   ├── Navigation/                  # 导航和路由
-│   │   ├── AppContainer.swift       # 应用容器
-│   │   └── AppRouter.swift          # 路由管理
-│   └── Utilities/                   # 工具函数
-│       ├── DateExtensions.swift     # 日期扩展
-│       └── HapticsManager.swift     # 触觉反馈
-├── Data/                            # 数据层
-│   ├── Models/                      # 数据模型
-│   │   ├── BaseModel.swift          # 基础模型
-│   │   └── DashboardModels.swift    # 仪表盘数据模型
-│   ├── Networking/                  # 网络请求
-│   │   └── APIClient.swift          # API 客户端
-│   └── Persistence/                 # 本地存储
-│       ├── DataManager.swift        # 数据管理器
-│       └── SchemaV1.swift           # 数据架构
-├── Features/                        # 功能模块
-│   ├── Dashboard/                   # 仪表盘
-│   │   ├── ViewModels/
-│   │   ├── Views/
-│   │   └── Components/
-│   ├── HealthCenter/                # 健康管理
-│   │   ├── ViewModels/
-│   │   └── Views/
-│   ├── TrainingSystem/              # 知识库
-│   │   ├── Models/
-│   │   ├── ViewModels/
-│   │   └── Views/
-│   ├── TradingJournal/              # 交易日志
-│   │   ├── ViewModels/
-│   │   └── Views/
-│   ├── SocialBlog/                  # 社媒和博客
-│   │   ├── ViewModels/
-│   │   └── Views/
-│   ├── NewsAggregator/              # 资讯聚合
-│   │   ├── Models/
-│   │   └── Views/
-│   ├── ProjectHub/                  # 项目管理
-│   │   └── Views/
-│   └── Tools/                       # 效率工具
-│       └── Views/
-└── Resources/                       # 资源文件
-    ├── Assets/                      # 图片和 Mock 数据
-    └── Localization/                # 本地化文件
-```
+### Focus Timer
+Use the Pomodoro technique to boost productivity:
+1. Tap the Focus Timer button
+2. Choose mode: Focus (25min), Short Break (5min), or Long Break (15min)
+3. Start the timer and stay focused
+4. The app automatically switches modes after completion
 
----
+### News Aggregator
+Stay informed with the latest news:
+1. Browse news by category
+2. Add custom RSS feeds
+3. Bookmark articles for later
+4. Read in-app with Safari integration
 
-## 🛠️ 技术栈
+### Trading Journal
+Track your investments:
+1. Log trades with buy/sell details
+2. View portfolio performance
+3. Analyze win rate and profit metrics
+4. Export data for tax purposes
 
-- **Language**: Swift 5.9+
-- **UI Framework**: SwiftUI
-- **Architecture**: MVVM + Observation Pattern
-- **Data Persistence**: UserDefaults + JSON Codable
-- **Networking**: URLSession + Swift Concurrency
-- **Async/Await**: Swift Concurrency
-- **Design Pattern**: Glassmorphism UI
+### Project Hub
+Manage your projects:
+1. Sync repositories from GitHub
+2. Track project progress
+3. Create tasks directly from projects
+4. Open projects in GitHub with one tap
 
----
+## 🔒 Privacy & Security
 
-## 📊 开发路线图
+Personal OS v2 takes your privacy seriously:
 
-### Phase 1（已完成）
-- ✅ 核心架构搭建
-- ✅ 基础 UI 组件库
-- ✅ 数据模型设计
+- **Local Storage**: All data stored locally using SwiftData
+- **No Tracking**: No third-party analytics or tracking
+- **HealthKit Privacy**: Health data never leaves your device
+- **API Keys**: Stored securely in UserDefaults
+- **Data Export**: Full control to export or delete your data
 
-### Phase 2（进行中）
-- 🔄 各功能模块实现
-- 🔄 本地数据持久化
-- 🔄 基础网络功能
+## 🎯 Roadmap
 
-### Phase 3（计划中）
-- ⏳ iCloud 同步
-- ⏳ 高级数据分析
-- ⏳ AI 智能建议
+### Short Term (1-2 weeks)
+- [ ] Widget support for home screen
+- [ ] Siri shortcuts integration
+- [ ] Dark mode optimization
+- [ ] iPad layout improvements
 
----
+### Medium Term (1-2 months)
+- [ ] iCloud sync across devices
+- [ ] Apple Watch companion app
+- [ ] AI-powered insights enhancement
+- [ ] Custom themes creator
 
-## 🤝 贡献指南
+### Long Term (3-6 months)
+- [ ] macOS version with Mac Catalyst
+- [ ] Automation workflows
+- [ ] Team collaboration features
+- [ ] App Store release
 
-欢迎提交 Issue 和 Pull Request！
+## 🤝 Contributing
 
-### 代码规范
-- 遵循 Swift 官方编码规范
-- 使用 SwiftUI 进行 UI 开发
-- 添加必要的代码注释
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-### 提交流程
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [NewsAPI](https://newsapi.org) for news data
+- [Alpha Vantage](https://www.alphavantage.co) for stock data
+- [SF Symbols](https://developer.apple.com/sf-symbols/) for beautiful icons
+- Apple's HealthKit for health data integration
+
+## 📧 Contact
+
+Project Link: [https://github.com/yourusername/personal-os-v2](https://github.com/yourusername/personal-os-v2)
 
 ---
 
-## 📝 许可证
-
-本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
-
----
-
-## 📧 联系方式
-
-- 📧 Email: [your-email@example.com]
-- 🐦 Twitter: [@your-handle]
-- 💼 LinkedIn: [your-profile]
-
----
-
-**Personal OS v2** - 让生活和工作更有序，让创意和思想更有价值。
+**Built with ❤️ using SwiftUI**
