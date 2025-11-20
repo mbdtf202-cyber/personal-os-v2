@@ -52,8 +52,8 @@ struct HabitTrackerView: View {
         AppTheme.background.ignoresSafeArea()
         HabitTrackerView(
             habits: [
-                HabitItem(icon: "drop.fill", title: "Drink 2L Water", color: AppTheme.mistBlue),
-                HabitItem(icon: "book.fill", title: "Read 30 mins", color: AppTheme.lavender)
+                HabitItem(title: "Drink 2L Water", icon: "drop.fill"),
+                HabitItem(title: "Read 30 mins", icon: "book.fill")
             ],
             onToggle: { _ in }
         )
