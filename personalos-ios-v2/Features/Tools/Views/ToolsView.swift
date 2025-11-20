@@ -134,26 +134,29 @@ struct ToolDetailView: View {
                 .glassCard()
                 
                 // 二维码工具
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "qrcode.viewfinder")
-                            .font(.title2)
+                NavigationLink(destination: QRCodeGeneratorView()) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "qrcode.viewfinder")
+                                .font(.title2)
+                                .foregroundColor(MorandiColors.textPrimary)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption)
+                                .foregroundColor(MorandiColors.textSecondary)
+                        }
+                        
+                        Text("二维码生成")
+                            .font(Typography.headlineSmall)
                             .foregroundColor(MorandiColors.textPrimary)
-                        Spacer()
-                        Image(systemName: "arrow.up.right")
-                            .font(.caption)
+                        
+                        Text("文本/链接转二维码")
+                            .font(Typography.bodySmall)
                             .foregroundColor(MorandiColors.textSecondary)
                     }
-                    
-                    Text("二维码生成")
-                        .font(Typography.headlineSmall)
-                        .foregroundColor(MorandiColors.textPrimary)
-                    
-                    Text("文本/链接转二维码")
-                        .font(Typography.bodySmall)
-                        .foregroundColor(MorandiColors.textSecondary)
+                    .glassCard()
                 }
-                .glassCard()
+                .buttonStyle(.plain)
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("快捷操作")
