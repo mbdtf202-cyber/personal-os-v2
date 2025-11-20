@@ -75,20 +75,18 @@ struct QuickNoteOverlay: View {
         let trimmedText = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
         
-        // Save as a code snippet in knowledge base
-        let snippet = CodeSnippet(
-            title: "Quick Note - \(Date().formatted(date: .abbreviated, time: .shortened))",
-            language: "Markdown",
-            code: trimmedText,
-            summary: String(trimmedText.prefix(100)),
-            category: .note
+        // Save as a todo item for now
+        let todo = TodoItem(
+            title: trimmedText.components(separatedBy: .newlines).first ?? trimmedText,
+            category: "Note",
+            priority: 1
         )
         
-        modelContext.insert(snippet)
+        modelContext.insert(todo)
         try? modelContext.save()
         
         HapticsManager.shared.success()
-        Logger.log("Quick note saved to knowledge base", category: Logger.general)
+        Logger.log("Quick note saved", category: Logger.general)
     }
 }
 
