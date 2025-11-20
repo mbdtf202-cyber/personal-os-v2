@@ -86,6 +86,16 @@ struct SnippetDetailView: View {
                         Label("Copy Code", systemImage: "doc.on.doc")
                     }
                     
+                    Button(action: shareSnippet) {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
+                    
+                    Button(action: exportAsMarkdown) {
+                        Label("Export as Markdown", systemImage: "arrow.down.doc")
+                    }
+                    
+                    Divider()
+                    
                     Button(role: .destructive, action: { showDeleteAlert = true }) {
                         Label("Delete", systemImage: "trash")
                     }
@@ -107,6 +117,57 @@ struct SnippetDetailView: View {
     private func copyCode() {
         UIPasteboard.general.string = snippet.code
         HapticsManager.shared.success()
+        Logger.log("Code copied to clipboard", category: Logger.general)
+    }
+    
+    private func shareSnippet() {
+        let text = """
+        # \(snippet.title)
+        
+        **Language:** \(snippet.language)
+        **Category:** \(snippet.category.rawValue)
+        
+        \(snippet.summary)
+        
+        ```\(snippet.language.lowercased())
+        \(snippet.code)
+        ```
+        """
+        
+        let activityVC = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+        
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            rootVC.present(activityVC, animated: true)
+        }
+        
+        HapticsManager.shared.light()
+        Logger.log("Snippet shared", category: Logger.general)
+    }
+    
+    private func exportAsMarkdown() {
+        let markdown = """
+        # \(snippet.title)
+        
+        **Language:** \(snippet.language)  
+        **Category:** \(snippet.category.rawValue)  
+        **Date:** \(snippet.date.formatted(date: .long, time: .omitted))
+        
+        ## Description
+        \(snippet.summary)
+        
+        ## Code
+        ```\(snippet.language.lowercased())
+        \(snippet.code)
+        ```
+        
+        ---
+        *Exported from Personal OS*
+        """
+        
+        UIPasteboard.general.string = markdown
+        HapticsManager.shared.success()
+        Logger.log("Snippet exported as Markdown", category: Logger.general)
     }
     
     private func deleteSnippet() {

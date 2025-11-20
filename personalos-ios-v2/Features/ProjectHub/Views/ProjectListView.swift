@@ -167,6 +167,9 @@ struct GitHubSyncSheet: View {
     }
     
     private func syncProjects() {
+        // Save GitHub username for later use
+        UserDefaults.standard.set(username, forKey: "github_username")
+        
         // Clear existing projects before syncing
         let fetchDescriptor = FetchDescriptor<ProjectItem>()
         if let existingProjects = try? modelContext.fetch(fetchDescriptor) {

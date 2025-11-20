@@ -79,8 +79,7 @@ struct ProjectDetailView: View {
                             }
                             
                             ActionButton(icon: "arrow.up.right.square", title: "Open in GitHub", color: AppTheme.almond) {
-                                // TODO: Open GitHub URL
-                                HapticsManager.shared.light()
+                                openGitHubURL()
                             }
                             
                             ActionButton(icon: "checkmark.circle", title: "Create Task", color: AppTheme.matcha) {
@@ -116,6 +115,18 @@ struct ProjectDetailView: View {
         try? modelContext.save()
         HapticsManager.shared.success()
         Logger.log("Task created for project: \(project.name)", category: Logger.general)
+    }
+    
+    private func openGitHubURL() {
+        // Try to construct GitHub URL from project name
+        let username = UserDefaults.standard.string(forKey: "github_username") ?? "user"
+        let repoName = project.name.lowercased().replacingOccurrences(of: " ", with: "-")
+        
+        if let url = URL(string: "https://github.com/\(username)/\(repoName)") {
+            UIApplication.shared.open(url)
+            HapticsManager.shared.light()
+            Logger.log("Opening GitHub URL: \(url.absoluteString)", category: Logger.general)
+        }
     }
 }
 

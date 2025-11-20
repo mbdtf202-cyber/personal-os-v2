@@ -4,12 +4,53 @@ import SwiftData
 struct SettingsView: View {
     @AppStorage("stockAPIKey") private var stockAPIKey = ""
     @AppStorage("newsAPIKey") private var newsAPIKey = ""
+    @AppStorage("selectedTheme") private var selectedTheme: String = ThemeStyle.glass.rawValue
+    @AppStorage("enableHaptics") private var enableHaptics = true
+    @AppStorage("enableNotifications") private var enableNotifications = true
     @State private var showSaveConfirmation = false
+    @State private var showClearDataAlert = false
     @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         NavigationStack {
             Form {
+                // Theme Section
+                Section {
+                    Picker("Theme", selection: $selectedTheme) {
+                        ForEach(ThemeStyle.allCases) { theme in
+                            HStack {
+                                Text(theme.title)
+                                Spacer()
+                                Text(theme.subtitle)
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                            }
+                            .tag(theme.rawValue)
+                        }
+                    }
+                    .onChange(of: selectedTheme) { _, newValue in
+                        if let theme = ThemeStyle(rawValue: newValue) {
+                            AppTheme.apply(style: theme)
+                            HapticsManager.shared.light()
+                        }
+                    }
+                } header: {
+                    Text("Appearance")
+                } footer: {
+                    Text("Choose your preferred visual style")
+                        .font(.caption)
+                }
+                
+                // Preferences Section
+                Section {
+                    Toggle("Haptic Feedback", isOn: $enableHaptics)
+                    Toggle("Notifications", isOn: $enableNotifications)
+                } header: {
+                    Text("Preferences")
+                } footer: {
+                    Text("Customize your app experience")
+                        .font(.caption)
+                }
                 Section {
                     Text("Configure your API keys to enable real-time data")
                         .font(.caption)
@@ -81,6 +122,13 @@ struct SettingsView: View {
                                 .foregroundStyle(AppTheme.tertiaryText)
                         }
                     }
+                    
+                    Button(role: .destructive, action: { showClearDataAlert = true }) {
+                        HStack {
+                            Image(systemName: "trash")
+                            Text("Clear All Data")
+                        }
+                    }
                 } header: {
                     Text("Data Management")
                 } footer: {
@@ -107,6 +155,14 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .alert("Clear All Data?", isPresented: $showClearDataAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Clear", role: .destructive) {
+                    clearAllData()
+                }
+            } message: {
+                Text("This will permanently delete all your data. This action cannot be undone.")
+            }
         }
     }
     
@@ -125,6 +181,27 @@ struct SettingsView: View {
         }
         
         Logger.log("API keys updated", category: Logger.general)
+    }
+    
+    private func clearAllData() {
+        Task {
+            do {
+                // Delete all data
+                try modelContext.delete(model: TodoItem.self)
+                try modelContext.delete(model: TradeRecord.self)
+                try modelContext.delete(model: ProjectItem.self)
+                try modelContext.delete(model: SocialPost.self)
+                try modelContext.delete(model: CodeSnippet.self)
+                try modelContext.delete(model: HabitLog.self)
+                
+                try modelContext.save()
+                
+                HapticsManager.shared.success()
+                Logger.log("All data cleared", category: Logger.general)
+            } catch {
+                Logger.error("Failed to clear data: \(error.localizedDescription)", category: Logger.general)
+            }
+        }
     }
     
     private func exportData() {

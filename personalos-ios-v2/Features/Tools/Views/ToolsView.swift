@@ -1,11 +1,17 @@
 import SwiftUI
 
 struct ToolsView: View {
+    @State private var showPasswordGenerator = false
+    @State private var showUnitConverter = false
+    @State private var showColorPicker = false
+    
     private let tools: [ToolItem] = [
-        .init(title: "二维码生成", subtitle: "文本/链接转二维码", icon: "qrcode.viewfinder", accent: AppTheme.mistBlue, primaryAction: "生成二维码"),
-        .init(title: "工作流", subtitle: "创建可重复的自动化任务", icon: "bolt.badge.clock", accent: AppTheme.lavender, primaryAction: "创建新的自动化"),
-        .init(title: "书签管理", subtitle: "结构化管理网络资源", icon: "bookmark.circle", accent: AppTheme.almond, primaryAction: "添加书签"),
-        .init(title: "闪念笔记", subtitle: "随时记录瞬时灵感", icon: "lightbulb", accent: AppTheme.coral, primaryAction: "记录灵感")
+        .init(title: "二维码生成", subtitle: "文本/链接转二维码", icon: "qrcode.viewfinder", accent: AppTheme.mistBlue, primaryAction: "生成二维码", destination: .qrCode),
+        .init(title: "密码生成器", subtitle: "生成安全的随机密码", icon: "key.fill", accent: AppTheme.lavender, primaryAction: "生成密码", destination: .password),
+        .init(title: "单位转换", subtitle: "长度、重量、温度转换", icon: "arrow.left.arrow.right", accent: AppTheme.matcha, primaryAction: "开始转换", destination: .unitConverter),
+        .init(title: "颜色选择器", subtitle: "HEX/RGB 颜色工具", icon: "paintpalette.fill", accent: AppTheme.coral, primaryAction: "选择颜色", destination: .colorPicker),
+        .init(title: "闪念笔记", subtitle: "随时记录瞬时灵感", icon: "lightbulb", accent: AppTheme.almond, primaryAction: "记录灵感", destination: .quickNote),
+        .init(title: "时间戳转换", subtitle: "Unix 时间戳工具", icon: "clock.fill", accent: AppTheme.mistBlue, primaryAction: "转换时间", destination: .timestamp)
     ]
 
     var body: some View {
@@ -13,19 +19,18 @@ struct ToolsView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     ForEach(tools) { tool in
-                        // ⚡️ 修复：二维码工具直接跳转到专用页面
-                        if tool.icon == "qrcode.viewfinder" {
+                        if tool.destination == .qrCode {
                             NavigationLink(destination: QRCodeGeneratorView()) {
                                 ToolRowView(tool: tool)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("打开 \(tool.title) 工具")
                         } else {
-                            NavigationLink(destination: ToolDetailView(tool: tool)) {
+                            Button {
+                                handleToolTap(tool)
+                            } label: {
                                 ToolRowView(tool: tool)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("打开 \(tool.title) 工具")
                         }
                     }
                 }
@@ -33,8 +38,35 @@ struct ToolsView: View {
             }
             .background(MorandiColors.background)
             .navigationTitle("效率工具")
+            .sheet(isPresented: $showPasswordGenerator) {
+                PasswordGeneratorView()
+            }
+            .sheet(isPresented: $showUnitConverter) {
+                UnitConverterView()
+            }
+            .sheet(isPresented: $showColorPicker) {
+                ColorPickerToolView()
+            }
         }
     }
+    
+    private func handleToolTap(_ tool: ToolItem) {
+        HapticsManager.shared.light()
+        switch tool.destination {
+        case .password:
+            showPasswordGenerator = true
+        case .unitConverter:
+            showUnitConverter = true
+        case .colorPicker:
+            showColorPicker = true
+        default:
+            break
+        }
+    }
+}
+
+enum ToolDestination {
+    case qrCode, password, unitConverter, colorPicker, quickNote, timestamp
 }
 
 struct ToolItem: Identifiable, Hashable {
@@ -44,6 +76,15 @@ struct ToolItem: Identifiable, Hashable {
     let icon: String
     let accent: Color
     let primaryAction: String
+    let destination: ToolDestination
+    
+    static func == (lhs: ToolItem, rhs: ToolItem) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }
 
 struct ToolRowView: View {
