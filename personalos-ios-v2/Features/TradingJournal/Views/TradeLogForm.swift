@@ -75,6 +75,7 @@ struct TradeLogForm: View {
             note: note
         )
         modelContext.insert(newTrade)
+        HapticsManager.shared.success()
         dismiss()
     }
     

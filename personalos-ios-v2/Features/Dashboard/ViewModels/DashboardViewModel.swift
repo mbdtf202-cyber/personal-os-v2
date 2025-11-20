@@ -42,6 +42,7 @@ class DashboardViewModel: BaseViewModel {
 
     func toggleTask(_ task: TodoItem, context: ModelContext) {
         task.isCompleted.toggle()
+        HapticsManager.shared.light()
         try? context.save()
     }
 

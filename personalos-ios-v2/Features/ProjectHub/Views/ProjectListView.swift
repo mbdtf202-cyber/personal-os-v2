@@ -138,6 +138,7 @@ struct GitHubSyncSheet: View {
         }
         
         try? modelContext.save()
+        HapticsManager.shared.success()
         Logger.log("Synced \(githubService.repos.count) projects from GitHub", category: .general)
     }
 }

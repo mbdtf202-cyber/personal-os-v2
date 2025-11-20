@@ -124,6 +124,7 @@ struct QRCodeGeneratorView: View {
         if let outputImage = filter.outputImage {
             if let cgImage = context.createCGImage(outputImage, from: outputImage.extent) {
                 qrCodeImage = UIImage(cgImage: cgImage)
+                HapticsManager.shared.success()
                 Logger.log("QR Code generated successfully", category: .general)
             }
         }
@@ -149,6 +150,7 @@ struct QRCodeGeneratorView: View {
         guard let image = qrCodeImage else { return }
         
         UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+        HapticsManager.shared.success()
         Logger.log("QR Code saved to Photos", category: .general)
     }
 }

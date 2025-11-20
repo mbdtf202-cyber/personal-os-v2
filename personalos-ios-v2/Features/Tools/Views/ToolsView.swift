@@ -89,50 +89,6 @@ struct ToolDetailView: View {
                     }
                 }
 
-                // OCR 工具
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "doc.text.viewfinder")
-                            .font(.title2)
-                            .foregroundColor(MorandiColors.textPrimary)
-                        Spacer()
-                        Image(systemName: "arrow.up.right")
-                            .font(.caption)
-                            .foregroundColor(MorandiColors.textSecondary)
-                    }
-                    
-                    Text("OCR 扫描")
-                        .font(Typography.headlineSmall)
-                        .foregroundColor(MorandiColors.textPrimary)
-                    
-                    Text("提取图片中的文字")
-                        .font(Typography.bodySmall)
-                        .foregroundColor(MorandiColors.textSecondary)
-                }
-                .glassCard()
-                
-                // PDF 工具
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "doc.on.doc")
-                            .font(.title2)
-                            .foregroundColor(MorandiColors.textPrimary)
-                        Spacer()
-                        Image(systemName: "arrow.up.right")
-                            .font(.caption)
-                            .foregroundColor(MorandiColors.textSecondary)
-                    }
-                    
-                    Text("PDF 合并")
-                        .font(Typography.headlineSmall)
-                        .foregroundColor(MorandiColors.textPrimary)
-                    
-                    Text("多文件快速合并")
-                        .font(Typography.bodySmall)
-                        .foregroundColor(MorandiColors.textSecondary)
-                }
-                .glassCard()
-                
                 // 二维码工具
                 NavigationLink(destination: QRCodeGeneratorView()) {
                     VStack(alignment: .leading, spacing: 12) {
