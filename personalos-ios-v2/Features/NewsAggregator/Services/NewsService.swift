@@ -23,11 +23,14 @@ struct NewsResponse: Codable {
     let articles: [NewsArticle]
 }
 
+import Observation
+
 @MainActor
-class NewsService: ObservableObject {
-    @Published var articles: [NewsArticle] = []
-    @Published var isLoading = false
-    @Published var error: String?
+@Observable
+class NewsService {
+    var articles: [NewsArticle] = []
+    var isLoading = false
+    var error: String?
     
     // Use NewsAPI.org - Get free API key at https://newsapi.org
     private let apiKey = "YOUR_API_KEY_HERE" // TODO: Replace with real key

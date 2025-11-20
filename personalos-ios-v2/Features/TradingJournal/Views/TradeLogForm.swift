@@ -11,11 +11,6 @@ struct TradeLogForm: View {
     @State private var quantity: String = ""
     @State private var note: String = ""
 
-    enum TradeType: String, CaseIterable {
-        case buy = "Buy"
-        case sell = "Sell"
-    }
-
     var body: some View {
         NavigationView {
             Form {
@@ -58,10 +53,9 @@ struct TradeLogForm: View {
     private func saveTrade() {
         let p = Double(price) ?? 0.0
         let q = Double(quantity) ?? 0.0
-        let tradeType: TradeType = (type == .buy) ? .buy : .sell
         let newTrade = TradeRecord(
             symbol: symbol.uppercased(),
-            type: tradeType,
+            type: type,
             price: p,
             quantity: q,
             assetType: .stock,

@@ -1,15 +1,17 @@
 import Foundation
 import HealthKit
 import Combine
+import Observation
 
 @MainActor
-class HealthKitService: ObservableObject {
+@Observable
+class HealthKitService {
     private let healthStore = HKHealthStore()
     
-    @Published var isAuthorized = false
-    @Published var todaySteps: Int = 0
-    @Published var lastNightSleep: Double = 0.0
-    @Published var heartRate: Int = 0
+    var isAuthorized = false
+    var todaySteps: Int = 0
+    var lastNightSleep: Double = 0.0
+    var heartRate: Int = 0
     
     func requestAuthorization() async {
         guard HKHealthStore.isHealthDataAvailable() else { return }
@@ -85,8 +87,6 @@ class HealthKitService: ObservableObject {
         
         healthStore.execute(query)
     }
-}
-
     
     func fetchSleepHours(from startDate: Date, to endDate: Date) async -> Double {
         guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else { return 0 }
@@ -110,3 +110,4 @@ class HealthKitService: ObservableObject {
             self.healthStore.execute(query)
         }
     }
+}

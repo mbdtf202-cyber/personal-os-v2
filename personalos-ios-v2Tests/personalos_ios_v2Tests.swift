@@ -134,4 +134,32 @@ final class personalos_ios_v2Tests: XCTestCase {
         XCTAssertFalse(APIConfig.hasValidStockAPIKey)
         XCTAssertFalse(APIConfig.hasValidNewsAPIKey)
     }
+    
+    // MARK: - AppRouter Tests
+    
+    @MainActor
+    func testAppRouterNavigation() {
+        let router = AppRouter()
+        
+        XCTAssertEqual(router.selectedTab, .dashboard)
+        
+        router.navigate(to: .trading)
+        XCTAssertEqual(router.selectedTab, .trading)
+        
+        router.navigate(to: .health)
+        XCTAssertEqual(router.selectedTab, .health)
+    }
+    
+    @MainActor
+    func testAppRouterGlobalSearch() {
+        let router = AppRouter()
+        
+        XCTAssertFalse(router.showGlobalSearch)
+        
+        router.toggleGlobalSearch()
+        XCTAssertTrue(router.showGlobalSearch)
+        
+        router.toggleGlobalSearch()
+        XCTAssertFalse(router.showGlobalSearch)
+    }
 }

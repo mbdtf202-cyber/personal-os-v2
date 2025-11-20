@@ -20,11 +20,14 @@ struct GitHubRepo: Codable, Identifiable {
     }
 }
 
+import Observation
+
 @MainActor
-class GitHubService: ObservableObject {
-    @Published var repos: [GitHubRepo] = []
-    @Published var isLoading = false
-    @Published var error: String?
+@Observable
+class GitHubService {
+    var repos: [GitHubRepo] = []
+    var isLoading = false
+    var error: String?
     
     func fetchUserRepos(username: String) async {
         isLoading = true

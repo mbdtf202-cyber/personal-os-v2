@@ -7,19 +7,6 @@ import Combine
 class DashboardViewModel: BaseViewModel {
     var showGlobalSearch: Bool = false
     var searchText: String = ""
-    
-    // Dependencies
-    var healthManager: HealthStoreManager
-    // Note: ContentManager logic is now largely handled by SwiftData (SocialPost), 
-    // but we might still want a service for other content or just query directly.
-    // For now, we'll simulate content awareness or inject a service if needed.
-    // Since SocialPost is SwiftData, we can't easily inject a "Manager" that holds state 
-    // unless it's an ObservableObject/Actor. 
-    // Let's inject HealthStoreManager as requested.
-    
-    init(healthManager: HealthStoreManager? = nil) {
-        self.healthManager = healthManager ?? HealthStoreManager()
-    }
 
     var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -31,11 +18,7 @@ class DashboardViewModel: BaseViewModel {
         }
     }
     
-    var dailyBriefing: String {
-        // Example aggregation
-        let steps = healthManager.steps
-        // We can't access SwiftData context here easily without passing it in or using a MainActor query wrapper.
-        // For now, we'll focus on Health data which is available.
+    func dailyBriefing(steps: Int) -> String {
         return "Today: \(steps) steps taken."
     }
     

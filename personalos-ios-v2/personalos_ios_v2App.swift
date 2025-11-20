@@ -4,6 +4,10 @@ import SwiftData
 @main
 struct personalos_ios_v2App: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @State private var router = AppRouter()
+    @State private var healthManager = HealthStoreManager()
+    @State private var githubService = GitHubService()
+    @State private var newsService = NewsService()
 
     init() {
         // 配置 UITabBar 的全局外观
@@ -30,56 +34,61 @@ struct personalos_ios_v2App: App {
             TradeRecord.self,
             AssetItem.self
         ])
+        .environment(router)
+        .environment(healthManager)
+        .environment(githubService)
+        .environment(newsService)
     }
 }
 
 // MARK: - Main Tab View
 struct MainTabView: View {
-    @State private var router = AppRouter()
-    @State private var selectedTab = 0
+    @Environment(AppRouter.self) private var router
     @State private var showQuickNote = false
     @State private var themeStyle: ThemeStyle = .glass
 
     var body: some View {
         ZStack {
-            TabView(selection: $selectedTab) {
+            TabView(selection: Binding(
+                get: { router.selectedTab },
+                set: { router.selectedTab = $0 }
+            )) {
                 // 1. Dashboard
                 DashboardView()
                     .tabItem {
                         Label("Home", systemImage: "square.grid.2x2")
                     }
-                    .tag(0)
+                    .tag(AppRouter.Tab.dashboard)
                 
                 // 2. Projects
                 ProjectListView()
                     .tabItem {
                         Label("Projects", systemImage: "folder")
                     }
-                    .tag(1)
+                    .tag(AppRouter.Tab.projects)
                 
                 // 3. Social & Blog
                 SocialDashboardView()
                     .tabItem {
                         Label("Social", systemImage: "bubble.left.and.bubble.right.fill")
                     }
-                    .tag(2)
+                    .tag(AppRouter.Tab.social)
                 
                 // 4. News
                 NewsFeedView()
                     .tabItem {
                         Label("News", systemImage: "newspaper")
                     }
-                    .tag(3)
+                    .tag(AppRouter.Tab.news)
 
                 // 5. More Apps
                 MoreModulesView(themeStyle: $themeStyle)
                     .tabItem {
                         Label("Apps", systemImage: "circle.grid.3x3.fill")
                     }
-                    .tag(4)
+                    .tag(AppRouter.Tab.tools)
             }
             .tint(AppTheme.primaryText)
-            .environment(router)
             
             // Quick Note Overlay
             if showQuickNote {

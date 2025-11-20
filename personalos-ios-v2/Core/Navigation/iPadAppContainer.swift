@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct iPadAppContainer: View {
-    @State private var router = AppRouter()
+    @Environment(AppRouter.self) private var router
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     
     var body: some View {

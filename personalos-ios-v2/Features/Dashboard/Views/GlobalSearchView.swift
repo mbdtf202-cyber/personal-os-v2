@@ -3,6 +3,7 @@ import Combine
 
 struct GlobalSearchView: View {
     @Binding var isPresented: Bool
+    @Environment(AppRouter.self) private var router
     @State private var query = ""
     @FocusState private var isFocused: Bool
     
@@ -56,8 +57,30 @@ struct GlobalSearchView: View {
                                 .font(.caption)
                                 .fontWeight(.bold)
                                 .foregroundStyle(AppTheme.secondaryText)
-                            ActionRow(icon: "doc.text", title: "Create new note")
-                            ActionRow(icon: "figure.run", title: "Log workout")
+                            
+                            Button(action: {
+                                router.navigate(to: .social)
+                                isPresented = false
+                            }) {
+                                ActionRow(icon: "doc.text", title: "Create new note")
+                            }
+                            .buttonStyle(.plain)
+                            
+                            Button(action: {
+                                router.navigate(to: .health)
+                                isPresented = false
+                            }) {
+                                ActionRow(icon: "figure.run", title: "Log workout")
+                            }
+                            .buttonStyle(.plain)
+                            
+                            Button(action: {
+                                router.navigate(to: .trading)
+                                isPresented = false
+                            }) {
+                                ActionRow(icon: "chart.line.uptrend.xyaxis", title: "Log trade")
+                            }
+                            .buttonStyle(.plain)
                         } else {
                             Text("RESULTS")
                                 .font(.caption)

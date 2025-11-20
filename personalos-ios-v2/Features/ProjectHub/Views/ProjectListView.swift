@@ -3,7 +3,7 @@ import SwiftUI
 // Models moved to UnifiedSchema.swift
 
 struct ProjectListView: View {
-    @StateObject private var githubService = GitHubService()
+    @Environment(GitHubService.self) private var githubService
     @State private var projects: [ProjectItem] = []
     @State private var showGitHubSync = false
     @State private var githubUsername = ""
@@ -55,7 +55,7 @@ struct ProjectListView: View {
             }
             .navigationTitle("Project Hub")
             .sheet(isPresented: $showGitHubSync) {
-                GitHubSyncSheet(githubService: githubService, projects: $projects)
+                GitHubSyncSheet(projects: $projects)
             }
             .onAppear {
                 loadProjects()
@@ -76,7 +76,7 @@ struct ProjectListView: View {
 }
 
 struct GitHubSyncSheet: View {
-    @ObservedObject var githubService: GitHubService
+    @Environment(GitHubService.self) private var githubService
     @Binding var projects: [ProjectItem]
     @Environment(\.dismiss) var dismiss
     @State private var username = ""

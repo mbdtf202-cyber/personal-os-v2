@@ -4,7 +4,7 @@ import SwiftData
 
 struct DashboardView: View {
     @State private var viewModel = DashboardViewModel()
-    @State private var healthManager = HealthStoreManager()
+    @Environment(HealthStoreManager.self) private var healthManager
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TodoItem.createdAt, order: .reverse) private var tasks: [TodoItem]
     @State private var showAddTask = false

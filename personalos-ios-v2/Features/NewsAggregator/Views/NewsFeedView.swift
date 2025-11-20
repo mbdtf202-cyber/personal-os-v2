@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 
 struct NewsFeedView: View {
-    @StateObject private var newsService = NewsService()
+    @Environment(NewsService.self) private var newsService
     @State private var selectedCategory = "All"
     @State private var news: [NewsItem] = []
     

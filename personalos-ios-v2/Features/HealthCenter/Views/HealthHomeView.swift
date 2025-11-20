@@ -6,9 +6,11 @@ import Charts
 struct HealthHomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \HabitItem.title) private var habits: [HabitItem]
-    @State private var manager = HealthStoreManager()
+    @Environment(HealthStoreManager.self) private var manager
     
     var body: some View {
+        @Bindable var bindableManager = manager
+        
         NavigationStack {
             ZStack {
                 AppTheme.background.ignoresSafeArea()
@@ -18,7 +20,7 @@ struct HealthHomeView: View {
                         dateHeader
                         metricsGrid
                         sleepChartSection
-                        MoodLogView(energyLevel: $manager.energyLevel)
+                        MoodLogView(energyLevel: $bindableManager.energyLevel)
                         HabitTrackerView(habits: habits, onToggle: toggleHabit)
                         Spacer(minLength: 100)
                     }
