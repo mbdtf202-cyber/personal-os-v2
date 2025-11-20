@@ -162,4 +162,125 @@ final class personalos_ios_v2Tests: XCTestCase {
         router.toggleGlobalSearch()
         XCTAssertFalse(router.showGlobalSearch)
     }
+    
+    // MARK: - SocialPost Tests
+    
+    func testSocialPostCreation() {
+        let post = SocialPost(
+            title: "Test Post",
+            platform: .twitter,
+            status: .draft,
+            date: Date(),
+            content: "Test content",
+            views: 0,
+            likes: 0
+        )
+        
+        XCTAssertEqual(post.title, "Test Post")
+        XCTAssertEqual(post.platform, .twitter)
+        XCTAssertEqual(post.status, .draft)
+        XCTAssertEqual(post.content, "Test content")
+    }
+    
+    func testSocialPostPersistence() throws {
+        let post = SocialPost(
+            title: "Persistent Post",
+            platform: .blog,
+            status: .published,
+            date: Date(),
+            content: "Content",
+            views: 100,
+            likes: 10
+        )
+        
+        modelContext.insert(post)
+        try modelContext.save()
+        
+        let fetchDescriptor = FetchDescriptor<SocialPost>()
+        let posts = try modelContext.fetch(fetchDescriptor)
+        
+        XCTAssertEqual(posts.count, 1)
+        XCTAssertEqual(posts.first?.title, "Persistent Post")
+        XCTAssertEqual(posts.first?.views, 100)
+    }
+    
+    // MARK: - ProjectItem Tests
+    
+    func testProjectItemCreation() {
+        let project = ProjectItem(
+            name: "Test Project",
+            details: "Test details",
+            language: "Swift",
+            stars: 100,
+            status: .active,
+            progress: 0.5
+        )
+        
+        XCTAssertEqual(project.name, "Test Project")
+        XCTAssertEqual(project.language, "Swift")
+        XCTAssertEqual(project.stars, 100)
+        XCTAssertEqual(project.status, .active)
+        XCTAssertEqual(project.progress, 0.5)
+    }
+    
+    // MARK: - NewsItem Tests
+    
+    func testNewsItemCreation() {
+        let news = NewsItem(
+            source: "Test Source",
+            title: "Test News",
+            summary: "Test summary",
+            category: "Tech",
+            image: "newspaper",
+            date: Date()
+        )
+        
+        XCTAssertEqual(news.source, "Test Source")
+        XCTAssertEqual(news.title, "Test News")
+        XCTAssertEqual(news.category, "Tech")
+    }
+    
+    // MARK: - Enum Tests
+    
+    func testTradeTypeEnum() {
+        XCTAssertEqual(TradeType.buy.rawValue, "Buy")
+        XCTAssertEqual(TradeType.sell.rawValue, "Sell")
+    }
+    
+    func testTradeEmotionEnum() {
+        XCTAssertEqual(TradeEmotion.excited.rawValue, "Excited")
+        XCTAssertEqual(TradeEmotion.fearful.rawValue, "Fearful")
+        XCTAssertEqual(TradeEmotion.neutral.rawValue, "Neutral")
+        XCTAssertEqual(TradeEmotion.revenge.rawValue, "Revenge")
+    }
+    
+    func testAssetTypeEnum() {
+        XCTAssertEqual(AssetType.stock.label, "Stock")
+        XCTAssertEqual(AssetType.crypto.label, "Crypto")
+        XCTAssertEqual(AssetType.forex.label, "Forex")
+        
+        XCTAssertEqual(AssetType.stock.icon, "building.columns.fill")
+        XCTAssertEqual(AssetType.crypto.icon, "bitcoinsign.circle.fill")
+        XCTAssertEqual(AssetType.forex.icon, "dollarsign.arrow.circlepath")
+    }
+    
+    func testProjectStatusEnum() {
+        XCTAssertEqual(ProjectStatus.active.rawValue, "Active")
+        XCTAssertEqual(ProjectStatus.idea.rawValue, "Idea")
+        XCTAssertEqual(ProjectStatus.done.rawValue, "Done")
+    }
+    
+    func testPostStatusEnum() {
+        XCTAssertEqual(PostStatus.idea.rawValue, "Idea")
+        XCTAssertEqual(PostStatus.draft.rawValue, "Draft")
+        XCTAssertEqual(PostStatus.scheduled.rawValue, "Scheduled")
+        XCTAssertEqual(PostStatus.published.rawValue, "Published")
+    }
+    
+    func testSocialPlatformEnum() {
+        XCTAssertEqual(SocialPlatform.xiaohongshu.rawValue, "RedBook")
+        XCTAssertEqual(SocialPlatform.twitter.rawValue, "X")
+        XCTAssertEqual(SocialPlatform.wechat.rawValue, "WeChat")
+        XCTAssertEqual(SocialPlatform.blog.rawValue, "Blog")
+    }
 }

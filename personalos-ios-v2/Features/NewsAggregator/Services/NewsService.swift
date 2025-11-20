@@ -32,12 +32,20 @@ class NewsService {
     var isLoading = false
     var error: String?
     
-    // Use NewsAPI.org - Get free API key at https://newsapi.org
-    private let apiKey = "YOUR_API_KEY_HERE" // TODO: Replace with real key
+    private var apiKey: String {
+        APIConfig.newsAPIKey
+    }
     
     func fetchTopHeadlines(category: String = "technology") async {
         isLoading = true
         error = nil
+        
+        // Use mock data if API key not configured
+        guard APIConfig.hasValidNewsAPIKey else {
+            Logger.debug("News API key not configured, skipping fetch", category: .network)
+            isLoading = false
+            return
+        }
         
         guard let url = URL(string: "https://newsapi.org/v2/top-headlines?category=\(category)&language=en&apiKey=\(apiKey)") else {
             error = "Invalid URL"
@@ -50,6 +58,7 @@ class NewsService {
             
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 error = "Failed to fetch news"
+                Logger.error("News API request failed with status: \((response as? HTTPURLResponse)?.statusCode ?? 0)", category: .network)
                 isLoading = false
                 return
             }
@@ -57,9 +66,11 @@ class NewsService {
             let decoder = JSONDecoder()
             let newsResponse = try decoder.decode(NewsResponse.self, from: data)
             articles = newsResponse.articles
+            Logger.log("Successfully fetched \(articles.count) news articles", category: .network)
             isLoading = false
         } catch {
             self.error = error.localizedDescription
+            Logger.error("Failed to fetch news: \(error.localizedDescription)", category: .network)
             isLoading = false
         }
     }

@@ -31,7 +31,7 @@ class HealthKitService {
             await fetchLastNightSleep()
             await fetchLatestHeartRate()
         } catch {
-            print("HealthKit authorization failed: \(error)")
+            Logger.error("HealthKit authorization failed: \(error.localizedDescription)", category: .health)
         }
     }
     

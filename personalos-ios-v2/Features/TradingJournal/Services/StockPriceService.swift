@@ -56,7 +56,7 @@ class StockPriceService {
             
             isLoading = false
         } catch {
-            print("Failed to fetch quote for \(symbol): \(error)")
+            Logger.error("Failed to fetch quote for \(symbol): \(error.localizedDescription)", category: .trading)
             isLoading = false
         }
     }
