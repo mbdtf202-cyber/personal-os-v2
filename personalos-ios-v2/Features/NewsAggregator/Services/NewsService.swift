@@ -76,9 +76,81 @@ class NewsService {
     }
     
     func fetchFromRSS(feedURL: String) async {
-        // TODO: Implement RSS parser
         isLoading = true
-        // Placeholder for RSS parsing logic
+        error = nil
+        
+        guard let url = URL(string: feedURL) else {
+            error = "Invalid RSS URL"
+            isLoading = false
+            return
+        }
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                error = "Failed to fetch RSS feed"
+                Logger.error("RSS fetch failed with status: \((response as? HTTPURLResponse)?.statusCode ?? 0)", category: Logger.network)
+                isLoading = false
+                return
+            }
+            
+            let parser = RSSParser()
+            let parsedArticles = parser.parse(data: data)
+            
+            // Convert to NewsArticle format
+            articles = parsedArticles.map { article in
+                NewsArticle(
+                    title: article.title,
+                    description: article.description,
+                    url: article.link,
+                    urlToImage: nil,
+                    publishedAt: article.pubDate,
+                    source: NewsArticle.NewsSource(name: "RSS Feed")
+                )
+            }
+            
+            Logger.log("Successfully fetched \(articles.count) articles from RSS", category: Logger.network)
+            isLoading = false
+        } catch {
+            self.error = error.localizedDescription
+            Logger.error("Failed to fetch RSS: \(error.localizedDescription)", category: Logger.network)
+            isLoading = false
+        }
+    }
+    
+    func fetchFromMultipleRSSFeeds(feeds: [RSSFeed]) async {
+        isLoading = true
+        error = nil
+        var allArticles: [NewsArticle] = []
+        
+        for feed in feeds where feed.isEnabled {
+            guard let url = URL(string: feed.url) else { continue }
+            
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                let parser = RSSParser()
+                let parsedArticles = parser.parse(data: data)
+                
+                let feedArticles = parsedArticles.map { article in
+                    NewsArticle(
+                        title: article.title,
+                        description: article.description,
+                        url: article.link,
+                        urlToImage: nil,
+                        publishedAt: article.pubDate,
+                        source: NewsArticle.NewsSource(name: feed.name)
+                    )
+                }
+                
+                allArticles.append(contentsOf: feedArticles)
+            } catch {
+                Logger.error("Failed to fetch RSS from \(feed.name): \(error.localizedDescription)", category: Logger.network)
+            }
+        }
+        
+        articles = allArticles
+        Logger.log("Successfully fetched \(articles.count) articles from \(feeds.count) RSS feeds", category: Logger.network)
         isLoading = false
     }
 }

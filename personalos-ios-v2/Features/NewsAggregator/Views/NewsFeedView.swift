@@ -8,6 +8,8 @@ struct NewsFeedView: View {
     @State private var showError = false
     @State private var selectedArticleURL: IdentifiableURL?
     @State private var readArticleIDs: Set<UUID> = []
+    @State private var showRSSFeeds = false
+    @State private var showBookmarks = false
     
     let mockNews: [NewsItem] = [
         NewsItem(
@@ -150,6 +152,20 @@ struct NewsFeedView: View {
             }
             .navigationTitle("Briefing")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Menu {
+                        Button(action: { showRSSFeeds = true }) {
+                            Label("RSS Feeds", systemImage: "antenna.radiowaves.left.and.right")
+                        }
+                        
+                        Button(action: { showBookmarks = true }) {
+                            Label("Bookmarks", systemImage: "bookmark")
+                        }
+                    } label: {
+                        Image(systemName: "line.3.horizontal")
+                    }
+                }
+                
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { Task { await refreshNews() } }) {
                         Image(systemName: "arrow.clockwise")
@@ -157,6 +173,12 @@ struct NewsFeedView: View {
                     .disabled(newsService.isLoading)
                     .accessibilityLabel("Refresh News")
                 }
+            }
+            .sheet(isPresented: $showRSSFeeds) {
+                RSSFeedsView()
+            }
+            .sheet(isPresented: $showBookmarks) {
+                BookmarkedNewsView()
             }
             .onAppear {
                 if news.isEmpty {
