@@ -5,6 +5,7 @@ struct NewsFeedView: View {
     @State private var selectedCategory = "All"
     @State private var news: [NewsItem] = []
     @State private var showError = false
+    @State private var selectedArticleURL: URL?
     
     let mockNews: [NewsItem] = [
         NewsItem(
@@ -100,6 +101,12 @@ struct NewsFeedView: View {
                                 
                                 ForEach(news) { item in
                                     NewsCard(item: item)
+                                        .onTapGesture {
+                                            if let url = item.url {
+                                                selectedArticleURL = url
+                                                HapticsManager.shared.light()
+                                            }
+                                        }
                                 }
                             }
                             .padding(20)
@@ -121,6 +128,10 @@ struct NewsFeedView: View {
                 if news.isEmpty {
                     news = mockNews
                 }
+            }
+            .fullScreenCover(item: $selectedArticleURL) { url in
+                SafariView(url: url)
+                    .ignoresSafeArea()
             }
         }
     }

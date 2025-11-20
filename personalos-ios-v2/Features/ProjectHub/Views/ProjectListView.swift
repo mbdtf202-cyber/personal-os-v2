@@ -27,7 +27,10 @@ struct ProjectListView: View {
                         // Projects List
                         LazyVStack(spacing: 16) {
                             ForEach(projects) { project in
-                                ProjectRow(project: project)
+                                NavigationLink(destination: ProjectDetailView(project: project)) {
+                                    ProjectRow(project: project)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                         

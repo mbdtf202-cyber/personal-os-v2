@@ -6,6 +6,7 @@ struct SocialDashboardView: View {
     @Query(sort: \SocialPost.date, order: .reverse) private var posts: [SocialPost]
     @State private var showEditor = false
     @State private var newPost = SocialPost(title: "", platform: .twitter, status: .idea, date: Date(), content: "", views: 0, likes: 0)
+    @State private var selectedPost: SocialPost?
 
     private var upcomingPosts: [SocialPost] {
         posts.filter { $0.status == .scheduled }.sorted { $0.date < $1.date }
@@ -35,6 +36,10 @@ struct SocialDashboardView: View {
                         } else {
                             ForEach(upcomingPosts) { post in
                                 PostRowView(post: post)
+                                    .onTapGesture {
+                                        selectedPost = post
+                                        HapticsManager.shared.light()
+                                    }
                             }
                         }
 
@@ -42,6 +47,10 @@ struct SocialDashboardView: View {
                         sectionHeader(title: "Drafts & Ideas", icon: "lightbulb.fill", color: .orange)
                         ForEach(drafts) { post in
                             PostRowView(post: post)
+                                .onTapGesture {
+                                    selectedPost = post
+                                    HapticsManager.shared.light()
+                                }
                         }
                         
                         Spacer(minLength: 100)
@@ -76,6 +85,9 @@ struct SocialDashboardView: View {
                 MarkdownEditorView(post: $newPost, onSave: { post in
                     savePost(post)
                 })
+            }
+            .sheet(item: $selectedPost) { post in
+                EditPostWrapper(post: post)
             }
         }
         .onAppear(perform: seedPostsIfNeeded)
@@ -206,6 +218,23 @@ struct SocialEmptyStateView: View {
             Spacer()
         }
         .padding(.vertical, 20)
+    }
+}
+
+// MARK: - Edit Post Wrapper
+struct EditPostWrapper: View {
+    @Bindable var post: SocialPost
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            MarkdownEditorView(post: Binding(
+                get: { post },
+                set: { post = $0 }
+            ), onSave: { _ in
+                dismiss()
+            })
+        }
     }
 }
 
