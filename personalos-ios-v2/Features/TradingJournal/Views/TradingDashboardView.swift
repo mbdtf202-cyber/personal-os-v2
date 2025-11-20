@@ -48,8 +48,11 @@ struct TradingDashboardView: View {
                         }
                         
                         balanceCard
+                        tradingStatsGrid
                         equityChart
+                        performanceMetrics
                         holdingsList
+                        recentTradesSection
                         Spacer(minLength: 100)
                     }
                     .padding(20)
@@ -185,6 +188,121 @@ struct TradingDashboardView: View {
         .cornerRadius(20)
     }
     
+    private var tradingStatsGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            QuickStatCard(
+                title: "Total Trades",
+                value: "\(recentTrades.count)",
+                icon: "chart.bar.fill",
+                color: AppTheme.mistBlue
+            )
+            
+            QuickStatCard(
+                title: "Win Rate",
+                value: winRate,
+                icon: "target",
+                color: AppTheme.matcha
+            )
+            
+            QuickStatCard(
+                title: "Avg Trade",
+                value: avgTradeSize,
+                icon: "dollarsign.circle.fill",
+                color: AppTheme.almond
+            )
+            
+            QuickStatCard(
+                title: "Best Trade",
+                value: bestTrade,
+                icon: "arrow.up.circle.fill",
+                color: AppTheme.matcha
+            )
+        }
+    }
+    
+    private var winRate: String {
+        guard !recentTrades.isEmpty else { return "0%" }
+        let profitableTrades = recentTrades.filter { trade in
+            // Simple heuristic: buy at lower price, sell at higher
+            return trade.type == .sell
+        }.count
+        let rate = Double(profitableTrades) / Double(recentTrades.count) * 100
+        return String(format: "%.1f%%", rate)
+    }
+    
+    private var avgTradeSize: String {
+        guard !recentTrades.isEmpty else { return "$0" }
+        let total = recentTrades.reduce(0.0) { $0 + ($1.price * $1.quantity) }
+        let avg = total / Double(recentTrades.count)
+        return String(format: "$%.0f", avg)
+    }
+    
+    private var bestTrade: String {
+        guard !recentTrades.isEmpty else { return "$0" }
+        let maxValue = recentTrades.map { $0.price * $0.quantity }.max() ?? 0
+        return String(format: "$%.0f", maxValue)
+    }
+    
+    private var performanceMetrics: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Performance Metrics")
+                .font(.headline)
+                .foregroundStyle(AppTheme.primaryText)
+            
+            HStack(spacing: 16) {
+                MetricBox(
+                    title: "Total P&L",
+                    value: String(format: "$%.2f", viewModel.dayPnL),
+                    subtitle: String(format: "%.2f%%", viewModel.dayPnLPercent),
+                    isPositive: viewModel.dayPnL >= 0
+                )
+                
+                MetricBox(
+                    title: "Portfolio Value",
+                    value: String(format: "$%.2f", viewModel.totalBalance),
+                    subtitle: "\(viewModel.assets.count) assets",
+                    isPositive: true
+                )
+            }
+        }
+        .padding(16)
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(20)
+    }
+    
+    private var recentTradesSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Recent Trades")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.primaryText)
+                
+                Spacer()
+                
+                if !recentTrades.isEmpty {
+                    Text("Last 5")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+            }
+            
+            if recentTrades.isEmpty {
+                Text("No recent trades. Tap + to log your first trade.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else {
+                ForEach(recentTrades.prefix(5)) { trade in
+                    RecentTradeRow(trade: trade)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.white.opacity(0.1))
+        .cornerRadius(20)
+    }
+    
     private var holdingsList: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -258,6 +376,113 @@ struct TradingDashboardView: View {
                 }
             }
         }
+    }
+}
+
+struct QuickStatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundStyle(color)
+                Spacer()
+            }
+            Text(value)
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundStyle(AppTheme.primaryText)
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(AppTheme.secondaryText)
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: AppTheme.shadow, radius: 4, y: 2)
+    }
+}
+
+struct MetricBox: View {
+    let title: String
+    let value: String
+    let subtitle: String
+    var isPositive: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(AppTheme.secondaryText)
+            Text(value)
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundStyle(isPositive ? AppTheme.matcha : AppTheme.coral)
+            Text(subtitle)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.tertiaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: AppTheme.shadow, radius: 4, y: 2)
+    }
+}
+
+struct RecentTradeRow: View {
+    let trade: TradeRecord
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Type Badge
+            ZStack {
+                Circle()
+                    .fill(trade.type == .buy ? AppTheme.matcha.opacity(0.15) : AppTheme.coral.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                Image(systemName: trade.type == .buy ? "arrow.down" : "arrow.up")
+                    .font(.caption)
+                    .foregroundStyle(trade.type == .buy ? AppTheme.matcha : AppTheme.coral)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(trade.symbol)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppTheme.primaryText)
+                
+                HStack(spacing: 4) {
+                    Text(trade.type.rawValue)
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.secondaryText)
+                    Text("•")
+                        .foregroundStyle(AppTheme.tertiaryText)
+                    Text(trade.date.formatted(.relative(presentation: .named)))
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.tertiaryText)
+                }
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("$\(trade.price * trade.quantity, specifier: "%.2f")")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppTheme.primaryText)
+                Text("\(trade.quantity, specifier: "%.2f") @ $\(trade.price, specifier: "%.2f")")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+        }
+        .padding(12)
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: AppTheme.shadow, radius: 3, y: 1)
     }
 }
 
