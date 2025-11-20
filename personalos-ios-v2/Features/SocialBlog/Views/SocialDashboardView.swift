@@ -228,10 +228,7 @@ struct EditPostWrapper: View {
     
     var body: some View {
         NavigationStack {
-            MarkdownEditorView(post: Binding(
-                get: { post },
-                set: { post = $0 }
-            ), onSave: { _ in
+            MarkdownEditorView(post: $post, onSave: { _ in
                 dismiss()
             })
         }
