@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct NewsFeedView: View {
     @Environment(NewsService.self) private var newsService

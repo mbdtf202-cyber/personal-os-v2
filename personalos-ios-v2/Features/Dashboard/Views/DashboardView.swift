@@ -245,14 +245,14 @@ struct DashboardView: View {
                                 .strikethrough(task.isCompleted)
                             
                             HStack(spacing: 8) {
-                                if let category = task.category {
-                                    Text(category)
+                                if !task.category.isEmpty {
+                                    Text(task.category)
                                         .font(.caption2)
                                         .fontWeight(.medium)
                                         .foregroundStyle(AppTheme.primaryText)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 3)
-                                        .background(categoryColor(for: category).opacity(0.2))
+                                        .background(categoryColor(for: task.category).opacity(0.2))
                                         .clipShape(Capsule())
                                 }
                                 
