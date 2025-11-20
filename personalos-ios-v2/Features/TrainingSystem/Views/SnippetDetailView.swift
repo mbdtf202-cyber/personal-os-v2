@@ -1,8 +1,11 @@
 import SwiftUI
+import SwiftData
 
 struct SnippetDetailView: View {
-    let snippet: CodeSnippet
+    @Bindable var snippet: CodeSnippet
     @Environment(\.dismiss) var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @State private var showDeleteAlert = false
     
     var body: some View {
         ZStack {
@@ -76,6 +79,41 @@ struct SnippetDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button(action: copyCode) {
+                        Label("Copy Code", systemImage: "doc.on.doc")
+                    }
+                    
+                    Button(role: .destructive, action: { showDeleteAlert = true }) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .alert("Delete Snippet?", isPresented: $showDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                deleteSnippet()
+            }
+        } message: {
+            Text("This action cannot be undone.")
+        }
+    }
+    
+    private func copyCode() {
+        UIPasteboard.general.string = snippet.code
+        HapticsManager.shared.success()
+    }
+    
+    private func deleteSnippet() {
+        modelContext.delete(snippet)
+        try? modelContext.save()
+        HapticsManager.shared.success()
+        dismiss()
     }
 }
 

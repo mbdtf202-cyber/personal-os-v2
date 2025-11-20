@@ -35,7 +35,8 @@ struct personalos_ios_v2App: App {
             TradeRecord.self,
             AssetItem.self,
             RSSFeed.self,
-            HabitItem.self
+            HabitItem.self,
+            CodeSnippet.self
         ])
         .environment(router)
         .environment(healthManager)

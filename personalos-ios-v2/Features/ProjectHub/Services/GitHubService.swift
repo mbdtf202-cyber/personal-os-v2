@@ -28,10 +28,12 @@ class GitHubService {
     var repos: [GitHubRepo] = []
     var isLoading = false
     var error: String?
+    var syncSuccess = false
     
     func fetchUserRepos(username: String) async {
         isLoading = true
         error = nil
+        syncSuccess = false
         
         guard let url = URL(string: "https://api.github.com/users/\(username)/repos?sort=updated&per_page=50") else {
             error = "Invalid URL"
@@ -53,10 +55,13 @@ class GitHubService {
             
             let decoder = JSONDecoder()
             repos = try decoder.decode([GitHubRepo].self, from: data)
+            syncSuccess = true
             isLoading = false
+            Logger.log("Successfully fetched \(repos.count) repositories from GitHub", category: Logger.general)
         } catch {
             self.error = error.localizedDescription
             isLoading = false
+            Logger.error("GitHub sync failed: \(error.localizedDescription)", category: Logger.general)
         }
     }
 }

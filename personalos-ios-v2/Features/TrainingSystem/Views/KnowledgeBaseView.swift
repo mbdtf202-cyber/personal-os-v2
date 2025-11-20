@@ -1,7 +1,32 @@
 import SwiftUI
+import SwiftData
 
 struct KnowledgeBaseView: View {
-    @State private var viewModel = WikiViewModel()
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \CodeSnippet.date, order: .reverse) private var allSnippets: [CodeSnippet]
+    @State private var selectedCategory: KnowledgeCategory?
+    @State private var searchText = ""
+    @State private var showAddSnippet = false
+    
+    private var filteredSnippets: [CodeSnippet] {
+        var results = allSnippets
+        
+        // Filter by category
+        if let category = selectedCategory {
+            results = results.filter { $0.category == category }
+        }
+        
+        // Filter by search text
+        if !searchText.isEmpty {
+            results = results.filter { 
+                $0.title.localizedCaseInsensitiveContains(searchText) ||
+                $0.summary.localizedCaseInsensitiveContains(searchText) ||
+                $0.code.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+        
+        return results
+    }
     
     var body: some View {
         NavigationStack {
@@ -12,16 +37,16 @@ struct KnowledgeBaseView: View {
                     // Filter Bar
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
-                            FilterChip(title: "All", isSelected: viewModel.selectedCategory == nil) {
-                                withAnimation { viewModel.selectedCategory = nil }
+                            FilterChip(title: "All", isSelected: selectedCategory == nil) {
+                                withAnimation { selectedCategory = nil }
                             }
                             ForEach(KnowledgeCategory.allCases, id: \.self) { category in
                                 FilterChip(
                                     title: category.rawValue,
-                                    isSelected: viewModel.selectedCategory == category,
+                                    isSelected: selectedCategory == category,
                                     color: category.color
                                 ) {
-                                    withAnimation { viewModel.selectedCategory = category }
+                                    withAnimation { selectedCategory = category }
                                 }
                             }
                         }
@@ -32,9 +57,27 @@ struct KnowledgeBaseView: View {
                     // Content List
                     ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 16) {
-                            ForEach(viewModel.filteredSnippets) { snippet in
-                                NavigationLink(destination: SnippetDetailView(snippet: snippet)) {
-                                    SnippetRowCard(snippet: snippet)
+                            if filteredSnippets.isEmpty {
+                                VStack(spacing: 16) {
+                                    Image(systemName: "doc.text.magnifyingglass")
+                                        .font(.system(size: 48))
+                                        .foregroundStyle(AppTheme.tertiaryText)
+                                    Text(searchText.isEmpty ? "No snippets yet" : "No results found")
+                                        .font(.headline)
+                                        .foregroundStyle(AppTheme.secondaryText)
+                                    Button("Add First Snippet") {
+                                        showAddSnippet = true
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 60)
+                            } else {
+                                ForEach(filteredSnippets) { snippet in
+                                    NavigationLink(destination: SnippetDetailView(snippet: snippet)) {
+                                        SnippetRowCard(snippet: snippet)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
                         }
@@ -43,8 +86,27 @@ struct KnowledgeBaseView: View {
                 }
             }
             .navigationTitle("Knowledge Base")
-            .searchable(text: $viewModel.searchText, prompt: "Search snippets, bugs, notes...")
+            .searchable(text: $searchText, prompt: "Search snippets, bugs, notes...")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: { showAddSnippet = true }) {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+            .sheet(isPresented: $showAddSnippet) {
+                AddSnippetView()
+            }
+            .onAppear {
+                seedSnippetsIfNeeded()
+            }
         }
+    }
+    
+    private func seedSnippetsIfNeeded() {
+        guard allSnippets.isEmpty else { return }
+        CodeSnippet.defaultSnippets.forEach { modelContext.insert($0) }
+        try? modelContext.save()
     }
 }
 

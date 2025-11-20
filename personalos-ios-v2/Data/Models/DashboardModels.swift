@@ -31,47 +31,4 @@ struct HealthCheckIn: Identifiable, Codable {
     }
 }
 
-// MARK: - Knowledge Base Models
-
-struct CodeSnippet: Identifiable, Hashable {
-    let id = UUID()
-    let title: String
-    let language: String
-    let code: String
-    let summary: String
-    let category: KnowledgeCategory
-    let date: Date
-}
-
-enum KnowledgeCategory: String, CaseIterable {
-    case swift = "Swift"
-    case python = "Python"
-    case ai = "AI/ML"
-    case devops = "DevOps"
-    case web = "Web"
-    case database = "Database"
-    
-    var color: Color {
-        switch self {
-        case .swift: return AppTheme.coral
-        case .python: return AppTheme.mistBlue
-        case .ai: return AppTheme.lavender
-        case .devops: return AppTheme.almond
-        case .web: return AppTheme.matcha
-        case .database: return .indigo
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .swift: return "swift"
-        case .python: return "terminal.fill"
-        case .ai: return "brain.head.profile"
-        case .devops: return "server.rack"
-        case .web: return "globe"
-        case .database: return "cylinder.fill"
-        }
-    }
-}
-
 import SwiftUI

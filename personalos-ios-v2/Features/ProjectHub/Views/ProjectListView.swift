@@ -86,19 +86,50 @@ struct GitHubSyncSheet: View {
     @Environment(GitHubService.self) private var githubService
     @Environment(\.dismiss) var dismiss
     @State private var username = ""
+    @State private var showSuccessMessage = false
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
+                if showSuccessMessage {
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(AppTheme.matcha)
+                            .font(.title2)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Sync Complete!")
+                                .font(.headline)
+                                .foregroundStyle(AppTheme.primaryText)
+                            Text("Synced \(githubService.repos.count) repositories")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                        Spacer()
+                    }
+                    .padding()
+                    .background(AppTheme.matcha.opacity(0.1))
+                    .cornerRadius(12)
+                    .padding(.horizontal)
+                }
+                
                 TextField("GitHub Username", text: $username)
                     .textFieldStyle(.roundedBorder)
                     .padding()
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
                 
                 Button("Sync Repositories") {
                     Task {
                         await githubService.fetchUserRepos(username: username)
-                        syncProjects()
-                        dismiss()
+                        if githubService.syncSuccess {
+                            syncProjects()
+                            showSuccessMessage = true
+                            HapticsManager.shared.success()
+                            
+                            // Auto dismiss after 1.5 seconds
+                            try? await Task.sleep(nanoseconds: 1_500_000_000)
+                            dismiss()
+                        }
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -110,10 +141,20 @@ struct GitHubSyncSheet: View {
                 }
                 
                 if let error = githubService.error {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .font(.caption)
+                    HStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(AppTheme.coral)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+                    .padding()
+                    .background(AppTheme.coral.opacity(0.1))
+                    .cornerRadius(12)
+                    .padding(.horizontal)
                 }
+                
+                Spacer()
             }
             .navigationTitle("Sync with GitHub")
             .navigationBarTitleDisplayMode(.inline)
@@ -146,7 +187,6 @@ struct GitHubSyncSheet: View {
         }
         
         try? modelContext.save()
-        HapticsManager.shared.success()
         Logger.log("Synced \(githubService.repos.count) projects from GitHub", category: Logger.general)
     }
 }
