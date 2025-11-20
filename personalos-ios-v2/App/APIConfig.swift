@@ -7,7 +7,11 @@ enum APIConfig {
     // Stock Price API (Alpha Vantage)
     // Get your free key at: https://www.alphavantage.co/support/#api-key
     static var stockAPIKey: String {
-        // Try to read from environment variable first
+        // Try AppStorage first (user configured in Settings)
+        if let storedKey = UserDefaults.standard.string(forKey: "stockAPIKey"), !storedKey.isEmpty {
+            return storedKey
+        }
+        // Try to read from environment variable
         if let key = ProcessInfo.processInfo.environment["STOCK_API_KEY"], !key.isEmpty {
             return key
         }
@@ -18,6 +22,11 @@ enum APIConfig {
     // News API
     // Get your free key at: https://newsapi.org/register
     static var newsAPIKey: String {
+        // Try AppStorage first (user configured in Settings)
+        if let storedKey = UserDefaults.standard.string(forKey: "newsAPIKey"), !storedKey.isEmpty {
+            return storedKey
+        }
+        // Try to read from environment variable
         if let key = ProcessInfo.processInfo.environment["NEWS_API_KEY"], !key.isEmpty {
             return key
         }

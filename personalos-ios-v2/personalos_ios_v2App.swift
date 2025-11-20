@@ -130,6 +130,10 @@ struct MoreModulesView: View {
                         NavigationLink(destination: ThemeGalleryView(themeStyle: $themeStyle)) {
                             ModuleCard(title: "Themes", icon: "paintbrush", color: AppTheme.lavender)
                         }
+                        
+                        NavigationLink(destination: SettingsView()) {
+                            ModuleCard(title: "Settings", icon: "gearshape.fill", color: .gray)
+                        }
                     }
                     .padding(20)
                 }
