@@ -16,31 +16,30 @@ struct ToolsView: View {
                         NavigationLink {
                             ToolDetailView(tool: tool)
                         } label: {
-                            FrostedCard {
-                                HStack(spacing: 12) {
-                                    Image(systemName: tool.icon)
-                                        .font(.title2)
-                                        .foregroundStyle(tool.accent)
-                                        .frame(width: 44, height: 44)
-                                        .background(tool.accent.opacity(0.15))
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                            HStack(spacing: 12) {
+                                Image(systemName: tool.icon)
+                                    .font(.title2)
+                                    .foregroundStyle(tool.accent)
+                                    .frame(width: 44, height: 44)
+                                    .background(tool.accent.opacity(0.15))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text(tool.title)
-                                            .font(Typography.headlineSmall)
-                                            .foregroundColor(MorandiColors.textPrimary)
-                                        Text(tool.subtitle)
-                                            .font(Typography.bodySmall)
-                                            .foregroundColor(MorandiColors.textSecondary)
-                                    }
-
-                                    Spacer()
-
-                                    Image(systemName: "chevron.right")
-                                        .font(.footnote)
-                                        .foregroundStyle(MorandiColors.textSecondary)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(tool.title)
+                                        .font(Typography.headlineSmall)
+                                        .foregroundColor(MorandiColors.textPrimary)
+                                    Text(tool.subtitle)
+                                        .font(Typography.bodySmall)
+                                        .foregroundColor(MorandiColors.textSecondary)
                                 }
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote)
+                                    .foregroundStyle(MorandiColors.textSecondary)
                             }
+                            .glassCard(cornerRadius: 16, padding: 16)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("打开 \(tool.title) 工具")
@@ -88,44 +87,42 @@ struct ToolDetailView: View {
                     }
                 }
 
-                FrostedCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("快捷操作")
-                            .font(Typography.titleSmall)
-                            .foregroundColor(MorandiColors.textPrimary)
-                        Text("通过快捷操作快速启动或记录你的工作，所有操作都会记录到历史活动中，避免遗漏。")
-                            .font(Typography.bodySmall)
-                            .foregroundColor(MorandiColors.textSecondary)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("快捷操作")
+                        .font(Typography.titleSmall)
+                        .foregroundColor(MorandiColors.textPrimary)
+                    Text("通过快捷操作快速启动或记录你的工作，所有操作都会记录到历史活动中，避免遗漏。")
+                        .font(Typography.bodySmall)
+                        .foregroundColor(MorandiColors.textSecondary)
 
-                        Button {
-                            showConfirmation = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "play.circle.fill")
-                                Text(tool.primaryAction)
-                                    .fontWeight(.semibold)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(tool.accent.opacity(0.2))
-                            .foregroundColor(MorandiColors.textPrimary)
-                            .cornerRadius(12)
+                    Button {
+                        showConfirmation = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "play.circle.fill")
+                            Text(tool.primaryAction)
+                                .fontWeight(.semibold)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("执行 \(tool.primaryAction)")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(tool.accent.opacity(0.2))
+                        .foregroundColor(MorandiColors.textPrimary)
+                        .cornerRadius(12)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("执行 \(tool.primaryAction)")
                 }
+                .glassCard(cornerRadius: 16, padding: 16)
 
-                FrostedCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("使用建议")
-                            .font(Typography.titleSmall)
-                            .foregroundColor(MorandiColors.textPrimary)
-                        Text("为每个工具设置每周目标和提醒时间，确保定期复盘。你也可以在仪表盘添加对应的快捷入口。")
-                            .font(Typography.bodySmall)
-                            .foregroundColor(MorandiColors.textSecondary)
-                    }
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("使用建议")
+                        .font(Typography.titleSmall)
+                        .foregroundColor(MorandiColors.textPrimary)
+                    Text("为每个工具设置每周目标和提醒时间，确保定期复盘。你也可以在仪表盘添加对应的快捷入口。")
+                        .font(Typography.bodySmall)
+                        .foregroundColor(MorandiColors.textSecondary)
                 }
+                .glassCard(cornerRadius: 16, padding: 16)
             }
             .padding(16)
         }

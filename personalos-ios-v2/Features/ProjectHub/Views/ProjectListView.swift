@@ -1,29 +1,5 @@
 import SwiftUI
 
-struct ProjectItem: Identifiable {
-    let id = UUID()
-    var name: String
-    var description: String
-    var language: String
-    var stars: Int
-    var status: ProjectStatus
-    var progress: Double
-}
-
-enum ProjectStatus: String {
-    case active = "Active"
-    case idea = "Idea"
-    case done = "Done"
-    
-    var color: Color {
-        switch self {
-        case .active: return AppTheme.mistBlue
-        case .idea: return AppTheme.almond
-        case .done: return AppTheme.matcha
-        }
-    }
-}
-
 struct ProjectListView: View {
     @StateObject private var githubService = GitHubService()
     @State private var projects: [ProjectItem] = []

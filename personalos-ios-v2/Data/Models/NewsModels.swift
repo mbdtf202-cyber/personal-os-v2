@@ -1,4 +1,4 @@
-import SwiftUI
+import Foundation
 
 struct NewsItem: Identifiable {
     let id = UUID()
