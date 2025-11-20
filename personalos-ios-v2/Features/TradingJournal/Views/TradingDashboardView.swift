@@ -86,26 +86,33 @@ struct TradingDashboardView: View {
             Text("Holdings")
                 .font(.headline)
                 .foregroundStyle(AppTheme.primaryText)
-            ForEach(viewModel.assets) { asset in
-                HStack {
-                    Image(systemName: asset.type.icon)
-                        .font(.title2)
-                        .foregroundStyle(AppTheme.primaryText)
-                    VStack(alignment: .leading) {
-                        Text(asset.symbol)
-                            .font(.headline)
-                        Text("\(asset.quantity, specifier: "%.2f") shares")
-                            .font(.caption)
+            if viewModel.assets.isEmpty {
+                Text("No assets. Tap + to log a trade.")
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .padding()
+            } else {
+                ForEach(viewModel.assets) { asset in
+                    HStack {
+                        Image(systemName: asset.type.icon)
+                            .font(.title2)
+                            .foregroundStyle(AppTheme.primaryText)
+                        VStack(alignment: .leading) {
+                            Text(asset.symbol)
+                                .font(.headline)
+                            Text("\(asset.quantity, specifier: "%.2f") shares")
+                                .font(.caption)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing) {
+                            Text("$\(asset.marketValue, specifier: "%.2f")")
+                                .fontWeight(.bold)
+                        }
                     }
-                    Spacer()
-                    VStack(alignment: .trailing) {
-                        Text("$\(asset.marketValue, specifier: "%.2f")")
-                            .fontWeight(.bold)
-                    }
+                    .padding(12)
+                    .background(Color.white.opacity(0.6))
+                    .cornerRadius(16)
                 }
-                .padding(12)
-                .background(Color.white.opacity(0.6))
-                .cornerRadius(16)
             }
         }
     }
