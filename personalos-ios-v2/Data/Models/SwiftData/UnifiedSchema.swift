@@ -306,3 +306,69 @@ enum AssetType: String, CaseIterable, Codable {
         }
     }
 }
+
+// MARK: - RSSFeed
+@Model
+final class RSSFeed {
+    var id: UUID
+    var name: String
+    var url: String
+    var category: String
+    var isEnabled: Bool
+    var lastFetched: Date?
+    
+    init(id: UUID = UUID(), name: String, url: String, category: String, isEnabled: Bool = true, lastFetched: Date? = nil) {
+        self.id = id
+        self.name = name
+        self.url = url
+        self.category = category
+        self.isEnabled = isEnabled
+        self.lastFetched = lastFetched
+    }
+    
+    static var defaultFeeds: [RSSFeed] {
+        [
+            RSSFeed(name: "Hacker News", url: "https://news.ycombinator.com/rss", category: "Tech"),
+            RSSFeed(name: "TechCrunch", url: "https://techcrunch.com/feed/", category: "Tech"),
+            RSSFeed(name: "The Verge", url: "https://www.theverge.com/rss/index.xml", category: "Tech"),
+            RSSFeed(name: "CSS-Tricks", url: "https://css-tricks.com/feed/", category: "Dev")
+        ]
+    }
+}
+
+// MARK: - HabitItem
+@Model
+final class HabitItem {
+    var id: UUID
+    var title: String
+    var icon: String
+    var isCompleted: Bool
+    var streak: Int
+    
+    init(id: UUID = UUID(), title: String, icon: String, isCompleted: Bool = false, streak: Int = 0) {
+        self.id = id
+        self.title = title
+        self.icon = icon
+        self.isCompleted = isCompleted
+        self.streak = streak
+    }
+    
+    @Transient var color: Color {
+        switch icon {
+        case "figure.run": return AppTheme.coral
+        case "book.fill": return AppTheme.lavender
+        case "brain.head.profile": return AppTheme.mistBlue
+        case "drop.fill": return AppTheme.mistBlue
+        default: return AppTheme.matcha
+        }
+    }
+    
+    static var defaultHabits: [HabitItem] {
+        [
+            HabitItem(title: "Morning Exercise", icon: "figure.run", streak: 5),
+            HabitItem(title: "Read 30 min", icon: "book.fill", streak: 3),
+            HabitItem(title: "Meditation", icon: "brain.head.profile", streak: 7),
+            HabitItem(title: "Drink Water", icon: "drop.fill", streak: 12)
+        ]
+    }
+}

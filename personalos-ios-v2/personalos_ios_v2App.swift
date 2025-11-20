@@ -34,7 +34,8 @@ struct personalos_ios_v2App: App {
             NewsItem.self,
             TradeRecord.self,
             AssetItem.self,
-            RSSFeed.self
+            RSSFeed.self,
+            HabitItem.self
         ])
         .environment(router)
         .environment(healthManager)
@@ -56,40 +57,40 @@ struct MainTabView: View {
                 get: { router.selectedTab },
                 set: { router.selectedTab = $0 }
             )) {
-                // 1. Dashboard
+                // 1. 🏠 Dashboard (含 Health)
                 DashboardView()
                     .tabItem {
-                        Label("Home", systemImage: "square.grid.2x2")
+                        Label("Home", systemImage: "square.grid.2x2.fill")
                     }
                     .tag(AppRouter.Tab.dashboard)
                 
-                // 2. Projects
-                ProjectListView()
+                // 2. 🚀 Growth (聚合 Projects, Knowledge, Tools)
+                GrowthHubView()
                     .tabItem {
-                        Label("Projects", systemImage: "folder")
+                        Label("Growth", systemImage: "hammer.fill")
                     }
-                    .tag(AppRouter.Tab.projects)
+                    .tag(AppRouter.Tab.growth)
                 
-                // 3. Social & Blog
+                // 3. 💬 Social
                 SocialDashboardView()
                     .tabItem {
                         Label("Social", systemImage: "bubble.left.and.bubble.right.fill")
                     }
                     .tag(AppRouter.Tab.social)
                 
-                // 4. News
+                // 4. 💰 Wealth
+                TradingDashboardView()
+                    .tabItem {
+                        Label("Wealth", systemImage: "chart.line.uptrend.xyaxis")
+                    }
+                    .tag(AppRouter.Tab.wealth)
+
+                // 5. 📰 News
                 NewsFeedView()
                     .tabItem {
-                        Label("News", systemImage: "newspaper")
+                        Label("News", systemImage: "newspaper.fill")
                     }
                     .tag(AppRouter.Tab.news)
-
-                // 5. More Apps
-                MoreModulesView(themeStyle: $themeStyle)
-                    .tabItem {
-                        Label("Apps", systemImage: "circle.grid.3x3.fill")
-                    }
-                    .tag(AppRouter.Tab.tools)
             }
             .tint(AppTheme.primaryText)
             
@@ -105,63 +106,4 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - More Modules View
-struct MoreModulesView: View {
-    @Binding var themeStyle: ThemeStyle
 
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                AppTheme.background.ignoresSafeArea()
-
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        NavigationLink(destination: HealthHomeView()) {
-                            ModuleCard(title: "Health", icon: "heart.fill", color: AppTheme.matcha)
-                        }
-
-                        NavigationLink(destination: TradingDashboardView()) {
-                            ModuleCard(title: "Trading", icon: "chart.xyaxis.line", color: AppTheme.almond)
-                        }
-
-                        NavigationLink(destination: KnowledgeBaseView()) {
-                            ModuleCard(title: "Knowledge", icon: "books.vertical.fill", color: .indigo)
-                        }
-
-                        NavigationLink(destination: ThemeGalleryView(themeStyle: $themeStyle)) {
-                            ModuleCard(title: "Themes", icon: "paintbrush", color: AppTheme.lavender)
-                        }
-                        
-                        NavigationLink(destination: SettingsView()) {
-                            ModuleCard(title: "Settings", icon: "gearshape.fill", color: .gray)
-                        }
-                    }
-                    .padding(20)
-                }
-                .navigationTitle("All Apps")
-            }
-        }
-    }
-}
-
-struct ModuleCard: View {
-    let title: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 32))
-                .foregroundStyle(color)
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(AppTheme.primaryText)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
-        .background(Color.white)
-        .cornerRadius(24)
-        .shadow(color: AppTheme.shadow, radius: 8, y: 4)
-    }
-}

@@ -8,8 +8,9 @@ struct DashboardView: View {
     @Environment(AppRouter.self) private var router
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TodoItem.createdAt, order: .reverse) private var tasks: [TodoItem]
-    @Query(sort: \SocialPost.createdAt, order: .reverse) private var posts: [SocialPost]
-    @Query(sort: \TradeRecord.entryDate, order: .reverse) private var trades: [TradeRecord]
+    @Query(sort: \SocialPost.date, order: .reverse) private var posts: [SocialPost]
+    @Query(sort: \TradeRecord.date, order: .reverse) private var trades: [TradeRecord]
+    @Query(sort: \ProjectItem.name) private var projects: [ProjectItem]
     @State private var showAddTask = false
     @State private var newTaskTitle = ""
     @State private var showQuickNote = false
@@ -43,8 +44,8 @@ struct DashboardView: View {
                         
                         healthSection
                         tasksSection
+                        modulesPreviewGrid
                         ActivityHeatmap(data: activityData)
-                        quickAccessGrid
                         Spacer(minLength: 100)
                     }
                     .padding(20)
@@ -305,37 +306,59 @@ struct DashboardView: View {
         }
     }
     
-    private var quickAccessGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-            ForEach(viewModel.quickActions) { action in
-                Button {
-                    handleQuickAction(action.title)
-                } label: {
-                    HStack {
-                        Image(systemName: action.icon)
-                            .foregroundStyle(action.color)
-                            .font(.title3)
-                            .frame(width: 40, height: 40)
-                            .background(action.color.opacity(0.1))
-                            .clipShape(Circle())
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(action.title)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(AppTheme.primaryText)
-                            Text(action.subtitle)
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.secondaryText)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.tertiaryText)
-                    }
-                    .padding()
-                    .background(Color.white)
-                    .cornerRadius(16)
-                    .shadow(color: AppTheme.shadow, radius: 5, y: 2)
+    // MARK: - Modules Preview (新增：全景概览)
+    private var modulesPreviewGrid: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Overview")
+                .font(.headline)
+                .foregroundStyle(AppTheme.primaryText)
+            
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                // 💰 财富预览
+                PreviewCard(
+                    title: "Wealth",
+                    icon: "chart.line.uptrend.xyaxis",
+                    color: AppTheme.almond,
+                    mainText: trades.first.map { "\($0.symbol)" } ?? "No trades",
+                    subText: trades.first.map { "$\(String(format: "%.2f", $0.price))" } ?? "Start investing"
+                )
+                .onTapGesture {
+                    router.navigate(to: .wealth)
+                }
+                
+                // 🚀 项目预览
+                PreviewCard(
+                    title: "Active Project",
+                    icon: "hammer.fill",
+                    color: AppTheme.mistBlue,
+                    mainText: projects.first?.name ?? "No Projects",
+                    subText: projects.first.map { "Progress: \(Int($0.progress * 100))%" } ?? "Start building"
+                )
+                .onTapGesture {
+                    router.navigate(to: .growth)
+                }
+                
+                // 💬 社媒预览
+                PreviewCard(
+                    title: "Social",
+                    icon: "bubble.left.fill",
+                    color: AppTheme.lavender,
+                    mainText: posts.first?.title ?? "No Posts",
+                    subText: posts.first?.status.rawValue ?? "Create content"
+                )
+                .onTapGesture {
+                    router.navigate(to: .social)
+                }
+                
+                // ⚙️ 设置入口
+                NavigationLink(destination: SettingsView()) {
+                    PreviewCard(
+                        title: "System",
+                        icon: "gearshape.fill",
+                        color: .gray,
+                        mainText: "Settings",
+                        subText: "Config & Data"
+                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -633,6 +656,45 @@ struct PermissionRow: View {
             
             Spacer()
         }
+    }
+}
+
+// MARK: - Preview Card Component
+struct PreviewCard: View {
+    let title: String
+    let icon: String
+    let color: Color
+    let mainText: String
+    let subText: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundStyle(color)
+                    .font(.title3)
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.tertiaryText)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(mainText)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppTheme.primaryText)
+                    .lineLimit(1)
+                
+                Text(subText)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: AppTheme.shadow, radius: 5, y: 2)
     }
 }
 

@@ -11,39 +11,27 @@ struct iPadAppContainer: View {
                 get: { router.selectedTab },
                 set: { if let value = $0 { router.selectedTab = value } }
             )) {
-                Section("Core") {
+                Section("Main") {
                     NavigationLink(value: AppRouter.Tab.dashboard) {
-                        Label("Dashboard", systemImage: "square.grid.2x2")
+                        Label("Dashboard", systemImage: "square.grid.2x2.fill")
                     }
-                    NavigationLink(value: AppRouter.Tab.health) {
-                        Label("Health", systemImage: "heart.fill")
-                    }
-                    NavigationLink(value: AppRouter.Tab.training) {
-                        Label("Learning", systemImage: "book.fill")
-                    }
-                }
-                
-                Section("Finance") {
-                    NavigationLink(value: AppRouter.Tab.trading) {
-                        Label("Trading", systemImage: "chart.line.uptrend.xyaxis")
+                    NavigationLink(value: AppRouter.Tab.growth) {
+                        Label("Growth", systemImage: "hammer.fill")
                     }
                 }
                 
                 Section("Content") {
                     NavigationLink(value: AppRouter.Tab.social) {
-                        Label("Social", systemImage: "pencil.and.scribble")
+                        Label("Social", systemImage: "bubble.left.and.bubble.right.fill")
                     }
                     NavigationLink(value: AppRouter.Tab.news) {
                         Label("News", systemImage: "newspaper.fill")
                     }
                 }
                 
-                Section("Work") {
-                    NavigationLink(value: AppRouter.Tab.projects) {
-                        Label("Projects", systemImage: "folder.fill")
-                    }
-                    NavigationLink(value: AppRouter.Tab.tools) {
-                        Label("Tools", systemImage: "wrench.and.screwdriver.fill")
+                Section("Finance") {
+                    NavigationLink(value: AppRouter.Tab.wealth) {
+                        Label("Wealth", systemImage: "chart.line.uptrend.xyaxis")
                     }
                 }
             }
@@ -55,20 +43,14 @@ struct iPadAppContainer: View {
                 switch router.selectedTab {
                 case .dashboard:
                     DashboardView()
-                case .health:
-                    HealthHomeView()
-                case .training:
-                    KnowledgeBaseView()
-                case .trading:
-                    TradingDashboardView()
+                case .growth:
+                    GrowthHubView()
                 case .social:
                     SocialDashboardView()
+                case .wealth:
+                    TradingDashboardView()
                 case .news:
                     NewsFeedView()
-                case .projects:
-                    ProjectListView()
-                case .tools:
-                    ToolsView()
                 }
             }
         }

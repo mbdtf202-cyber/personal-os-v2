@@ -5,14 +5,11 @@ import Observation
 @MainActor
 class AppRouter {
     enum Tab {
-        case dashboard
-        case health
-        case training
-        case trading
-        case social
-        case news
-        case projects
-        case tools
+        case dashboard  // 🏠 总览 + 健康
+        case growth     // 🚀 成长 (Project + Knowledge + Tools)
+        case social     // 💬 社媒
+        case wealth     // 💰 财富 (Trading)
+        case news       // 📰 资讯
     }
     
     var selectedTab: Tab = .dashboard

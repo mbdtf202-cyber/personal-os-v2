@@ -47,9 +47,9 @@ class DashboardViewModel: BaseViewModel {
     
     let quickActions: [QuickAction] = [
         QuickAction(title: "Add Note", subtitle: "捕捉想法并同步到知识库", icon: "note.text.badge.plus", color: AppTheme.mistBlue, targetTab: .social, action: .showSheet),
-        QuickAction(title: "Log Trade", subtitle: "记录一笔新的交易复盘", icon: "chart.bar.xaxis", color: AppTheme.almond, targetTab: .trading, action: .showSheet),
+        QuickAction(title: "Log Trade", subtitle: "记录一笔新的交易复盘", icon: "chart.bar.xaxis", color: AppTheme.almond, targetTab: .wealth, action: .showSheet),
         QuickAction(title: "Focus", subtitle: "开启 25 分钟专注会话", icon: "moon.stars.fill", color: AppTheme.lavender, targetTab: nil, action: .showSheet),
-        QuickAction(title: "Scan", subtitle: "快速扫描并存档文档", icon: "qrcode.viewfinder", color: AppTheme.primaryText, targetTab: .tools, action: .navigate)
+        QuickAction(title: "Scan", subtitle: "快速扫描并存档文档", icon: "qrcode.viewfinder", color: AppTheme.primaryText, targetTab: .growth, action: .navigate)
     ]
     
     func handleQuickAction(_ action: QuickAction, router: AppRouter) {
@@ -86,11 +86,11 @@ class DashboardViewModel: BaseViewModel {
             }.count
             
             let postsCount = posts.filter { post in
-                post.createdAt >= dayStart && post.createdAt < dayEnd
+                post.date >= dayStart && post.date < dayEnd
             }.count
             
             let tradesCount = trades.filter { trade in
-                trade.entryDate >= dayStart && trade.entryDate < dayEnd
+                trade.date >= dayStart && trade.date < dayEnd
             }.count
             
             let totalActivity = Double(completedTasks + postsCount + tradesCount)
