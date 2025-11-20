@@ -225,10 +225,21 @@ struct SocialEmptyStateView: View {
 struct EditPostWrapper: View {
     @Bindable var post: SocialPost
     @Environment(\.dismiss) var dismiss
+    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         NavigationStack {
-            MarkdownEditorView(post: $post, onSave: { _ in
+            MarkdownEditorView(post: Binding(
+                get: { post },
+                set: { newValue in
+                    post.title = newValue.title
+                    post.content = newValue.content
+                    post.platform = newValue.platform
+                    post.status = newValue.status
+                    post.date = newValue.date
+                    try? modelContext.save()
+                }
+            ), onSave: { _ in
                 dismiss()
             })
         }

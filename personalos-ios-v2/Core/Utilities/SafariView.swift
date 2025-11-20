@@ -12,6 +12,8 @@ struct SafariView: UIViewControllerRepresentable {
     }
 }
 
-extension URL: Identifiable {
-    public var id: String { absoluteString }
+// Wrapper to make URL identifiable without extending the type
+struct IdentifiableURL: Identifiable {
+    let id = UUID()
+    let url: URL
 }

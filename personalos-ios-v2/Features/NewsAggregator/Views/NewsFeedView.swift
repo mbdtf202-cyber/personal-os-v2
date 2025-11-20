@@ -5,7 +5,7 @@ struct NewsFeedView: View {
     @State private var selectedCategory = "All"
     @State private var news: [NewsItem] = []
     @State private var showError = false
-    @State private var selectedArticleURL: URL?
+    @State private var selectedArticleURL: IdentifiableURL?
     
     let mockNews: [NewsItem] = [
         NewsItem(
@@ -103,7 +103,7 @@ struct NewsFeedView: View {
                                     NewsCard(item: item)
                                         .onTapGesture {
                                             if let url = item.url {
-                                                selectedArticleURL = url
+                                                selectedArticleURL = IdentifiableURL(url: url)
                                                 HapticsManager.shared.light()
                                             }
                                         }
@@ -129,8 +129,8 @@ struct NewsFeedView: View {
                     news = mockNews
                 }
             }
-            .fullScreenCover(item: $selectedArticleURL) { url in
-                SafariView(url: url)
+            .fullScreenCover(item: $selectedArticleURL) { identifiableURL in
+                SafariView(url: identifiableURL.url)
                     .ignoresSafeArea()
             }
         }
