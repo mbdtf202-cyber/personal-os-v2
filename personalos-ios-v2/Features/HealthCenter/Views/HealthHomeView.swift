@@ -55,9 +55,42 @@ struct HealthHomeView: View {
     }
     
     private var metricsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-            MetricCard(title: "Steps", value: "\(manager.steps)", icon: "figure.walk", color: AppTheme.matcha)
-            MetricCard(title: "Heart Rate", value: "\(manager.heartRate) bpm", icon: "heart.fill", color: AppTheme.coral)
+        VStack(spacing: 16) {
+            if manager.healthKitService.authorizationDenied {
+                VStack(spacing: 12) {
+                    Image(systemName: "heart.slash")
+                        .font(.largeTitle)
+                        .foregroundStyle(AppTheme.coral)
+                    Text("Health Access Denied")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.primaryText)
+                    Text("Enable Health permissions in Settings to track your health data")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                        .multilineTextAlignment(.center)
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(AppTheme.mistBlue)
+                    .cornerRadius(12)
+                }
+                .padding()
+                .background(Color.white)
+                .cornerRadius(20)
+                .shadow(color: AppTheme.shadow, radius: 8, y: 4)
+            } else {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                    MetricCard(title: "Steps", value: "\(manager.steps)", icon: "figure.walk", color: AppTheme.matcha)
+                    MetricCard(title: "Heart Rate", value: "\(manager.heartRate) bpm", icon: "heart.fill", color: AppTheme.coral)
+                }
+            }
         }
     }
     

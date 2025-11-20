@@ -30,6 +30,14 @@ struct TradeLogForm: View {
                             .keyboardType(.decimalPad)
                     }
                 }
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            hideKeyboard()
+                        }
+                    }
+                }
 
                 Section(header: Text("Notes")) {
                     TextEditor(text: $note)
@@ -64,6 +72,10 @@ struct TradeLogForm: View {
         )
         modelContext.insert(newTrade)
         dismiss()
+    }
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

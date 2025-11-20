@@ -66,6 +66,7 @@ struct TradingDashboardView: View {
                             .foregroundStyle(AppTheme.primaryText)
                     }
                     .disabled(stockPriceService.isLoading)
+                    .accessibilityLabel("Refresh Prices")
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { showLogForm = true }) {
@@ -73,6 +74,7 @@ struct TradingDashboardView: View {
                             .font(.system(size: 22))
                             .foregroundStyle(AppTheme.almond)
                     }
+                    .accessibilityLabel("Log Trade")
                 }
             }
             .sheet(isPresented: $showLogForm) {

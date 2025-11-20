@@ -114,6 +114,7 @@ struct NewsFeedView: View {
                         Image(systemName: "arrow.clockwise")
                     }
                     .disabled(newsService.isLoading)
+                    .accessibilityLabel("Refresh News")
                 }
             }
             .onAppear {

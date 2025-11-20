@@ -80,6 +80,7 @@ struct DashboardView: View {
                     .frame(width: 48, height: 48)
                     .background(Circle().fill(Color.white).shadow(color: AppTheme.shadow, radius: 8, y: 4))
             }
+            .accessibilityLabel("Search")
         }
     }
     
@@ -135,6 +136,7 @@ struct DashboardView: View {
                     Image(systemName: "plus.circle.fill")
                         .foregroundStyle(AppTheme.mistBlue)
                 }
+                .accessibilityLabel("Add Task")
             }
             
             if tasks.isEmpty {
@@ -165,6 +167,7 @@ struct DashboardView: View {
                                 .foregroundStyle(AppTheme.coral)
                                 .font(.caption)
                         }
+                        .accessibilityLabel("Delete Task")
                     }
                     .padding()
                     .background(Color.white)

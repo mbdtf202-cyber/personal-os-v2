@@ -9,6 +9,7 @@ class HealthKitService {
     private let healthStore = HKHealthStore()
     
     var isAuthorized = false
+    var authorizationDenied = false
     var todaySteps: Int = 0
     var lastNightSleep: Double = 0.0
     var heartRate: Int = 0
@@ -27,10 +28,12 @@ class HealthKitService {
         do {
             try await healthStore.requestAuthorization(toShare: [], read: typesToRead)
             isAuthorized = true
+            authorizationDenied = false
             await fetchTodaySteps()
             await fetchLastNightSleep()
             await fetchLatestHeartRate()
         } catch {
+            authorizationDenied = true
             Logger.error("HealthKit authorization failed: \(error.localizedDescription)", category: .health)
         }
     }
