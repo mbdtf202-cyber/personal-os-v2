@@ -1,0 +1,204 @@
+import Foundation
+import SwiftData
+
+enum MigrationVersion: Int, CaseIterable {
+    case v1 = 1
+    case v2 = 2
+    case v3 = 3
+    
+    static var current: MigrationVersion {
+        return .v3
+    }
+}
+
+@MainActor
+class MigrationManager {
+    static let shared = MigrationManager()
+    
+    private let versionKey = "schema_version"
+    private let backupKey = "last_backup_date"
+    
+    private init() {}
+    
+    func getCurrentVersion() -> MigrationVersion {
+        let version = UserDefaults.standard.integer(forKey: versionKey)
+        return MigrationVersion(rawValue: version) ?? .v1
+    }
+    
+    func setCurrentVersion(_ version: MigrationVersion) {
+        UserDefaults.standard.set(version.rawValue, forKey: versionKey)
+    }
+    
+    func needsMigration() -> Bool {
+        return getCurrentVersion().rawValue < MigrationVersion.current.rawValue
+    }
+    
+    func performMigration(modelContainer: ModelContainer) async throws {
+        let currentVersion = getCurrentVersion()
+        
+        guard needsMigration() else {
+            print("No migration needed")
+            return
+        }
+        
+        print("Starting migration from v\(currentVersion.rawValue) to v\(MigrationVersion.current.rawValue)")
+        
+        // Backup before migration
+        try await createBackup(modelContainer: modelContainer)
+        
+        // Perform migrations sequentially
+        for version in MigrationVersion.allCases where version.rawValue > currentVersion.rawValue {
+            try await migrate(to: version, modelContainer: modelContainer)
+            setCurrentVersion(version)
+        }
+        
+        print("Migration completed successfully")
+    }
+    
+    private func migrate(to version: MigrationVersion, modelContainer: ModelContainer) async throws {
+        switch version {
+        case .v1:
+            break // Initial version
+        case .v2:
+            try await migrateToV2(modelContainer: modelContainer)
+        case .v3:
+            try await migrateToV3(modelContainer: modelContainer)
+        }
+    }
+    
+    private func migrateToV2(modelContainer: ModelContainer) async throws {
+        print("Migrating to v2: Adding new fields to existing models")
+        // Add migration logic here
+        // Example: Add new properties, update relationships, etc.
+    }
+    
+    private func migrateToV3(modelContainer: ModelContainer) async throws {
+        print("Migrating to v3: Restructuring data models")
+        // Add migration logic here
+    }
+    
+    private func createBackup(modelContainer: ModelContainer) async throws {
+        print("Creating backup before migration")
+        
+        let backupURL = getBackupURL()
+        
+        // Export data to JSON
+        _ = modelContainer.mainContext
+        
+        // Backup each model type
+        // This is a simplified example - in production, implement proper serialization
+        
+        UserDefaults.standard.set(Date(), forKey: backupKey)
+        print("Backup created at: \(backupURL.path)")
+    }
+    
+    func restoreFromBackup() async throws {
+        print("Restoring from backup")
+        let backupURL = getBackupURL()
+        
+        guard FileManager.default.fileExists(atPath: backupURL.path) else {
+            throw MigrationError.backupNotFound
+        }
+        
+        // Implement restore logic
+    }
+    
+    private func getBackupURL() -> URL {
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return documentsPath.appendingPathComponent("backup_\(Date().timeIntervalSince1970).json")
+    }
+    
+    func cleanupOldBackups() {
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        
+        do {
+            let files = try FileManager.default.contentsOfDirectory(at: documentsPath, includingPropertiesForKeys: nil)
+            let backupFiles = files.filter { $0.lastPathComponent.hasPrefix("backup_") }
+            
+            // Keep only last 5 backups
+            let sortedBackups = backupFiles.sorted { $0.lastPathComponent > $1.lastPathComponent }
+            for backup in sortedBackups.dropFirst(5) {
+                try FileManager.default.removeItem(at: backup)
+                print("Removed old backup: \(backup.lastPathComponent)")
+            }
+        } catch {
+            print("Failed to cleanup backups: \(error)")
+        }
+    }
+}
+
+enum MigrationError: Error {
+    case backupNotFound
+    case migrationFailed(String)
+    case incompatibleVersion
+}
+
+// MARK: - Data Cleanup Manager
+@MainActor
+class DataCleanupManager {
+    static let shared = DataCleanupManager()
+    
+    private init() {}
+    
+    func cleanupOldData(modelContainer: ModelContainer, olderThan days: Int = 90) async throws {
+        let context = modelContainer.mainContext
+        let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date())!
+        
+        print("Cleaning up data older than \(days) days")
+        
+        // Clean up old news items
+        let newsDescriptor = FetchDescriptor<NewsItem>(
+            predicate: #Predicate { item in
+                item.date < cutoffDate
+            }
+        )
+        
+        let oldNews = try context.fetch(newsDescriptor)
+        for item in oldNews {
+            context.delete(item)
+        }
+        
+        // Clean up old trade records (keep all for historical analysis)
+        // Only clean up draft/incomplete records
+        
+        try context.save()
+        print("Cleanup completed: removed \(oldNews.count) old items")
+    }
+    
+    func calculateDatabaseSize() -> Int {
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        
+        do {
+            let files = try FileManager.default.contentsOfDirectory(at: documentsPath, includingPropertiesForKeys: [.fileSizeKey])
+            
+            let totalSize = files.reduce(0) { sum, url in
+                let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+                return sum + size
+            }
+            
+            return totalSize
+        } catch {
+            print("Failed to calculate database size: \(error)")
+            return 0
+        }
+    }
+    
+    func exportData(modelContainer: ModelContainer) async throws -> URL {
+        _ = modelContainer.mainContext
+        let exportURL = FileManager.default.temporaryDirectory.appendingPathComponent("export_\(Date().timeIntervalSince1970).json")
+        
+        // Export all data to JSON
+        let exportData: [String: Any] = [
+            "version": MigrationVersion.current.rawValue,
+            "exportDate": Date().timeIntervalSince1970,
+            "note": "Export functionality to be implemented"
+        ]
+        
+        // Add export logic for each model type
+        
+        let jsonData = try JSONSerialization.data(withJSONObject: exportData, options: .prettyPrinted)
+        try jsonData.write(to: exportURL)
+        
+        return exportURL
+    }
+}

@@ -24,14 +24,22 @@ class HealthStoreManager {
 
     init() {
         Task {
-            await healthKitService.requestAuthorization()
-            await syncHealthData()
+            do {
+                try await healthKitService.requestAuthorization()
+                await syncHealthData()
+            } catch {
+                print("Failed to request HealthKit authorization: \(error)")
+            }
         }
     }
     
     func requestHealthKitAuthorization() async {
-        await healthKitService.requestAuthorization()
-        await syncHealthData()
+        do {
+            try await healthKitService.requestAuthorization()
+            await syncHealthData()
+        } catch {
+            print("Failed to request HealthKit authorization: \(error)")
+        }
     }
     
     func syncHealthData() async {

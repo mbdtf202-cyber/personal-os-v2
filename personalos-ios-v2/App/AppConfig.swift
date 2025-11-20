@@ -10,8 +10,14 @@ struct AppConfig {
     // MARK: - API Configuration
     struct API {
         static let baseURL = "https://api.personalos.com"
+        static let remoteConfigURL = "https://api.personalos.com/config/features"
         static let timeout: TimeInterval = 30
         static let retryCount = 3
+        
+        // Service-specific endpoints
+        static let newsAPIKey = ProcessInfo.processInfo.environment["NEWS_API_KEY"] ?? ""
+        static let githubToken = ProcessInfo.processInfo.environment["GITHUB_TOKEN"] ?? ""
+        static let stockAPIKey = ProcessInfo.processInfo.environment["STOCK_API_KEY"] ?? ""
     }
     
     // MARK: - Feature Flags

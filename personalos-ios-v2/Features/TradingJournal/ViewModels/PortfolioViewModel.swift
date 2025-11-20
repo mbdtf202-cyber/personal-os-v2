@@ -15,7 +15,7 @@ class PortfolioViewModel {
 
     func recalculatePortfolio(from trades: [TradeRecord]) {
         let result = calculator.calculate(with: trades) { symbol, fallback in
-            priceService?.quotes[symbol]?.price ?? priceService?.getMockPrice(for: symbol, fallback: fallback) ?? fallback
+            priceService?.quotes[symbol]?.price ?? fallback
         }
 
         assets = result.assets
@@ -28,8 +28,12 @@ class PortfolioViewModel {
     func refreshPrices(for trades: [TradeRecord]) async {
         guard let priceService = priceService else { return }
         let symbols = Array(Set(trades.map { $0.symbol }))
-        await priceService.fetchMultipleQuotes(symbols: symbols)
-        recalculatePortfolio(from: trades)
+        do {
+            _ = try await priceService.fetchMultipleQuotes(symbols: symbols)
+            recalculatePortfolio(from: trades)
+        } catch {
+            print("Failed to refresh prices: \(error)")
+        }
     }
 }
 

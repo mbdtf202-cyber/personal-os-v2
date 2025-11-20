@@ -5,7 +5,7 @@ import Observation
 
 @MainActor
 @Observable
-class HealthKitService {
+class HealthKitService: HealthServiceProtocol {
     private let healthStore = HKHealthStore()
     
     var isAuthorized = false
@@ -14,7 +14,7 @@ class HealthKitService {
     var lastNightSleep: Double = 0.0
     var heartRate: Int = 0
     
-    func requestAuthorization() async {
+    func requestAuthorization() async throws {
         guard HKHealthStore.isHealthDataAvailable() else { return }
         
         guard let stepType = HKObjectType.quantityType(forIdentifier: .stepCount),
@@ -110,6 +110,49 @@ class HealthKitService {
                     .reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) / 3600 }
                 
                 continuation.resume(returning: sleepHours)
+            }
+            
+            self.healthStore.execute(query)
+        }
+    }
+}
+
+// MARK: - Protocol Conformance
+extension HealthKitService {
+    func fetchDailySteps() async throws -> Double {
+        await fetchTodaySteps()
+        return Double(todaySteps)
+    }
+    
+    func fetchWeeklyActivity() async throws -> [String: Double] {
+        guard let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) else {
+            return [:]
+        }
+        
+        let calendar = Calendar.current
+        let now = Date()
+        let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now))!
+        
+        return await withCheckedContinuation { continuation in
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "EEE"
+            
+            let query = HKStatisticsCollectionQuery(
+                quantityType: stepType,
+                quantitySamplePredicate: nil,
+                options: .cumulativeSum,
+                anchorDate: startOfWeek,
+                intervalComponents: DateComponents(day: 1)
+            )
+            
+            query.initialResultsHandler = { _, results, _ in
+                var data: [String: Double] = [:]
+                results?.enumerateStatistics(from: startOfWeek, to: now) { statistics, _ in
+                    let dayName = dateFormatter.string(from: statistics.startDate)
+                    let steps = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0
+                    data[dayName] = steps
+                }
+                continuation.resume(returning: data)
             }
             
             self.healthStore.execute(query)

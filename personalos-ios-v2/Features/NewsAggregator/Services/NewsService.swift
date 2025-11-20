@@ -27,7 +27,7 @@ import Observation
 
 @MainActor
 @Observable
-class NewsService {
+class NewsService: NewsServiceProtocol {
     var articles: [NewsArticle] = []
     var isLoading = false
     var error: String?
@@ -152,5 +152,27 @@ class NewsService {
         articles = allArticles
         Logger.log("Successfully fetched \(articles.count) articles from \(feeds.count) RSS feeds", category: Logger.network)
         isLoading = false
+    }
+}
+
+// MARK: - Protocol Conformance
+extension NewsService {
+    func fetchNews(category: String?) async throws -> [NewsArticle] {
+        await fetchTopHeadlines(category: category ?? "technology")
+        return articles
+    }
+    
+    func searchNews(query: String) async throws -> [NewsArticle] {
+        guard APIConfig.hasValidNewsAPIKey else {
+            return []
+        }
+        
+        guard let url = URL(string: "https://newsapi.org/v2/everything?q=\(query)&language=en&apiKey=\(apiKey)") else {
+            throw URLError(.badURL)
+        }
+        
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let newsResponse = try JSONDecoder().decode(NewsResponse.self, from: data)
+        return newsResponse.articles
     }
 }

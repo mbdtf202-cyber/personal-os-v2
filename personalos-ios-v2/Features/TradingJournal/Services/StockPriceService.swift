@@ -10,95 +10,66 @@ struct StockQuote: Codable {
 
 @MainActor
 @Observable
-class StockPriceService {
+class StockPriceService: StockServiceProtocol {
     var quotes: [String: StockQuote] = [:]
     var isLoading = false
     var error: String?
     
-    private var apiKey: String {
-        APIConfig.stockAPIKey
+    private let apiKey: String
+    
+    init() {
+        self.apiKey = AppConfig.API.stockAPIKey
     }
     
-    func fetchQuote(symbol: String) async {
+    func fetchQuote(symbol: String) async throws -> StockQuote {
         isLoading = true
-        error = nil
+        defer { isLoading = false }
         
-        // Use mock data if API key not configured
-        guard APIConfig.hasValidStockAPIKey else {
-            quotes[symbol] = StockQuote(
+        // Mock data if no API key
+        guard !apiKey.isEmpty else {
+            let mockQuote = StockQuote(
                 symbol: symbol,
-                price: getMockPrice(for: symbol),
-                change: Double.random(in: -5...5),
-                changePercent: Double.random(in: -2...2)
+                price: Double.random(in: 100...500),
+                change: Double.random(in: -10...10),
+                changePercent: Double.random(in: -5...5)
             )
-            Logger.debug("Stock API key not configured, using mock data for \(symbol)", category: Logger.trading)
-            isLoading = false
-            return
+            quotes[symbol] = mockQuote
+            return mockQuote
         }
         
-        guard let url = URL(string: "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=\(symbol)&apikey=\(apiKey)") else {
-            error = "Invalid URL"
-            isLoading = false
-            return
+        // Implement real API call here
+        guard let url = URL(string: "https://api.example.com/quote/\(symbol)?apikey=\(apiKey)") else {
+            throw URLError(.badURL)
         }
         
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            
-            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let globalQuote = json["Global Quote"] as? [String: String],
-               let priceStr = globalQuote["05. price"],
-               let price = Double(priceStr),
-               let changeStr = globalQuote["09. change"],
-               let change = Double(changeStr),
-               let changePercentStr = globalQuote["10. change percent"]?.replacingOccurrences(of: "%", with: ""),
-               let changePercent = Double(changePercentStr) {
-                
-                let quote = StockQuote(symbol: symbol, price: price, change: change, changePercent: changePercent)
-                quotes[symbol] = quote
-                Logger.log("Successfully fetched quote for \(symbol): $\(price)", category: Logger.trading)
-            } else {
-                error = "Failed to parse stock data"
-                Logger.error("Failed to parse stock data for \(symbol)", category: Logger.trading)
-            }
-            
-            isLoading = false
-        } catch {
-            self.error = error.localizedDescription
-            Logger.error("Failed to fetch quote for \(symbol): \(error.localizedDescription)", category: Logger.trading)
-            isLoading = false
-        }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        let quote = try JSONDecoder().decode(StockQuote.self, from: data)
+        quotes[symbol] = quote
+        return quote
     }
     
-    func fetchMultipleQuotes(symbols: [String]) async {
-        // Rate limiting: Alpha Vantage free tier allows 5 requests per minute
-        let batchSize = 5
-        let delayBetweenBatches: UInt64 = 60_000_000_000 // 60 seconds in nanoseconds
+    func fetchMultipleQuotes(symbols: [String]) async throws -> [StockQuote] {
+        var results: [StockQuote] = []
         
-        for (index, symbol) in symbols.enumerated() {
-            await fetchQuote(symbol: symbol)
-            
-            // Add delay after every 5 requests
-            if (index + 1) % batchSize == 0 && index < symbols.count - 1 {
-                Logger.log("Rate limit: waiting 60s before next batch", category: Logger.trading)
-                try? await Task.sleep(nanoseconds: delayBetweenBatches)
-            } else if index < symbols.count - 1 {
-                // Small delay between individual requests
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        for symbol in symbols {
+            do {
+                let quote = try await fetchQuote(symbol: symbol)
+                results.append(quote)
+            } catch {
+                Logger.error("Failed to fetch quote for \(symbol): \(error)", category: Logger.network)
             }
         }
+        
+        return results
     }
     
-    // Fallback: Use mock data if API key not configured
-    func getMockPrice(for symbol: String, fallback: Double? = nil) -> Double {
-        let mockPrices: [String: Double] = [
-            "AAPL": 175.50,
-            "GOOGL": 140.25,
-            "MSFT": 380.00,
-            "TSLA": 245.80,
-            "BTC": 42000.00,
-            "ETH": 2200.00
-        ]
-        return mockPrices[symbol] ?? fallback ?? 100.0
+    func subscribeToRealTimeUpdates(symbols: [String]) async {
+        // Implement WebSocket or polling for real-time updates
+        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self = self else { return }
+                _ = try? await self.fetchMultipleQuotes(symbols: symbols)
+            }
+        }
     }
 }

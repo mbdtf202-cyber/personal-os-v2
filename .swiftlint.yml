@@ -1,0 +1,59 @@
+disabled_rules:
+  - trailing_whitespace
+  - line_length
+  
+opt_in_rules:
+  - empty_count
+  - empty_string
+  - explicit_init
+  - first_where
+  - sorted_imports
+  - vertical_whitespace_closing_braces
+  - vertical_whitespace_opening_braces
+
+excluded:
+  - Pods
+  - .build
+  - DerivedData
+  - personalos-ios-v2.xcodeproj
+  - personalos-ios-v2Tests
+  - personalos-ios-v2UITests
+
+line_length:
+  warning: 120
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+file_length:
+  warning: 500
+  error: 1000
+
+function_body_length:
+  warning: 50
+  error: 100
+
+type_body_length:
+  warning: 300
+  error: 500
+
+cyclomatic_complexity:
+  warning: 10
+  error: 20
+
+identifier_name:
+  min_length:
+    warning: 2
+  max_length:
+    warning: 50
+    error: 60
+  excluded:
+    - id
+    - url
+    - URL
+    - i
+    - j
+    - x
+    - y
+
+reporter: "xcode"

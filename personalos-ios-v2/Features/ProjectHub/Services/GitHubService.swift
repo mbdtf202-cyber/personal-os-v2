@@ -24,7 +24,7 @@ import Observation
 
 @MainActor
 @Observable
-class GitHubService {
+class GitHubService: GitHubServiceProtocol {
     var repos: [GitHubRepo] = []
     var isLoading = false
     var error: String?
@@ -63,5 +63,50 @@ class GitHubService {
             isLoading = false
             Logger.error("GitHub sync failed: \(error.localizedDescription)", category: Logger.general)
         }
+    }
+}
+
+// MARK: - Protocol Conformance
+struct GitHubRepository: Codable {
+    let id: Int
+    let name: String
+    let description: String?
+    let url: String
+}
+
+struct GitHubIssue: Codable {
+    let id: Int
+    let title: String
+    let state: String
+    let url: String
+}
+
+extension GitHubService {
+    func fetchRepositories() async throws -> [GitHubRepository] {
+        // Use existing repos or fetch
+        if repos.isEmpty {
+            await fetchUserRepos(username: "default")
+        }
+        
+        return repos.map { repo in
+            GitHubRepository(
+                id: repo.id,
+                name: repo.name,
+                description: repo.description,
+                url: repo.htmlUrl
+            )
+        }
+    }
+    
+    func fetchIssues(repo: String) async throws -> [GitHubIssue] {
+        guard let url = URL(string: "https://api.github.com/repos/\(repo)/issues") else {
+            throw URLError(.badURL)
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode([GitHubIssue].self, from: data)
     }
 }

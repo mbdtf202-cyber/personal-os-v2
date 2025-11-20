@@ -50,3 +50,16 @@ Pods/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Backup Files
+*.backup
+backup_*.json
+
+# Test Coverage
+*.xcresult
+coverage.json

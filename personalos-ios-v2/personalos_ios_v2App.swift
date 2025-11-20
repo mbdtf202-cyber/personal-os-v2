@@ -4,26 +4,31 @@ import SwiftData
 @main
 struct personalos_ios_v2App: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var serviceContainer = ServiceContainer.shared
+    @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var remoteConfig = RemoteConfigService.shared
     @State private var router = AppRouter()
-    @State private var healthManager = HealthStoreManager()
-    @State private var githubService = GitHubService()
-    @State private var newsService = NewsService()
-    @State private var stockPriceService = StockPriceService()
 
     init() {
-        // 配置 UITabBar 的全局外观
-        let appearance = UITabBarAppearance()
-        appearance.configureWithTransparentBackground()
-        UITabBar.appearance().standardAppearance = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
+        setupServices()
+        setupTheme()
     }
 
     var body: some Scene {
         WindowGroup {
-            if UIDevice.current.userInterfaceIdiom == .pad {
-                iPadAppContainer()
-            } else {
-                MainTabView()
+            Group {
+                if remoteConfig.isLoaded {
+                    if UIDevice.current.userInterfaceIdiom == .pad {
+                        iPadAppContainer()
+                    } else {
+                        MainTabView()
+                    }
+                } else {
+                    LoadingView(message: "Initializing...")
+                }
+            }
+            .task {
+                await remoteConfig.fetchConfig()
             }
         }
         .modelContainer(for: [
@@ -39,18 +44,31 @@ struct personalos_ios_v2App: App {
             CodeSnippet.self
         ])
         .environment(router)
-        .environment(healthManager)
-        .environment(githubService)
-        .environment(newsService)
-        .environment(stockPriceService)
+        .environmentObject(serviceContainer)
+        .environmentObject(themeManager)
+        .environmentObject(remoteConfig)
+    }
+    
+    private func setupServices() {
+        #if DEBUG
+        ServiceFactory.shared.configure(environment: .mock)
+        #else
+        ServiceFactory.shared.configure(environment: .production)
+        #endif
+        
+        ServiceFactory.shared.setupServices(in: ServiceContainer.shared)
+    }
+    
+    private func setupTheme() {
+        ThemeManager.shared.applyTheme(ThemeManager.shared.currentTheme)
     }
 }
 
 // MARK: - Main Tab View
 struct MainTabView: View {
     @Environment(AppRouter.self) private var router
+    @EnvironmentObject var remoteConfig: RemoteConfigService
     @State private var showQuickNote = false
-    @State private var themeStyle: ThemeStyle = .glass
 
     var body: some View {
         ZStack {
@@ -59,39 +77,51 @@ struct MainTabView: View {
                 set: { router.selectedTab = $0 }
             )) {
                 // 1. 🏠 Dashboard (含 Health)
-                DashboardView()
-                    .tabItem {
-                        Label("Home", systemImage: "square.grid.2x2.fill")
-                    }
-                    .tag(AppRouter.Tab.dashboard)
+                if remoteConfig.isFeatureEnabled("healthCenter") {
+                    DashboardView()
+                        .tabItem {
+                            Label("Home", systemImage: "square.grid.2x2.fill")
+                        }
+                        .tag(AppRouter.Tab.dashboard)
+                }
                 
                 // 2. 🚀 Growth (聚合 Projects, Knowledge, Tools)
-                GrowthHubView()
-                    .tabItem {
-                        Label("Growth", systemImage: "hammer.fill")
-                    }
-                    .tag(AppRouter.Tab.growth)
+                if remoteConfig.isFeatureEnabled("projectHub") || 
+                   remoteConfig.isFeatureEnabled("trainingSystem") ||
+                   remoteConfig.isFeatureEnabled("tools") {
+                    GrowthHubView()
+                        .tabItem {
+                            Label("Growth", systemImage: "hammer.fill")
+                        }
+                        .tag(AppRouter.Tab.growth)
+                }
                 
                 // 3. 💬 Social
-                SocialDashboardView()
-                    .tabItem {
-                        Label("Social", systemImage: "bubble.left.and.bubble.right.fill")
-                    }
-                    .tag(AppRouter.Tab.social)
+                if remoteConfig.isFeatureEnabled("socialBlog") {
+                    SocialDashboardView()
+                        .tabItem {
+                            Label("Social", systemImage: "bubble.left.and.bubble.right.fill")
+                        }
+                        .tag(AppRouter.Tab.social)
+                }
                 
                 // 4. 💰 Wealth
-                TradingDashboardView()
-                    .tabItem {
-                        Label("Wealth", systemImage: "chart.line.uptrend.xyaxis")
-                    }
-                    .tag(AppRouter.Tab.wealth)
+                if remoteConfig.isFeatureEnabled("tradingJournal") {
+                    TradingDashboardView()
+                        .tabItem {
+                            Label("Wealth", systemImage: "chart.line.uptrend.xyaxis")
+                        }
+                        .tag(AppRouter.Tab.wealth)
+                }
 
                 // 5. 📰 News
-                NewsFeedView()
-                    .tabItem {
-                        Label("News", systemImage: "newspaper.fill")
-                    }
-                    .tag(AppRouter.Tab.news)
+                if remoteConfig.isFeatureEnabled("newsAggregator") {
+                    NewsFeedView()
+                        .tabItem {
+                            Label("News", systemImage: "newspaper.fill")
+                        }
+                        .tag(AppRouter.Tab.news)
+                }
             }
             .tint(AppTheme.primaryText)
             
@@ -99,10 +129,6 @@ struct MainTabView: View {
             if showQuickNote {
                 QuickNoteOverlay(isPresented: $showQuickNote)
             }
-        }
-        .onAppear { AppTheme.apply(style: themeStyle) }
-        .onChange(of: themeStyle) { _, newStyle in
-            AppTheme.apply(style: newStyle)
         }
     }
 }
