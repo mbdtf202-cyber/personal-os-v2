@@ -11,6 +11,7 @@ struct RSSFeedsView: View {
     @State private var newFeedCategory = "General"
     
     let categories = ["General", "Tech", "Dev", "Design", "Business", "Science"]
+    var onLoadFeeds: (([RSSFeed]) -> Void)? = nil
     
     var body: some View {
         NavigationStack {
@@ -87,8 +88,22 @@ struct RSSFeedsView: View {
                     Button("Done") { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button(action: { showAddFeed = true }) {
-                        Image(systemName: "plus")
+                    Menu {
+                        Button(action: { showAddFeed = true }) {
+                            Label("Add Feed", systemImage: "plus")
+                        }
+                        
+                        if !feeds.isEmpty, let onLoadFeeds = onLoadFeeds {
+                            Button(action: {
+                                let enabledFeeds = feeds.filter { $0.isEnabled }
+                                onLoadFeeds(enabledFeeds)
+                                dismiss()
+                            }) {
+                                Label("Load from RSS", systemImage: "arrow.clockwise")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
                     }
                 }
             }

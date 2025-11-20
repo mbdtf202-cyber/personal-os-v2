@@ -176,14 +176,32 @@ struct NewsFeedView: View {
                 }
             }
             .sheet(isPresented: $showRSSFeeds) {
-                RSSFeedsView()
+                RSSFeedsView(onLoadFeeds: { feeds in
+                    Task {
+                        await loadFromRSSFeeds(feeds)
+                    }
+                })
             }
             .sheet(isPresented: $showBookmarks) {
                 BookmarkedNewsView()
             }
             .onAppear {
-                if news.isEmpty {
-                    news = mockNews
+                Task {
+                    if news.isEmpty {
+                        if APIConfig.hasValidNewsAPIKey {
+                            await refreshNews()
+                        } else {
+                            // Use mock data if no API key
+                            news = mockNews
+                        }
+                    }
+                }
+            }
+            .onChange(of: selectedCategory) { _, _ in
+                Task {
+                    if APIConfig.hasValidNewsAPIKey {
+                        await refreshNews()
+                    }
                 }
             }
             .fullScreenCover(item: $selectedArticleURL) { identifiableURL in
@@ -210,6 +228,24 @@ struct NewsFeedView: View {
             }
         } else if newsService.error == nil && !APIConfig.hasValidNewsAPIKey {
             showError = true
+        }
+    }
+    
+    private func loadFromRSSFeeds(_ feeds: [RSSFeed]) async {
+        await newsService.fetchFromMultipleRSSFeeds(feeds: feeds)
+        if !newsService.articles.isEmpty {
+            news = newsService.articles.map { article in
+                NewsItem(
+                    source: article.source.name,
+                    title: article.title,
+                    summary: article.description ?? "No description available",
+                    category: "RSS",
+                    image: "antenna.radiowaves.left.and.right",
+                    imageURL: article.urlToImage,
+                    date: Date(),
+                    url: URL(string: article.url)
+                )
+            }
         }
     }
     
@@ -258,16 +294,16 @@ struct NewsCard: View {
         VStack(alignment: .leading, spacing: 12) {
             // Image Header
             if let imageURLString = item.imageURL, let imageURL = URL(string: imageURLString) {
-                CachedAsyncImage(url: imageURL) { image in
+                CachedAsyncImage(url: imageURL, content: { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(height: 160)
                         .clipped()
                         .cornerRadius(12)
-                } placeholder: {
+                }, placeholder: {
                     placeholderImage
-                }
+                })
             }
             
             // Header
