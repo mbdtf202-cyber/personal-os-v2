@@ -311,14 +311,6 @@ class OfflineCache {
     }
 }
 
-nonisolated extension String {
-    var sha256Hash: String {
-        guard let data = self.data(using: .utf8) else { return self }
-        let hash = CryptoKit.SHA256.hash(data: data)
-        return hash.compactMap { String(format: "%02x", $0) }.joined()
-    }
-}
-
     // MARK: - Convenience Methods
     func request<T: Codable>(url: URL) async throws -> T {
         try await request(url.absoluteString)
@@ -346,3 +338,12 @@ nonisolated extension String {
         circuitBreaker.recordSuccess()
         return data
     }
+}
+
+nonisolated extension String {
+    var sha256Hash: String {
+        guard let data = self.data(using: .utf8) else { return self }
+        let hash = CryptoKit.SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
+    }
+}
