@@ -36,6 +36,7 @@ struct AppConfig {
             KeychainManager.shared.getAPIKey(for: Keys.stockAPIKey) ?? 
             ProcessInfo.processInfo.environment["STOCK_API_KEY"] ?? ""
         }
+    }
     
     // MARK: - Feature Flags
     struct Features {
