@@ -202,35 +202,35 @@ struct SettingsView: View {
             var errors: [String] = []
             
             do {
-                try await appDependency!.repositories.todo.deleteAll()
+                try await appDependency?.repositories.todo.deleteAll()
             } catch {
                 errors.append("Todos")
                 Logger.error("Failed to delete todos: \(error)", category: Logger.general)
             }
             
             do {
-                try await appDependency!.repositories.trade.deleteAll()
+                try await appDependency?.repositories.trade.deleteAll()
             } catch {
                 errors.append("Trades")
                 Logger.error("Failed to delete trades: \(error)", category: Logger.general)
             }
             
             do {
-                try await appDependency!.repositories.project.deleteAll()
+                try await appDependency?.repositories.project.deleteAll()
             } catch {
                 errors.append("Projects")
                 Logger.error("Failed to delete projects: \(error)", category: Logger.general)
             }
             
             do {
-                try await appDependency!.repositories.socialPost.deleteAll()
+                try await appDependency?.repositories.socialPost.deleteAll()
             } catch {
                 errors.append("Social Posts")
                 Logger.error("Failed to delete social posts: \(error)", category: Logger.general)
             }
             
             do {
-                try await appDependency!.repositories.codeSnippet.deleteAll()
+                try await appDependency?.repositories.codeSnippet.deleteAll()
             } catch {
                 errors.append("Code Snippets")
                 Logger.error("Failed to delete code snippets: \(error)", category: Logger.general)

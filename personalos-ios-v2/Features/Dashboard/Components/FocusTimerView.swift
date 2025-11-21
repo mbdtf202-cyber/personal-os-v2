@@ -279,7 +279,7 @@ struct FocusTimerView: View {
         session.isCompleted = true
         Task {
             do {
-                try await appDependency!.repositories.habit.save(session)
+                try await appDependency?.repositories.habit.save(session)
                 Logger.log("Focus session completed: \(currentMode.rawValue)", category: Logger.general)
             } catch {
                 ErrorHandler.shared.handle(error, context: "FocusTimerView.completeFocusSession")

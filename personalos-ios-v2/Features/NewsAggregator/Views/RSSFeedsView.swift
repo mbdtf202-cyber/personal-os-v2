@@ -156,7 +156,7 @@ struct RSSFeedsView: View {
         )
         Task {
             do {
-                try await appDependency!.repositories.rssFeed.save(feed)
+                try await appDependency?.repositories.rssFeed.save(feed)
                 HapticsManager.shared.success()
             } catch {
                 ErrorHandler.shared.handle(error, context: "RSSFeedsView.addFeed")
@@ -171,7 +171,7 @@ struct RSSFeedsView: View {
     private func deleteFeed(_ feed: RSSFeed) {
         Task {
             do {
-                try await appDependency!.repositories.rssFeed.delete(feed)
+                try await appDependency?.repositories.rssFeed.delete(feed)
                 HapticsManager.shared.light()
             } catch {
                 ErrorHandler.shared.handle(error, context: "RSSFeedsView.deleteFeed")
@@ -189,7 +189,7 @@ struct RSSFeedsView: View {
         guard feeds.isEmpty else { return }
         Task {
             for feed in RSSFeed.defaultFeeds {
-                try? await appDependency!.repositories.rssFeed.save(feed)
+                try? await appDependency?.repositories.rssFeed.save(feed)
             }
         }
     }

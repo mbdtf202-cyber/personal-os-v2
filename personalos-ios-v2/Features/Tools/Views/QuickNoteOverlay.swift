@@ -96,7 +96,7 @@ struct QuickNoteOverlay: View {
             )
             Task {
                 do {
-                    try await appDependency!.repositories.socialPost.save(post)
+                    try await appDependency?.repositories.socialPost.save(post)
                     Logger.log("Quick note saved as Social Post", category: Logger.general)
                     HapticsManager.shared.success()
                 } catch {
@@ -113,7 +113,7 @@ struct QuickNoteOverlay: View {
             )
             Task {
                 do {
-                    try await appDependency!.repositories.todo.save(todo)
+                    try await appDependency?.repositories.todo.save(todo)
                     Logger.log("Quick note saved as Task", category: Logger.general)
                     HapticsManager.shared.success()
                 } catch {

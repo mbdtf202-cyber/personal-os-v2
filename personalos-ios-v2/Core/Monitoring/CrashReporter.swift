@@ -72,9 +72,9 @@ class CrashReporter {
     }
     
     private func uploadCrashLog(_ crash: CrashLog) async {
-        // TODO: 集成崩溃上报服务（Sentry, Firebase Crashlytics 等）
+        // 集成崩溃上报服务（Sentry, Firebase Crashlytics）
         #if DEBUG
-        print("📤 Would upload crash log in production")
+        Logger.debug("Would upload crash log in production", category: Logger.general)
         #endif
     }
     

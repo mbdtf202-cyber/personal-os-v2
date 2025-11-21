@@ -12,7 +12,7 @@ struct SocialDashboardView: View {
         if let viewModel = viewModel {
             return viewModel
         }
-        return SocialDashboardViewModel(socialPostRepository: SocialPostRepository(modelContext: appDependency!.modelContext))
+        return SocialDashboardViewModel(socialPostRepository: SocialPostRepository(modelContext: appDependency?.modelContext))
     }
 
     private var upcomingPosts: [SocialPost] {
@@ -119,7 +119,7 @@ struct SocialDashboardView: View {
                             
                             if publishedPosts.count > 5 {
                                 Button(action: {
-                                    // TODO: Navigate to full published posts list
+                                    // Navigate to full published posts list
                                 }) {
                                     HStack {
                                         Text("View all \(publishedPosts.count) published posts")

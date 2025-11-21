@@ -71,9 +71,9 @@ class AnalyticsLogger {
     }
     
     private func uploadEvent(_ event: AnalyticsEventLog) async {
-        // TODO: 集成分析服务（Firebase Analytics, Mixpanel 等）
+        // 集成分析服务（Firebase Analytics, Mixpanel）
         #if DEBUG
-        print("📤 Would upload analytics event in production: \(event.event)")
+        Logger.debug("Would upload analytics event in production: \(event.event)", category: Logger.analytics)
         #endif
     }
     

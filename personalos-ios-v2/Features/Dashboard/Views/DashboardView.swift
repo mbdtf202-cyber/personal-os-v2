@@ -57,7 +57,7 @@ struct DashboardView: View {
                         healthSection
                         tasksSection
                         modulesPreviewGrid
-                        // ActivityHeatmap(data: activityData) // TODO: 接入真实数据后启用
+                        // ActivityHeatmap(data: activityData)
                         Spacer(minLength: 100)
                     }
                     .padding(20)

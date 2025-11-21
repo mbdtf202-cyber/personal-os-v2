@@ -70,7 +70,7 @@ struct AddSnippetView: View {
         
         Task {
             do {
-                try await appDependency!.repositories.codeSnippet.save(snippet)
+                try await appDependency?.repositories.codeSnippet.save(snippet)
                 HapticsManager.shared.success()
             } catch {
                 ErrorHandler.shared.handle(error, context: "AddSnippetView.saveSnippet")

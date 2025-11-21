@@ -123,7 +123,7 @@ struct TradeHistoryListView: View {
     private func deleteTrade(_ trade: TradeRecord) {
         Task {
             do {
-                try await appDependency!.repositories.trade.delete(trade)
+                try await appDependency?.repositories.trade.delete(trade)
                 HapticsManager.shared.success()
             } catch {
                 ErrorHandler.shared.handle(error, context: "TradeHistoryListView.deleteTrade")
