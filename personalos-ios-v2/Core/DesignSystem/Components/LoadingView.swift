@@ -20,5 +20,5 @@ struct LoadingView: View {
 }
 
 #Preview {
-    LoadingView()
+    LoadingView(message: "Loading...")
 }

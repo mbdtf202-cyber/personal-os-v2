@@ -113,28 +113,7 @@ struct RootView: View {
     }
 }
 
-// MARK: - Loading View
-struct LoadingView: View {
-    let message: String
-    
-    var body: some View {
-        ZStack {
-            AppTheme.background.ignoresSafeArea()
-            
-            VStack(spacing: 24) {
-                LoadingSpinner()
-                    .scaleEffect(1.5)
-                
-                Text(message)
-                    .font(.subheadline)
-                    .foregroundStyle(AppTheme.secondaryText)
-                
-                LoadingDots()
-            }
-            .animateOnAppear()
-        }
-    }
-}
+// LoadingView moved to Core/DesignSystem/Components/LoadingView.swift
 
 // MARK: - Main Tab View
 struct MainTabView: View {
