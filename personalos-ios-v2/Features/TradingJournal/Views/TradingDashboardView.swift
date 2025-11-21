@@ -5,12 +5,20 @@ import SwiftData
 struct TradingDashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(StockPriceService.self) private var stockPriceService
-    @Query(sort: \TradeRecord.date, order: .reverse) private var allTrades: [TradeRecord]
     
-    private var recentTrades: [TradeRecord] {
-        let ninetyDaysAgo = Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? Date()
-        return allTrades.filter { $0.date > ninetyDaysAgo }
+    // ✅ P0 Fix: 数据库级过滤，避免内存遍历 10,000+ 条记录
+    // 使用静态计算的日期，让 SwiftData 在 SQLite 层面过滤
+    private static var ninetyDaysAgo: Date {
+        Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? Date()
     }
+    
+    @Query(
+        filter: #Predicate<TradeRecord> { trade in
+            trade.date > TradingDashboardView.ninetyDaysAgo
+        },
+        sort: \TradeRecord.date,
+        order: .reverse
+    ) private var recentTrades: [TradeRecord]
     @State private var viewModel = PortfolioViewModel()
     @State private var showLogForm = false
     @State private var showPriceError = false

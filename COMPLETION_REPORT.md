@@ -37,8 +37,7 @@
 7. RiskManagerTests
 8. HealthStoreManagerTests
 9. PortfolioCalculatorTests
-10. ServiceContainerTests
-11. personalos_ios_v2Tests
+10. personalos_ios_v2Tests
 
 #### UI 测试 (5 个)
 1. DashboardUITests

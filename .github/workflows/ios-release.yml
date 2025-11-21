@@ -20,6 +20,13 @@ jobs:
     - name: Install dependencies
       run: |
         brew install xcpretty
+    
+    - name: Inject Production Secrets
+      run: |
+        chmod +x Scripts/inject_secrets.sh
+        STOCK_API_KEY="${{ secrets.STOCK_API_KEY }}" \
+        NEWS_API_KEY="${{ secrets.NEWS_API_KEY }}" \
+        ./Scripts/inject_secrets.sh
         
     - name: Build Archive
       run: |

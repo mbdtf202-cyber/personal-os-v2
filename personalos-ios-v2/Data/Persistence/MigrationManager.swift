@@ -83,16 +83,129 @@ class MigrationManager {
         
         let context = modelContainer.mainContext
         
+        // ✅ P1 Fix: 增强防御性代码，处理脏数据
         let tradeDescriptor = FetchDescriptor<TradeRecord>()
         let trades = try context.fetch(tradeDescriptor)
-        Logger.log("✅ V3 migration: \(trades.count) trades migrated to Decimal", category: Logger.general)
         
+        var cleanedCount = 0
+        var invalidCount = 0
+        var deletedCount = 0
+        
+        for trade in trades {
+            var shouldDelete = false
+            
+            // 检查数据有效性
+            if trade.price.isNaN || trade.price.isInfinite {
+                Logger.warning("Invalid price detected in trade \(trade.id), marking for deletion", category: Logger.general)
+                shouldDelete = true
+                invalidCount += 1
+            }
+            
+            if trade.quantity.isNaN || trade.quantity.isInfinite {
+                Logger.warning("Invalid quantity detected in trade \(trade.id), marking for deletion", category: Logger.general)
+                shouldDelete = true
+                invalidCount += 1
+            }
+            
+            // 如果数据完全损坏，删除记录
+            if shouldDelete {
+                context.delete(trade)
+                deletedCount += 1
+                continue
+            }
+            
+            // 修复可恢复的数据问题
+            var needsCleaning = false
+            
+            if trade.price < 0 {
+                Logger.warning("Negative price detected in trade \(trade.id): \(trade.price), converting to absolute", category: Logger.general)
+                trade.price = abs(trade.price)
+                needsCleaning = true
+            }
+            
+            if trade.quantity < 0 {
+                Logger.warning("Negative quantity detected in trade \(trade.id): \(trade.quantity), converting to absolute", category: Logger.general)
+                trade.quantity = abs(trade.quantity)
+                needsCleaning = true
+            }
+            
+            // 检查异常大的值（可能是数据损坏）
+            if trade.price > 1_000_000 {
+                Logger.warning("Suspiciously large price in trade \(trade.id): \(trade.price)", category: Logger.general)
+                needsCleaning = true
+            }
+            
+            if trade.quantity > 1_000_000 {
+                Logger.warning("Suspiciously large quantity in trade \(trade.id): \(trade.quantity)", category: Logger.general)
+                needsCleaning = true
+            }
+            
+            if needsCleaning {
+                cleanedCount += 1
+            }
+        }
+        
+        Logger.log("✅ V3 migration: \(trades.count) trades processed, \(cleanedCount) cleaned, \(invalidCount) invalid, \(deletedCount) deleted", category: Logger.general)
+        
+        // 处理资产
         let assetDescriptor = FetchDescriptor<AssetItem>()
         let assets = try context.fetch(assetDescriptor)
-        Logger.log("✅ V3 migration: \(assets.count) assets migrated to Decimal", category: Logger.general)
+        
+        var assetCleanedCount = 0
+        
+        for asset in assets {
+            var needsCleaning = false
+            
+            if asset.currentPrice.isNaN || asset.currentPrice.isInfinite {
+                asset.currentPrice = 0
+                needsCleaning = true
+            }
+            if asset.quantity.isNaN || asset.quantity.isInfinite {
+                asset.quantity = 0
+                needsCleaning = true
+            }
+            if asset.avgCost.isNaN || asset.avgCost.isInfinite {
+                asset.avgCost = 0
+                needsCleaning = true
+            }
+            
+            // 修复负值
+            if asset.currentPrice < 0 {
+                asset.currentPrice = abs(asset.currentPrice)
+                needsCleaning = true
+            }
+            if asset.quantity < 0 {
+                asset.quantity = abs(asset.quantity)
+                needsCleaning = true
+            }
+            if asset.avgCost < 0 {
+                asset.avgCost = abs(asset.avgCost)
+                needsCleaning = true
+            }
+            
+            if needsCleaning {
+                assetCleanedCount += 1
+            }
+        }
+        
+        Logger.log("✅ V3 migration: \(assets.count) assets validated, \(assetCleanedCount) cleaned", category: Logger.general)
         
         try context.save()
-        Logger.log("✅ V3 migration complete - Financial data now uses Decimal for precision", category: Logger.general)
+        
+        // 记录迁移统计到分析系统
+        AnalyticsLogger.shared.log(.custom(
+            event: "migration_v3_completed",
+            parameters: [
+                "trades_total": trades.count,
+                "trades_cleaned": cleanedCount,
+                "trades_invalid": invalidCount,
+                "trades_deleted": deletedCount,
+                "assets_total": assets.count,
+                "assets_cleaned": assetCleanedCount
+            ]
+        ))
+        
+        Logger.log("✅ V3 migration complete - Financial data now uses Decimal with comprehensive validation", category: Logger.general)
     }
     
     private func createBackup(modelContainer: ModelContainer) async throws {

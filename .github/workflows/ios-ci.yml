@@ -23,6 +23,14 @@ jobs:
       
     - name: Show available schemes
       run: xcodebuild -list -project personalos-ios-v2.xcodeproj
+    
+    - name: Inject Secrets (CI)
+      run: |
+        chmod +x Scripts/inject_secrets.sh
+        # CI 环境使用占位符（不需要真实密钥）
+        STOCK_API_KEY="CI_TEST_KEY" \
+        NEWS_API_KEY="CI_TEST_KEY" \
+        ./Scripts/inject_secrets.sh
       
     - name: Build
       run: |

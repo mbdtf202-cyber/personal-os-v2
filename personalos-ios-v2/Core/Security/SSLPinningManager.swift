@@ -5,19 +5,38 @@ import Foundation
 final class SSLPinningManager: NSObject {
     static let shared = SSLPinningManager()
     
-    // 存储受信任的证书公钥哈希
-    private let trustedPublicKeyHashes: Set<String> = [
-        // 生产环境证书哈希（需要替换为实际值）
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-        // 备用证书哈希
-        "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
-    ]
+    // ✅ P1 Fix: 支持 Remote Config 动态更新证书哈希
+    private var trustedPublicKeyHashes: Set<String> {
+        // 优先从 Remote Config 读取（支持证书轮换）
+        if let remoteHashes = RemoteConfigService.shared.getString(key: "ssl_pinning_hashes", defaultValue: nil) {
+            let hashes = remoteHashes.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+            if !hashes.isEmpty {
+                Logger.log("Using SSL hashes from Remote Config", category: Logger.security)
+                return Set(hashes)
+            }
+        }
+        
+        // 回退到硬编码值（⚠️ 生产环境必须替换为真实证书哈希）
+        return [
+            // 生产环境证书哈希（通过 openssl 提取）
+            // openssl s_client -connect api.personalos.com:443 | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            // 备用证书哈希（证书轮换时使用）
+            "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
+        ]
+    }
     
     private override init() {
         super.init()
     }
     
     func validateServerTrust(_ serverTrust: SecTrust, forHost host: String) -> Bool {
+        // ✅ 紧急开关：通过 Remote Config 关闭 SSL Pinning
+        if RemoteConfigService.shared.getBool(key: "disable_ssl_pinning", defaultValue: false) {
+            Logger.warning("SSL Pinning disabled via Remote Config", category: Logger.security)
+            return true
+        }
+        
         // 只对关键 API 启用 SSL Pinning
         guard shouldPinHost(host) else {
             return true // 非关键域名跳过验证
