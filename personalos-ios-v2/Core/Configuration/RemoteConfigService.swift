@@ -47,9 +47,17 @@ class RemoteConfigService: ObservableObject {
     }
     
     func fetchConfig() async {
+        // 如果已经从缓存加载，直接返回
+        if isLoaded {
+            return
+        }
+        
         do {
-            guard let url = URL(string: configURL) else {
-                print("Invalid remote config URL")
+            guard let url = URL(string: configURL), !configURL.isEmpty else {
+                print("⚠️ Invalid remote config URL, using default config")
+                await MainActor.run {
+                    self.isLoaded = true
+                }
                 return
             }
             
@@ -64,8 +72,12 @@ class RemoteConfigService: ObservableObject {
                 cacheConfig(config)
             }
         } catch {
-            print("Failed to fetch remote config: \(error)")
-            // Fallback to cached or default config
+            print("⚠️ Failed to fetch remote config: \(error.localizedDescription)")
+            print("✅ Using default/cached config")
+            // Fallback to default config
+            await MainActor.run {
+                self.isLoaded = true
+            }
         }
     }
     

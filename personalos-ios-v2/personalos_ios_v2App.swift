@@ -8,6 +8,10 @@ struct personalos_ios_v2App: App {
     @StateObject private var themeManager = ThemeManager.shared
     @StateObject private var remoteConfig = RemoteConfigService.shared
     @State private var router = AppRouter()
+    @State private var stockPriceService = StockPriceService()
+    @State private var healthManager = HealthStoreManager()
+    @State private var githubService = GitHubService()
+    @State private var newsService = NewsService()
 
     init() {
         setupServices()
@@ -16,19 +20,15 @@ struct personalos_ios_v2App: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if remoteConfig.isLoaded {
-                    if UIDevice.current.userInterfaceIdiom == .pad {
-                        iPadAppContainer()
-                    } else {
-                        MainTabView()
-                    }
+            ZStack {
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    iPadAppContainer()
                 } else {
-                    LoadingView(message: "Initializing...")
+                    MainTabView()
                 }
             }
-            .task {
-                await remoteConfig.fetchConfig()
+            .onAppear {
+                print("✅ App launched successfully")
             }
         }
         .modelContainer(for: [
@@ -44,6 +44,10 @@ struct personalos_ios_v2App: App {
             CodeSnippet.self
         ])
         .environment(router)
+        .environment(stockPriceService)
+        .environment(healthManager)
+        .environment(githubService)
+        .environment(newsService)
         .environmentObject(serviceContainer)
         .environmentObject(themeManager)
         .environmentObject(remoteConfig)
@@ -67,7 +71,6 @@ struct personalos_ios_v2App: App {
 // MARK: - Main Tab View
 struct MainTabView: View {
     @Environment(AppRouter.self) private var router
-    @EnvironmentObject var remoteConfig: RemoteConfigService
     @State private var showQuickNote = false
 
     var body: some View {
@@ -77,51 +80,39 @@ struct MainTabView: View {
                 set: { router.selectedTab = $0 }
             )) {
                 // 1. 🏠 Dashboard (含 Health)
-                if remoteConfig.isFeatureEnabled("healthCenter") {
-                    DashboardView()
-                        .tabItem {
-                            Label("Home", systemImage: "square.grid.2x2.fill")
-                        }
-                        .tag(AppRouter.Tab.dashboard)
-                }
+                DashboardView()
+                    .tabItem {
+                        Label("Home", systemImage: "square.grid.2x2.fill")
+                    }
+                    .tag(AppRouter.Tab.dashboard)
                 
                 // 2. 🚀 Growth (聚合 Projects, Knowledge, Tools)
-                if remoteConfig.isFeatureEnabled("projectHub") || 
-                   remoteConfig.isFeatureEnabled("trainingSystem") ||
-                   remoteConfig.isFeatureEnabled("tools") {
-                    GrowthHubView()
-                        .tabItem {
-                            Label("Growth", systemImage: "hammer.fill")
-                        }
-                        .tag(AppRouter.Tab.growth)
-                }
+                GrowthHubView()
+                    .tabItem {
+                        Label("Growth", systemImage: "hammer.fill")
+                    }
+                    .tag(AppRouter.Tab.growth)
                 
                 // 3. 💬 Social
-                if remoteConfig.isFeatureEnabled("socialBlog") {
-                    SocialDashboardView()
-                        .tabItem {
-                            Label("Social", systemImage: "bubble.left.and.bubble.right.fill")
-                        }
-                        .tag(AppRouter.Tab.social)
-                }
+                SocialDashboardView()
+                    .tabItem {
+                        Label("Social", systemImage: "bubble.left.and.bubble.right.fill")
+                    }
+                    .tag(AppRouter.Tab.social)
                 
                 // 4. 💰 Wealth
-                if remoteConfig.isFeatureEnabled("tradingJournal") {
-                    TradingDashboardView()
-                        .tabItem {
-                            Label("Wealth", systemImage: "chart.line.uptrend.xyaxis")
-                        }
-                        .tag(AppRouter.Tab.wealth)
-                }
+                TradingDashboardView()
+                    .tabItem {
+                        Label("Wealth", systemImage: "chart.line.uptrend.xyaxis")
+                    }
+                    .tag(AppRouter.Tab.wealth)
 
                 // 5. 📰 News
-                if remoteConfig.isFeatureEnabled("newsAggregator") {
-                    NewsFeedView()
-                        .tabItem {
-                            Label("News", systemImage: "newspaper.fill")
-                        }
-                        .tag(AppRouter.Tab.news)
-                }
+                NewsFeedView()
+                    .tabItem {
+                        Label("News", systemImage: "newspaper.fill")
+                    }
+                    .tag(AppRouter.Tab.news)
             }
             .tint(AppTheme.primaryText)
             

@@ -4,13 +4,21 @@ import SwiftData
 struct NewsFeedView: View {
     @Environment(NewsService.self) private var newsService
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \NewsItem.date, order: .reverse) private var bookmarkedNews: [NewsItem]
+    
     @State private var selectedCategory = "All"
     @State private var news: [NewsItem] = []
-    @State private var showError = false
     @State private var selectedArticleURL: IdentifiableURL?
     @State private var readArticleIDs: Set<UUID> = []
     @State private var showRSSFeeds = false
     @State private var showBookmarks = false
+    @State private var showSearch = false
+    @State private var searchQuery = ""
+    @State private var viewMode: ViewMode = .compact
+    
+    enum ViewMode {
+        case compact, comfortable, magazine
+    }
     
     let mockNews: [NewsItem] = [
         NewsItem(
@@ -44,106 +52,131 @@ struct NewsFeedView: View {
     
     let categories = ["All", "Tech", "AI", "Crypto", "Dev", "Design"]
     
+    var filteredNews: [NewsItem] {
+        if searchQuery.isEmpty {
+            return news
+        }
+        return news.filter { item in
+            item.title.localizedCaseInsensitiveContains(searchQuery) ||
+            item.summary.localizedCaseInsensitiveContains(searchQuery)
+        }
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 AppTheme.background.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
+                    // Search Bar (when active)
+                    if showSearch {
+                        HStack(spacing: 12) {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundStyle(AppTheme.secondaryText)
+                            
+                            TextField("Search news...", text: $searchQuery)
+                                .textFieldStyle(.plain)
+                            
+                            if !searchQuery.isEmpty {
+                                Button(action: { searchQuery = "" }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(AppTheme.tertiaryText)
+                                }
+                            }
+                            
+                            Button("Cancel") {
+                                showSearch = false
+                                searchQuery = ""
+                            }
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.mistBlue)
+                        }
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                    }
+                    
                     // Category Filter
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(categories, id: \.self) { cat in
-                                Button(action: { selectedCategory = cat }) {
-                                    Text(cat)
-                                        .font(.subheadline)
-                                        .fontWeight(selectedCategory == cat ? .bold : .medium)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(selectedCategory == cat ? AppTheme.primaryText : Color.white)
-                                        .foregroundStyle(selectedCategory == cat ? .white : AppTheme.primaryText)
-                                        .clipShape(Capsule())
-                                        .shadow(color: AppTheme.shadow, radius: 4, y: 2)
-                                }
+                                CategoryChip(
+                                    title: cat,
+                                    isSelected: selectedCategory == cat,
+                                    action: { 
+                                        selectedCategory = cat
+                                        HapticsManager.shared.light()
+                                    }
+                                )
                             }
                         }
-                        .padding()
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
                     }
+                    .background(AppTheme.background)
                     
                     // News List
                     ScrollView(showsIndicators: false) {
                         if newsService.isLoading {
-                            LoadingView(message: "Loading news...")
+                            VStack(spacing: 16) {
+                                ProgressView()
+                                    .scaleEffect(1.2)
+                                Text("Loading latest news...")
+                                    .font(.subheadline)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 60)
+                        } else if filteredNews.isEmpty {
+                            EmptyNewsState(
+                                hasAPIKey: APIConfig.hasValidNewsAPIKey,
+                                searchQuery: searchQuery,
+                                onRetry: { Task { await refreshNews() } }
+                            )
                         } else {
-                            LazyVStack(spacing: 20) {
+                            LazyVStack(spacing: viewMode == .compact ? 12 : 16) {
                                 // Error Banner
                                 if let error = newsService.error {
-                                    HStack {
-                                        Image(systemName: "exclamationmark.triangle.fill")
-                                            .foregroundStyle(AppTheme.coral)
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text("Failed to load news")
-                                                .font(.subheadline)
-                                                .fontWeight(.semibold)
-                                            Text(error)
-                                                .font(.caption)
-                                                .foregroundStyle(AppTheme.secondaryText)
-                                        }
-                                        Spacer()
-                                        Button("Retry") {
-                                            Task { await refreshNews() }
-                                        }
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(AppTheme.mistBlue)
+                                    ErrorBanner(error: error) {
+                                        Task { await refreshNews() }
                                     }
-                                    .padding()
-                                    .background(AppTheme.coral.opacity(0.1))
-                                    .cornerRadius(12)
-                                    .padding(.horizontal, 20)
-                                    .padding(.top, 10)
                                 }
                                 
-                                ForEach(news) { item in
-                                    NewsCard(item: item, isRead: readArticleIDs.contains(item.id))
-                                        .onTapGesture {
-                                            if let url = item.url {
-                                                readArticleIDs.insert(item.id)
-                                                selectedArticleURL = IdentifiableURL(url: url)
-                                                HapticsManager.shared.light()
-                                            }
+                                ForEach(filteredNews) { item in
+                                    Group {
+                                        switch viewMode {
+                                        case .compact:
+                                            CompactNewsCard(
+                                                item: item,
+                                                isRead: readArticleIDs.contains(item.id),
+                                                isBookmarked: bookmarkedNews.contains(where: { $0.id == item.id })
+                                            )
+                                        case .comfortable:
+                                            ComfortableNewsCard(
+                                                item: item,
+                                                isRead: readArticleIDs.contains(item.id),
+                                                isBookmarked: bookmarkedNews.contains(where: { $0.id == item.id })
+                                            )
+                                        case .magazine:
+                                            MagazineNewsCard(
+                                                item: item,
+                                                isRead: readArticleIDs.contains(item.id),
+                                                isBookmarked: bookmarkedNews.contains(where: { $0.id == item.id })
+                                            )
                                         }
-                                        .contextMenu {
-                                            if let url = item.url {
-                                                Button(action: {
-                                                    UIPasteboard.general.string = url.absoluteString
-                                                    HapticsManager.shared.success()
-                                                }) {
-                                                    Label("Copy Link", systemImage: "doc.on.doc")
-                                                }
-                                                
-                                                Button(action: {
-                                                    shareArticle(url: url, title: item.title)
-                                                }) {
-                                                    Label("Share", systemImage: "square.and.arrow.up")
-                                                }
-                                                
-                                                Button(action: {
-                                                    bookmarkArticle(item)
-                                                }) {
-                                                    Label("Bookmark", systemImage: "bookmark")
-                                                }
-                                                
-                                                Button(action: {
-                                                    createTaskFromArticle(item)
-                                                }) {
-                                                    Label("Create Task", systemImage: "checkmark.circle")
-                                                }
-                                            }
-                                        }
+                                    }
+                                    .onTapGesture {
+                                        openArticle(item)
+                                    }
+                                    .contextMenu {
+                                        newsContextMenu(for: item)
+                                    }
                                 }
                             }
-                            .padding(20)
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
                         }
                     }
                     .refreshable {
@@ -151,28 +184,51 @@ struct NewsFeedView: View {
                     }
                 }
             }
-            .navigationTitle("Briefing")
+            .navigationTitle("News")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
+                        Section("View Mode") {
+                            Button(action: { viewMode = .compact }) {
+                                Label("Compact", systemImage: viewMode == .compact ? "checkmark" : "")
+                            }
+                            Button(action: { viewMode = .comfortable }) {
+                                Label("Comfortable", systemImage: viewMode == .comfortable ? "checkmark" : "")
+                            }
+                            Button(action: { viewMode = .magazine }) {
+                                Label("Magazine", systemImage: viewMode == .magazine ? "checkmark" : "")
+                            }
+                        }
+                        
+                        Divider()
+                        
                         Button(action: { showRSSFeeds = true }) {
                             Label("RSS Feeds", systemImage: "antenna.radiowaves.left.and.right")
                         }
                         
                         Button(action: { showBookmarks = true }) {
-                            Label("Bookmarks", systemImage: "bookmark")
+                            Label("Bookmarks (\(bookmarkedNews.count))", systemImage: "bookmark.fill")
                         }
                     } label: {
-                        Image(systemName: "line.3.horizontal")
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                            .font(.system(size: 20))
                     }
                 }
                 
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: { Task { await refreshNews() } }) {
-                        Image(systemName: "arrow.clockwise")
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack(spacing: 16) {
+                        Button(action: { showSearch.toggle() }) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 18))
+                        }
+                        
+                        Button(action: { Task { await refreshNews() } }) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 18))
+                        }
+                        .disabled(newsService.isLoading)
                     }
-                    .disabled(newsService.isLoading)
-                    .accessibilityLabel("Refresh News")
                 }
             }
             .sheet(isPresented: $showRSSFeeds) {
@@ -226,8 +282,6 @@ struct NewsFeedView: View {
                     url: URL(string: article.url)
                 )
             }
-        } else if newsService.error == nil && !APIConfig.hasValidNewsAPIKey {
-            showError = true
         }
     }
     
@@ -266,11 +320,20 @@ struct NewsFeedView: View {
     }
     
     private func bookmarkArticle(_ item: NewsItem) {
-        // Save to SwiftData
-        modelContext.insert(item)
-        try? modelContext.save()
-        HapticsManager.shared.success()
-        Logger.log("Article bookmarked: \(item.title)", category: Logger.general)
+        // Check if already bookmarked
+        if let existingBookmark = bookmarkedNews.first(where: { $0.id == item.id }) {
+            // Remove bookmark
+            modelContext.delete(existingBookmark)
+            try? modelContext.save()
+            HapticsManager.shared.light()
+            Logger.log("Bookmark removed: \(item.title)", category: Logger.general)
+        } else {
+            // Add bookmark
+            modelContext.insert(item)
+            try? modelContext.save()
+            HapticsManager.shared.success()
+            Logger.log("Article bookmarked: \(item.title)", category: Logger.general)
+        }
     }
     
     private func createTaskFromArticle(_ item: NewsItem) {
@@ -284,61 +347,209 @@ struct NewsFeedView: View {
         HapticsManager.shared.success()
         Logger.log("Task created from article", category: Logger.general)
     }
+    
+    private func openArticle(_ item: NewsItem) {
+        if let url = item.url {
+            readArticleIDs.insert(item.id)
+            selectedArticleURL = IdentifiableURL(url: url)
+            HapticsManager.shared.light()
+        }
+    }
+    
+    @ViewBuilder
+    private func newsContextMenu(for item: NewsItem) -> some View {
+        if let url = item.url {
+            Button(action: {
+                UIPasteboard.general.string = url.absoluteString
+                HapticsManager.shared.success()
+            }) {
+                Label("Copy Link", systemImage: "doc.on.doc")
+            }
+            
+            Button(action: {
+                shareArticle(url: url, title: item.title)
+            }) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            
+            Button(action: {
+                bookmarkArticle(item)
+            }) {
+                Label(
+                    bookmarkedNews.contains(where: { $0.id == item.id }) ? "Remove Bookmark" : "Bookmark",
+                    systemImage: bookmarkedNews.contains(where: { $0.id == item.id }) ? "bookmark.fill" : "bookmark"
+                )
+            }
+            
+            Button(action: {
+                createTaskFromArticle(item)
+            }) {
+                Label("Create Task", systemImage: "checkmark.circle")
+            }
+        }
+    }
 }
 
-struct NewsCard: View {
-    let item: NewsItem
-    var isRead: Bool = false
+// MARK: - Category Chip
+struct CategoryChip: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Image Header
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(isSelected ? .semibold : .medium)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? AppTheme.mistBlue : Color.white)
+                .foregroundStyle(isSelected ? .white : AppTheme.primaryText)
+                .clipShape(Capsule())
+                .shadow(color: AppTheme.shadow.opacity(isSelected ? 0.3 : 0.1), radius: isSelected ? 6 : 3, y: 2)
+        }
+    }
+}
+
+// MARK: - Compact News Card
+struct CompactNewsCard: View {
+    let item: NewsItem
+    var isRead: Bool
+    var isBookmarked: Bool
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Thumbnail
             if let imageURLString = item.imageURL, let imageURL = URL(string: imageURLString) {
                 CachedAsyncImage(url: imageURL, content: { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(height: 160)
-                        .clipped()
-                        .cornerRadius(12)
+                        .frame(width: 80, height: 80)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 }, placeholder: {
-                    placeholderImage
+                    thumbnailPlaceholder
                 })
+            } else {
+                thumbnailPlaceholder
             }
             
+            // Content
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Text(item.source)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppTheme.mistBlue)
+                    
+                    Text("•")
+                        .foregroundStyle(AppTheme.tertiaryText)
+                    
+                    Text(item.date.formatted(.relative(presentation: .named)))
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.tertiaryText)
+                    
+                    if isBookmarked {
+                        Image(systemName: "bookmark.fill")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.almond)
+                    }
+                }
+                
+                Text(item.title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(isRead ? AppTheme.secondaryText : AppTheme.primaryText)
+                    .lineLimit(2)
+                
+                Text(item.summary)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .lineLimit(2)
+            }
+            
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: AppTheme.shadow.opacity(0.08), radius: 4, y: 2)
+        .opacity(isRead ? 0.7 : 1.0)
+    }
+    
+    private var thumbnailPlaceholder: some View {
+        ZStack {
+            Color.gray.opacity(0.15)
+            Image(systemName: item.image)
+                .font(.title3)
+                .foregroundStyle(AppTheme.tertiaryText)
+        }
+        .frame(width: 80, height: 80)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+// MARK: - Comfortable News Card
+struct ComfortableNewsCard: View {
+    let item: NewsItem
+    var isRead: Bool
+    var isBookmarked: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
             // Header
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: item.image)
                     .font(.caption)
                     .foregroundStyle(AppTheme.mistBlue)
-                    .frame(width: 24, height: 24)
+                    .frame(width: 28, height: 28)
                     .background(AppTheme.mistBlue.opacity(0.1))
                     .clipShape(Circle())
                 
                 Text(item.source)
                     .font(.caption)
-                    .fontWeight(.bold)
+                    .fontWeight(.semibold)
                     .foregroundStyle(AppTheme.secondaryText)
                 
                 Spacer()
                 
-                Text(item.date.formatted(date: .omitted, time: .shortened))
+                if isBookmarked {
+                    Image(systemName: "bookmark.fill")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.almond)
+                }
+                
+                Text(item.date.formatted(.relative(presentation: .named)))
                     .font(.caption2)
                     .foregroundStyle(AppTheme.tertiaryText)
             }
             
-            // Content
+            // Title
             Text(item.title)
                 .font(.headline)
                 .foregroundStyle(isRead ? AppTheme.secondaryText : AppTheme.primaryText)
-                .lineLimit(2)
+                .lineLimit(3)
             
+            // Summary
             Text(item.summary)
                 .font(.subheadline)
                 .foregroundStyle(AppTheme.secondaryText)
-                .lineLimit(3)
+                .lineLimit(2)
             
-            // Actions
+            // Thumbnail (if available)
+            if let imageURLString = item.imageURL, let imageURL = URL(string: imageURLString) {
+                CachedAsyncImage(url: imageURL, content: { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 120)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }, placeholder: {
+                    imagePlaceholder(height: 120)
+                })
+            }
+            
+            // Footer
             HStack {
                 Label(item.category, systemImage: "tag.fill")
                     .font(.caption2)
@@ -346,58 +557,212 @@ struct NewsCard: View {
                 
                 Spacer()
                 
-                Button(action: {
-                    // TODO: Implement bookmark functionality
-                    HapticsManager.shared.light()
-                }) {
-                    Image(systemName: "bookmark")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.primaryText)
-                }
-                
-                Button(action: {
-                    if let url = item.url {
-                        shareArticle(url: url, title: item.title)
-                    }
-                }) {
-                    Image(systemName: "arrow.up.right.square")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.primaryText)
-                }
+                Image(systemName: "arrow.up.right")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.tertiaryText)
             }
-            .padding(.top, 8)
         }
-        .glassCard()
+        .padding(14)
+        .background(Color.white)
+        .cornerRadius(14)
+        .shadow(color: AppTheme.shadow.opacity(0.1), radius: 6, y: 3)
+        .opacity(isRead ? 0.7 : 1.0)
     }
     
-    private var placeholderImage: some View {
+    private func imagePlaceholder(height: CGFloat) -> some View {
         ZStack {
-            Color.gray.opacity(0.2)
+            Color.gray.opacity(0.15)
             Image(systemName: "photo")
-                .font(.largeTitle)
+                .font(.title2)
                 .foregroundStyle(AppTheme.tertiaryText)
         }
-        .frame(height: 160)
-        .cornerRadius(12)
+        .frame(height: height)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+// MARK: - Magazine News Card
+struct MagazineNewsCard: View {
+    let item: NewsItem
+    var isRead: Bool
+    var isBookmarked: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Large Image
+            if let imageURLString = item.imageURL, let imageURL = URL(string: imageURLString) {
+                CachedAsyncImage(url: imageURL, content: { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 200)
+                        .clipped()
+                }, placeholder: {
+                    magazinePlaceholder
+                })
+            } else {
+                magazinePlaceholder
+            }
+            
+            // Content
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Label(item.source, systemImage: item.image)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppTheme.mistBlue)
+                    
+                    Spacer()
+                    
+                    if isBookmarked {
+                        Image(systemName: "bookmark.fill")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.almond)
+                    }
+                    
+                    Text(item.date.formatted(.relative(presentation: .named)))
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.tertiaryText)
+                }
+                
+                Text(item.title)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundStyle(isRead ? AppTheme.secondaryText : AppTheme.primaryText)
+                    .lineLimit(3)
+                
+                Text(item.summary)
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.secondaryText)
+                    .lineLimit(3)
+                
+                HStack {
+                    Label(item.category, systemImage: "tag.fill")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.almond)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.almond.opacity(0.1))
+                        .clipShape(Capsule())
+                    
+                    Spacer()
+                    
+                    Image(systemName: "arrow.up.right.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(AppTheme.mistBlue)
+                }
+            }
+            .padding(16)
+        }
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: AppTheme.shadow.opacity(0.12), radius: 8, y: 4)
+        .opacity(isRead ? 0.7 : 1.0)
     }
     
-    private func shareArticle(url: URL, title: String) {
-        let activityVC = UIActivityViewController(
-            activityItems: [title, url],
-            applicationActivities: nil
-        )
-        
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first,
-           let rootVC = window.rootViewController {
-            activityVC.popoverPresentationController?.sourceView = window
-            rootVC.present(activityVC, animated: true)
+    private var magazinePlaceholder: some View {
+        ZStack {
+            LinearGradient(
+                colors: [AppTheme.mistBlue.opacity(0.3), AppTheme.lavender.opacity(0.3)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Image(systemName: item.image)
+                .font(.system(size: 48))
+                .foregroundStyle(.white.opacity(0.6))
         }
-        
-        HapticsManager.shared.light()
+        .frame(height: 200)
+    }
+}
+
+// MARK: - Error Banner
+struct ErrorBanner: View {
+    let error: String
+    let onRetry: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(AppTheme.coral)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Failed to load news")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppTheme.primaryText)
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+            
+            Spacer()
+            
+            Button(action: onRetry) {
+                Text("Retry")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(AppTheme.mistBlue)
+                    .clipShape(Capsule())
+            }
+        }
+        .padding()
+        .background(AppTheme.coral.opacity(0.1))
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Empty State
+struct EmptyNewsState: View {
+    let hasAPIKey: Bool
+    let searchQuery: String
+    let onRetry: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: searchQuery.isEmpty ? "newspaper" : "magnifyingglass")
+                .font(.system(size: 60))
+                .foregroundStyle(AppTheme.tertiaryText)
+            
+            VStack(spacing: 8) {
+                Text(searchQuery.isEmpty ? "No News Available" : "No Results Found")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundStyle(AppTheme.primaryText)
+                
+                if searchQuery.isEmpty {
+                    Text(hasAPIKey ? "Pull to refresh or try again" : "Configure News API key in Settings")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.secondaryText)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("Try a different search term")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+            }
+            
+            if searchQuery.isEmpty && hasAPIKey {
+                Button(action: onRetry) {
+                    Text("Retry")
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(AppTheme.mistBlue)
+                        .clipShape(Capsule())
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
+        .padding(.horizontal, 40)
     }
 }
 
 #Preview {
     NewsFeedView()
+        .modelContainer(for: NewsItem.self, inMemory: true)
 }

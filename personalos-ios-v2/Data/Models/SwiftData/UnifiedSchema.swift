@@ -282,9 +282,9 @@ final class AssetItem {
         self.type = type
     }
     
-    @Transient var marketValue: Double { quantity * currentPrice }
-    @Transient var pnl: Double { (currentPrice - avgCost) * quantity }
-    @Transient var pnlPercent: Double { avgCost == 0 ? 0 : (currentPrice - avgCost) / avgCost }
+    var marketValue: Double { quantity * currentPrice }
+    var pnl: Double { (currentPrice - avgCost) * quantity }
+    var pnlPercent: Double { avgCost == 0 ? 0 : (currentPrice - avgCost) / avgCost }
 }
 
 enum AssetType: String, CaseIterable, Codable {
@@ -353,7 +353,7 @@ final class HabitItem {
         self.streak = streak
     }
     
-    @Transient var color: Color {
+    var color: Color {
         switch icon {
         case "figure.run": return AppTheme.coral
         case "book.fill": return AppTheme.lavender
@@ -394,7 +394,7 @@ final class CodeSnippet {
         self.date = date
     }
     
-    @Transient var category: KnowledgeCategory {
+    var category: KnowledgeCategory {
         get { KnowledgeCategory(rawValue: categoryRaw) ?? .swift }
         set { categoryRaw = newValue.rawValue }
     }
