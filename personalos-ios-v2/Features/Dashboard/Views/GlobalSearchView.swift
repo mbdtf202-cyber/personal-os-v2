@@ -22,6 +22,7 @@ struct GlobalSearchView: View {
     @State private var query = ""
     @State private var searchResults: [SearchResult] = []
     @FocusState private var isFocused: Bool
+    @State private var searchTask: Task<Void, Never>?
     
     var body: some View {
         ZStack {
@@ -127,7 +128,19 @@ struct GlobalSearchView: View {
         .onAppear { isFocused = true }
         .transition(.opacity)
         .onChange(of: query) { _, newValue in
-            performSearch(newValue)
+            // 🔧 优化: Debounce 搜索，避免每次输入都触发数据库查询
+            searchTask?.cancel()
+            searchTask = Task {
+                try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+                if !Task.isCancelled {
+                    await MainActor.run {
+                        performSearch(newValue)
+                    }
+                }
+            }
+        }
+        .onDisappear {
+            searchTask?.cancel()
         }
     }
     

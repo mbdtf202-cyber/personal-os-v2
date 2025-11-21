@@ -133,15 +133,13 @@ struct NewsFeedView: View {
                             EmptyNewsState(
                                 hasAPIKey: APIConfig.hasValidNewsAPIKey,
                                 searchQuery: searchQuery,
-                                onRetry: { Task { await refreshNews() } }
+                                onRetry: refreshNews
                             )
                         } else {
                             LazyVStack(spacing: viewMode == .compact ? 12 : 16) {
                                 // Error Banner
                                 if let error = newsService.error {
-                                    ErrorBanner(error: error) {
-                                        Task { await refreshNews() }
-                                    }
+                                    ErrorBanner(error: error, onRetry: refreshNews)
                                 }
                                 
                                 ForEach(filteredNews) { item in
@@ -223,7 +221,9 @@ struct NewsFeedView: View {
                                 .font(.system(size: 18))
                         }
                         
-                        Button(action: { Task { await refreshNews() } }) {
+                        Button {
+                            Task { await refreshNews() }
+                        } label: {
                             Image(systemName: "arrow.clockwise")
                                 .font(.system(size: 18))
                         }
@@ -687,7 +687,7 @@ struct MagazineNewsCard: View {
 // MARK: - Error Banner
 struct ErrorBanner: View {
     let error: String
-    let onRetry: () -> Void
+    let onRetry: () async -> Void
     
     var body: some View {
         HStack(spacing: 12) {
@@ -706,7 +706,9 @@ struct ErrorBanner: View {
             
             Spacer()
             
-            Button(action: onRetry) {
+            Button {
+                Task { await onRetry() }
+            } label: {
                 Text("Retry")
                     .font(.caption)
                     .fontWeight(.semibold)
@@ -727,7 +729,7 @@ struct ErrorBanner: View {
 struct EmptyNewsState: View {
     let hasAPIKey: Bool
     let searchQuery: String
-    let onRetry: () -> Void
+    let onRetry: () async -> Void
     
     var body: some View {
         VStack(spacing: 20) {
@@ -754,7 +756,9 @@ struct EmptyNewsState: View {
             }
             
             if searchQuery.isEmpty && hasAPIKey {
-                Button(action: onRetry) {
+                Button {
+                    Task { await onRetry() }
+                } label: {
                     Text("Retry")
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
