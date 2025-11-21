@@ -45,28 +45,8 @@ class FirebaseCrashReporter {
     }
 }
 
-// MARK: - 集成说明
-/*
- Firebase Crashlytics 集成步骤：
- 
- 1. 添加依赖（Package.swift 或 Podfile）：
-    .package(url: "https://github.com/firebase/firebase-ios-sdk", from: "10.0.0")
- 
- 2. 在 AppDelegate.swift 中初始化：
-    import FirebaseCore
-    import FirebaseCrashlytics
-    
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions...) {
-        FirebaseApp.configure()
-        Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(true)
-    }
- 
- 3. 下载 GoogleService-Info.plist 并添加到项目
- 
- 4. 在 Build Phases 中添加 Run Script：
-    "${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run"
- 
- 5. 取消注释本文件中的 Firebase 代码
- 
- 免费额度：每月 10,000 次崩溃报告
- */
+// MARK: - Firebase Integration Guide
+// 1. Add Firebase SDK dependency
+// 2. Download GoogleService-Info.plist
+// 3. Initialize in AppDelegate: FirebaseApp.configure()
+// 4. Uncomment Firebase code in report() method
