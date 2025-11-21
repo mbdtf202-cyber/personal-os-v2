@@ -20,16 +20,8 @@ struct personalos_ios_v2App: App {
 
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                if UIDevice.current.userInterfaceIdiom == .pad {
-                    iPadAppContainer()
-                } else {
-                    MainTabView()
-                }
-            }
-            .onAppear {
-                print("✅ App launched successfully")
-            }
+            // 🚑 P0 Fix: 使用 RootView 解决竞态条件
+            RootView()
         }
         .modelContainer(for: [
             TodoItem.self,
@@ -51,16 +43,6 @@ struct personalos_ios_v2App: App {
         .environmentObject(serviceContainer)
         .environmentObject(themeManager)
         .environmentObject(remoteConfig)
-        .task {
-            // 🚑 P0 Fix: Configure RepositoryContainer with ModelContext
-            await configureRepositoryContainer()
-        }
-    }
-    
-    @MainActor
-    private func configureRepositoryContainer() async {
-        // Note: We need to access modelContext from a View, not from App
-        // This will be handled in MainTabView instead
     }
     
     private func setupServices() {
@@ -78,12 +60,57 @@ struct personalos_ios_v2App: App {
     }
 }
 
+// MARK: - Root View (P0 Fix: 解决 RepositoryContainer 竞态条件)
+struct RootView: View {
+    @Environment(\.modelContext) private var modelContext
+    @State private var isReady = false
+    
+    var body: some View {
+        Group {
+            if isReady {
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    iPadAppContainer()
+                } else {
+                    MainTabView()
+                }
+            } else {
+                LoadingView(message: "Initializing PersonalOS...")
+            }
+        }
+        .onAppear {
+            // 🚑 P0 Fix: 同步配置 RepositoryContainer，确保在任何 View 使用前完成
+            RepositoryContainer.shared.configure(modelContext: modelContext)
+            isReady = true
+            Logger.log("✅ RepositoryContainer configured with ModelContext", category: Logger.general)
+        }
+    }
+}
+
+// MARK: - Loading View
+struct LoadingView: View {
+    let message: String
+    
+    var body: some View {
+        ZStack {
+            AppTheme.background.ignoresSafeArea()
+            
+            VStack(spacing: 20) {
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .tint(AppTheme.mistBlue)
+                
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+        }
+    }
+}
+
 // MARK: - Main Tab View
 struct MainTabView: View {
     @Environment(AppRouter.self) private var router
-    @Environment(\.modelContext) private var modelContext
     @State private var showQuickNote = false
-    @State private var isRepositoryConfigured = false
 
     var body: some View {
         ZStack {
@@ -131,16 +158,6 @@ struct MainTabView: View {
             // Quick Note Overlay
             if showQuickNote {
                 QuickNoteOverlay(isPresented: $showQuickNote)
-            }
-        }
-        .task {
-            // 🚑 P0 Fix: Configure RepositoryContainer on first appear
-            if !isRepositoryConfigured {
-                await MainActor.run {
-                    RepositoryContainer.shared.configure(modelContext: modelContext)
-                    isRepositoryConfigured = true
-                    Logger.log("✅ RepositoryContainer configured with ModelContext", category: Logger.general)
-                }
             }
         }
     }

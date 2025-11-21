@@ -198,18 +198,53 @@ struct SettingsView: View {
     
     private func clearAllData() {
         Task {
+            // 🔧 P2 Fix: 使用统一的错误处理，确保用户知道哪一步失败
+            var errors: [String] = []
+            
             do {
-                // Delete all data using repositories
                 try await RepositoryContainer.shared.todoRepository.deleteAll()
-                try await RepositoryContainer.shared.tradeRepository.deleteAll()
-                try await RepositoryContainer.shared.projectRepository.deleteAll()
-                try await RepositoryContainer.shared.socialPostRepository.deleteAll()
-                try await RepositoryContainer.shared.codeSnippetRepository.deleteAll()
-                
-                HapticsManager.shared.success()
-                Logger.log("All data cleared", category: Logger.general)
             } catch {
-                ErrorHandler.shared.handle(error, context: "SettingsView.clearAllData")
+                errors.append("Todos")
+                Logger.error("Failed to delete todos: \(error)", category: Logger.general)
+            }
+            
+            do {
+                try await RepositoryContainer.shared.tradeRepository.deleteAll()
+            } catch {
+                errors.append("Trades")
+                Logger.error("Failed to delete trades: \(error)", category: Logger.general)
+            }
+            
+            do {
+                try await RepositoryContainer.shared.projectRepository.deleteAll()
+            } catch {
+                errors.append("Projects")
+                Logger.error("Failed to delete projects: \(error)", category: Logger.general)
+            }
+            
+            do {
+                try await RepositoryContainer.shared.socialPostRepository.deleteAll()
+            } catch {
+                errors.append("Social Posts")
+                Logger.error("Failed to delete social posts: \(error)", category: Logger.general)
+            }
+            
+            do {
+                try await RepositoryContainer.shared.codeSnippetRepository.deleteAll()
+            } catch {
+                errors.append("Code Snippets")
+                Logger.error("Failed to delete code snippets: \(error)", category: Logger.general)
+            }
+            
+            if errors.isEmpty {
+                HapticsManager.shared.success()
+                Logger.log("All data cleared successfully", category: Logger.general)
+            } else {
+                let errorMessage = "Failed to delete: \(errors.joined(separator: ", "))"
+                ErrorHandler.shared.handle(
+                    AppError.database(errorMessage),
+                    context: "SettingsView.clearAllData"
+                )
             }
         }
     }
