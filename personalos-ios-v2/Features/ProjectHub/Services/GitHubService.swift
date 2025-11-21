@@ -32,8 +32,7 @@ class GitHubService: GitHubServiceProtocol {
     
     private let networkClient: NetworkClient
     
-    // 🔧 P1 Fix: 使用专用的 github 配置单例
-    init(networkClient: NetworkClient = NetworkClient.github) {
+    init(networkClient: NetworkClient) {
         self.networkClient = networkClient
     }
     
@@ -42,17 +41,10 @@ class GitHubService: GitHubServiceProtocol {
         error = nil
         syncSuccess = false
         
-        guard let url = URL(string: "https://api.github.com/users/\(username)/repos?sort=updated&per_page=50") else {
-            error = "Invalid URL"
-            isLoading = false
-            return
-        }
-        
-        var request = URLRequest(url: url)
-        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        let endpoint = GitHubEndpoint.userRepos(username: username, perPage: 50)
         
         do {
-            repos = try await networkClient.request(url: url)
+            repos = try await networkClient.request(endpoint)
             syncSuccess = true
             isLoading = false
             Logger.log("Successfully fetched \(repos.count) repositories from GitHub", category: Logger.general)
@@ -97,13 +89,16 @@ extension GitHubService {
     }
     
     func fetchIssues(repo: String) async throws -> [GitHubIssue] {
-        guard let url = URL(string: "https://api.github.com/repos/\(repo)/issues") else {
+        let components = repo.split(separator: "/")
+        guard components.count == 2 else {
             throw URLError(.badURL)
         }
         
-        var request = URLRequest(url: url)
-        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        let endpoint = GitHubEndpoint.repoIssues(
+            owner: String(components[0]),
+            repo: String(components[1])
+        )
         
-        return try await networkClient.request(url: url)
+        return try await networkClient.request(endpoint)
     }
 }

@@ -18,8 +18,7 @@ class StockPriceService: StockServiceProtocol {
     private let networkClient: NetworkClient
     private let apiKey: String
     
-    // 🔧 P1 Fix: 使用专用的 stocks 配置单例
-    init(networkClient: NetworkClient = NetworkClient.stocks) {
+    init(networkClient: NetworkClient) {
         self.networkClient = networkClient
         self.apiKey = AppConfig.API.stockAPIKey
     }
@@ -28,7 +27,6 @@ class StockPriceService: StockServiceProtocol {
         isLoading = true
         defer { isLoading = false }
         
-        // Mock data if no API key
         guard !apiKey.isEmpty else {
             let mockQuote = StockQuote(
                 symbol: symbol,
@@ -40,12 +38,8 @@ class StockPriceService: StockServiceProtocol {
             return mockQuote
         }
         
-        // Implement real API call here
-        guard let url = URL(string: "https://api.example.com/quote/\(symbol)?apikey=\(apiKey)") else {
-            throw URLError(.badURL)
-        }
-        
-        let quote: StockQuote = try await networkClient.request(url: url)
+        let endpoint = StockEndpoint.quote(symbol: symbol, apiKey: apiKey)
+        let quote: StockQuote = try await networkClient.request(endpoint)
         quotes[symbol] = quote
         return quote
     }

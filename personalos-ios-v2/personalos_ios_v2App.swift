@@ -4,23 +4,17 @@ import SwiftData
 @main
 struct personalos_ios_v2App: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var serviceContainer = ServiceContainer.shared
     @StateObject private var themeManager = ThemeManager.shared
     @StateObject private var remoteConfig = RemoteConfigService.shared
     @State private var router = AppRouter()
-    @State private var stockPriceService = StockPriceService()
     @State private var healthManager = HealthStoreManager()
-    @State private var githubService = GitHubService()
-    @State private var newsService = NewsService()
 
     init() {
-        setupServices()
         setupTheme()
     }
 
     var body: some Scene {
         WindowGroup {
-            // 🚑 P0 Fix: 使用 RootView 解决竞态条件
             RootView()
         }
         .modelContainer(for: [
@@ -36,23 +30,9 @@ struct personalos_ios_v2App: App {
             CodeSnippet.self
         ])
         .environment(router)
-        .environment(stockPriceService)
         .environment(healthManager)
-        .environment(githubService)
-        .environment(newsService)
-        .environmentObject(serviceContainer)
         .environmentObject(themeManager)
         .environmentObject(remoteConfig)
-    }
-    
-    private func setupServices() {
-        #if DEBUG
-        ServiceFactory.shared.configure(environment: .mock)
-        #else
-        ServiceFactory.shared.configure(environment: .production)
-        #endif
-        
-        ServiceFactory.shared.setupServices(in: ServiceContainer.shared)
     }
     
     private func setupTheme() {
@@ -60,28 +40,38 @@ struct personalos_ios_v2App: App {
     }
 }
 
-// MARK: - Root View (P0 Fix: 解决 RepositoryContainer 竞态条件)
 struct RootView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var isReady = false
+    @State private var appDependency: AppDependency?
     
     var body: some View {
         Group {
-            if isReady {
+            if let dependency = appDependency {
                 if UIDevice.current.userInterfaceIdiom == .pad {
                     iPadAppContainer()
+                        .environment(\.appDependency, dependency)
                 } else {
                     MainTabView()
+                        .environment(\.appDependency, dependency)
                 }
             } else {
                 LoadingView(message: "Initializing PersonalOS...")
             }
         }
         .onAppear {
-            // 🚑 P0 Fix: 同步配置 RepositoryContainer，确保在任何 View 使用前完成
-            RepositoryContainer.shared.configure(modelContext: modelContext)
-            isReady = true
-            Logger.log("✅ RepositoryContainer configured with ModelContext", category: Logger.general)
+            #if DEBUG
+            appDependency = AppDependency(modelContext: modelContext, environment: .mock)
+            #else
+            appDependency = AppDependency(modelContext: modelContext, environment: .production)
+            #endif
+            
+            @available(*, deprecated)
+            func configureDeprecatedContainer() {
+                RepositoryContainer.shared.configure(modelContext: modelContext)
+            }
+            configureDeprecatedContainer()
+            
+            Logger.log("✅ AppDependency initialized", category: Logger.general)
         }
     }
 }

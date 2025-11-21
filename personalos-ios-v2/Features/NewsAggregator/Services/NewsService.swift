@@ -37,8 +37,7 @@ class NewsService: NewsServiceProtocol {
         APIConfig.newsAPIKey
     }
     
-    // 🔧 P1 Fix: 使用专用的 news 配置单例
-    init(networkClient: NetworkClient = NetworkClient.news) {
+    init(networkClient: NetworkClient) {
         self.networkClient = networkClient
     }
     
@@ -46,21 +45,16 @@ class NewsService: NewsServiceProtocol {
         isLoading = true
         error = nil
         
-        // Use mock data if API key not configured
         guard APIConfig.hasValidNewsAPIKey else {
             Logger.debug("News API key not configured, skipping fetch", category: Logger.network)
             isLoading = false
             return
         }
         
-        guard let url = URL(string: "https://newsapi.org/v2/top-headlines?category=\(category)&language=en&apiKey=\(apiKey)") else {
-            error = "Invalid URL"
-            isLoading = false
-            return
-        }
+        let endpoint = NewsEndpoint.topHeadlines(category: category, apiKey: apiKey)
         
         do {
-            let newsResponse: NewsResponse = try await networkClient.request(url: url)
+            let newsResponse: NewsResponse = try await networkClient.request(endpoint)
             articles = newsResponse.articles
             Logger.log("Successfully fetched \(articles.count) news articles", category: Logger.network)
             isLoading = false
@@ -155,11 +149,8 @@ extension NewsService {
             return []
         }
         
-        guard let url = URL(string: "https://newsapi.org/v2/everything?q=\(query)&language=en&apiKey=\(apiKey)") else {
-            throw URLError(.badURL)
-        }
-        
-        let newsResponse: NewsResponse = try await networkClient.request(url: url)
+        let endpoint = NewsEndpoint.search(query: query, apiKey: apiKey)
+        let newsResponse: NewsResponse = try await networkClient.request(endpoint)
         return newsResponse.articles
     }
 }

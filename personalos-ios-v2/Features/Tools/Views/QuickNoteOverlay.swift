@@ -7,6 +7,7 @@ struct QuickNoteOverlay: View {
     @State private var saveAsPost: Bool = false
     @FocusState private var isFocused: Bool
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.appDependency) private var appDependency
     
     var body: some View {
         ZStack {

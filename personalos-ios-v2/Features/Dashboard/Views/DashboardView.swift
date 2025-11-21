@@ -3,14 +3,42 @@ import Combine
 import SwiftData
 
 struct DashboardView: View {
-    @State private var viewModel: DashboardViewModel
+    @State private var viewModel: DashboardViewModel?
     @Environment(HealthStoreManager.self) private var healthManager
     @Environment(AppRouter.self) private var router
+    @Environment(\.appDependency) private var appDependency
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \TodoItem.createdAt, order: .reverse) private var tasks: [TodoItem]
-    @Query(sort: \SocialPost.date, order: .reverse) private var posts: [SocialPost]
-    @Query(sort: \TradeRecord.date, order: .reverse) private var trades: [TradeRecord]
+    @Query(
+        filter: #Predicate<TodoItem> { _ in true },
+        sort: \TodoItem.createdAt,
+        order: .reverse
+    ) private var allTasks: [TodoItem]
+    
+    @Query(
+        filter: #Predicate<SocialPost> { _ in true },
+        sort: \SocialPost.date,
+        order: .reverse
+    ) private var allPosts: [SocialPost]
+    
+    @Query(
+        filter: #Predicate<TradeRecord> { _ in true },
+        sort: \TradeRecord.date,
+        order: .reverse
+    ) private var allTrades: [TradeRecord]
+    
     @Query(sort: \ProjectItem.name) private var projects: [ProjectItem]
+    
+    private var tasks: [TodoItem] {
+        Array(allTasks.prefix(10))
+    }
+    
+    private var posts: [SocialPost] {
+        Array(allPosts.prefix(10))
+    }
+    
+    private var trades: [TradeRecord] {
+        Array(allTrades.prefix(10))
+    }
     @State private var showAddTask = false
     @State private var newTaskTitle = ""
     @State private var showQuickNote = false
@@ -20,12 +48,7 @@ struct DashboardView: View {
     @State private var isFocusActive = false
     @State private var activityData: [(String, Double)] = []
 
-    // 🚑 P0 Fix: 直接初始化 ViewModel（RepositoryContainer 已在 RootView 中配置）
-    init() {
-        _viewModel = State(initialValue: DashboardViewModel(
-            todoRepository: RepositoryContainer.shared.todoRepository
-        ))
-    }
+    init() {}
 
     var body: some View {
         NavigationStack {
@@ -56,21 +79,33 @@ struct DashboardView: View {
                 }
             }
             .overlay {
-                if viewModel.showGlobalSearch {
-                    GlobalSearchView(isPresented: $viewModel.showGlobalSearch)
+                if let vm = viewModel, vm.showGlobalSearch {
+                    GlobalSearchView(isPresented: Binding(
+                        get: { vm.showGlobalSearch },
+                        set: { vm.showGlobalSearch = $0 }
+                    ))
                 }
             }
         }
-        .alert("Error", isPresented: $viewModel.isError) {
-            Button("OK") { viewModel.clearError() }
+        .alert("Error", isPresented: Binding(
+            get: { viewModel?.isError ?? false },
+            set: { if !$0 { viewModel?.clearError() } }
+        )) {
+            Button("OK") { viewModel?.clearError() }
         } message: {
-            Text(viewModel.errorMessage ?? "Unknown error")
+            Text(viewModel?.errorMessage ?? "Unknown error")
         }
         .sheet(isPresented: $showQuickNote) {
             QuickNoteOverlay(isPresented: $showQuickNote)
         }
         .sheet(isPresented: $showTradeLog) {
             TradeLogForm()
+        }
+        .onAppear {
+            if viewModel == nil, let dependency = appDependency {
+                viewModel = DashboardViewModel(todoRepository: dependency.repositories.todo)
+            }
+            updateActivityData()
         }
         .sheet(isPresented: $showQRScanner) {
             QRCodeGeneratorView()
@@ -181,7 +216,7 @@ struct DashboardView: View {
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(AppTheme.secondaryText)
-                Text("\(viewModel.greeting), Creator")
+                Text("\(viewModel?.greeting ?? "Good Day"), Creator")
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundStyle(AppTheme.primaryText)
@@ -189,7 +224,7 @@ struct DashboardView: View {
             Spacer()
             Button(action: { 
                 withAnimation { 
-                    viewModel.showGlobalSearch = true 
+                    viewModel?.showGlobalSearch = true 
                 } 
             }) {
                 Image(systemName: "magnifyingglass")
@@ -243,7 +278,7 @@ struct DashboardView: View {
                     HStack(spacing: 12) {
                         Button(action: { 
                             Task { 
-                                await viewModel.toggleTask(task) 
+                                await viewModel?.toggleTask(task) 
                             } 
                         }) {
                             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
@@ -286,7 +321,7 @@ struct DashboardView: View {
                         
                         Button(action: { 
                             Task { 
-                                await viewModel.deleteTask(task) 
+                                await viewModel?.deleteTask(task) 
                             } 
                         }) {
                             Image(systemName: "trash")
@@ -394,7 +429,7 @@ struct DashboardView: View {
         guard !trimmedTitle.isEmpty else { return }
 
         Task { 
-            await viewModel.addTask(title: trimmedTitle) 
+            await viewModel?.addTask(title: trimmedTitle) 
         }
         newTaskTitle = ""
         showAddTask = false
@@ -465,7 +500,7 @@ struct DashboardView: View {
     }
 
     private func seedTasksIfNeeded() {
-        guard tasks.isEmpty else { return }
+        guard tasks.isEmpty, let dependency = appDependency else { return }
         Task {
             let defaults = [
                 TodoItem(title: "完成 PersonalOS 开发", category: "Work", priority: 2),
@@ -473,13 +508,14 @@ struct DashboardView: View {
                 TodoItem(title: "健身打卡", category: "Life", priority: 1)
             ]
             for task in defaults {
-                try? await RepositoryContainer.shared.todoRepository.save(task)
+                try? await dependency.repositories.todo.save(task)
             }
         }
     }
     
     private func updateActivityData() {
-        activityData = viewModel.calculateActivityData(tasks: tasks, posts: posts, trades: trades)
+        guard let vm = viewModel else { return }
+        activityData = vm.calculateActivityData(tasks: tasks, posts: posts, trades: trades)
     }
 }
 
