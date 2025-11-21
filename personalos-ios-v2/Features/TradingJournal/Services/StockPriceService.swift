@@ -15,9 +15,11 @@ class StockPriceService: StockServiceProtocol {
     var isLoading = false
     var error: String?
     
+    private let networkClient: NetworkClient
     private let apiKey: String
     
-    init() {
+    init(networkClient: NetworkClient = NetworkClient(config: .stocks)) {
+        self.networkClient = networkClient
         self.apiKey = AppConfig.API.stockAPIKey
     }
     
@@ -42,8 +44,7 @@ class StockPriceService: StockServiceProtocol {
             throw URLError(.badURL)
         }
         
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let quote = try JSONDecoder().decode(StockQuote.self, from: data)
+        let quote: StockQuote = try await networkClient.request(url: url)
         quotes[symbol] = quote
         return quote
     }

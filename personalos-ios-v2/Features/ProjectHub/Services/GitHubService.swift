@@ -30,6 +30,12 @@ class GitHubService: GitHubServiceProtocol {
     var error: String?
     var syncSuccess = false
     
+    private let networkClient: NetworkClient
+    
+    init(networkClient: NetworkClient = NetworkClient(config: .github)) {
+        self.networkClient = networkClient
+    }
+    
     func fetchUserRepos(username: String) async {
         isLoading = true
         error = nil
@@ -45,23 +51,14 @@ class GitHubService: GitHubServiceProtocol {
         request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
         
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                error = "Failed to fetch repos"
-                isLoading = false
-                return
-            }
-            
-            let decoder = JSONDecoder()
-            repos = try decoder.decode([GitHubRepo].self, from: data)
+            repos = try await networkClient.request(url: url)
             syncSuccess = true
             isLoading = false
             Logger.log("Successfully fetched \(repos.count) repositories from GitHub", category: Logger.general)
         } catch {
             self.error = error.localizedDescription
+            ErrorHandler.shared.handle(error, context: "GitHubService.fetchUserRepos")
             isLoading = false
-            Logger.error("GitHub sync failed: \(error.localizedDescription)", category: Logger.general)
         }
     }
 }
@@ -106,7 +103,6 @@ extension GitHubService {
         var request = URLRequest(url: url)
         request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
         
-        let (data, _) = try await URLSession.shared.data(for: request)
-        return try JSONDecoder().decode([GitHubIssue].self, from: data)
+        return try await networkClient.request(url: url)
     }
 }
