@@ -76,8 +76,8 @@ class RemoteConfigService: ObservableObject {
                 cacheConfig(config)
             }
         } catch {
-            print("⚠️ Failed to fetch remote config: \(error.localizedDescription)")
-            print("✅ Using default/cached config")
+            Logger.warning("Failed to fetch remote config: \(error.localizedDescription)", category: Logger.general)
+            Logger.log("Using default/cached config", category: Logger.general)
             // Fallback to default config
             await MainActor.run {
                 self.isLoaded = true
