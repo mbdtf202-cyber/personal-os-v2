@@ -1,28 +1,29 @@
 import Foundation
 
 /// 纯计算引擎：根据交易记录计算持仓、资产和权益曲线
+/// ✅ 使用 Decimal 确保金融计算精度
 struct PortfolioCalculator {
     struct Result {
         var assets: [AssetItem]
-        var totalBalance: Double
+        var totalBalance: Decimal
         var equityCurve: [EquityPoint]
-        var dayPnL: Double
-        var dayPnLPercent: Double
+        var dayPnL: Decimal
+        var dayPnLPercent: Decimal
     }
 
     /// `priceLookup` 用于注入实时价格。回退到 `lastTradePrice`。
-    func calculate(with trades: [TradeRecord], priceLookup: (String, Double) -> Double) -> Result {
+    func calculate(with trades: [TradeRecord], priceLookup: (String, Decimal) -> Decimal) -> Result {
         let sortedTrades = trades.sorted { $0.date < $1.date }
         let holdings = computeHoldings(from: sortedTrades)
         let assets = buildAssets(from: holdings, priceLookup: priceLookup)
 
-        let totalBalance = assets.reduce(0) { $0 + $1.marketValue }
+        let totalBalance = assets.reduce(Decimal.zero) { $0 + $1.marketValue }
         let equityCurve = buildEquityCurve(from: sortedTrades)
 
-        let latest = equityCurve.last?.value
-        let previous = equityCurve.dropLast().last?.value
-        let dayPnL = (latest ?? 0) - (previous ?? 0)
-        let dayPnLPercent = (previous ?? 0) != 0 ? (dayPnL / (previous ?? 1)) * 100 : 0
+        let latest = equityCurve.last?.value ?? Decimal.zero
+        let previous = equityCurve.dropLast().last?.value ?? Decimal.zero
+        let dayPnL = latest - previous
+        let dayPnLPercent = previous != 0 ? (dayPnL / previous) * 100 : 0
 
         return Result(
             assets: assets.sorted { $0.symbol < $1.symbol },
@@ -58,10 +59,10 @@ struct PortfolioCalculator {
         return holdings
     }
 
-    private func buildAssets(from holdings: [String: HoldingSnapshot], priceLookup: (String, Double) -> Double) -> [AssetItem] {
+    private func buildAssets(from holdings: [String: HoldingSnapshot], priceLookup: (String, Decimal) -> Decimal) -> [AssetItem] {
         holdings.compactMap { symbol, snapshot in
             guard snapshot.quantity > 0 else { return nil }
-            let avgCost = snapshot.quantity > 0 ? snapshot.totalCost / snapshot.quantity : 0
+            let avgCost = snapshot.quantity > 0 ? snapshot.totalCost / snapshot.quantity : Decimal.zero
             let currentPrice = priceLookup(symbol, snapshot.latestPrice)
 
             return AssetItem(
@@ -101,7 +102,7 @@ struct PortfolioCalculator {
                 tradeIndex += 1
             }
 
-            let equity = holdings.values.reduce(0) { partial, snapshot in
+            let equity = holdings.values.reduce(Decimal.zero) { partial, snapshot in
                 partial + snapshot.quantity * snapshot.latestPrice
             }
 
@@ -130,4 +131,19 @@ struct PortfolioCalculator {
 
         holdings[trade.symbol] = snapshot
     }
+}
+
+// MARK: - Supporting Types
+
+struct HoldingSnapshot {
+    var assetType: AssetType
+    var quantity: Decimal = 0
+    var totalCost: Decimal = 0
+    var latestPrice: Decimal = 0
+}
+
+struct EquityPoint: Identifiable {
+    let id = UUID()
+    let day: String
+    let value: Decimal
 }

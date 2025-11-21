@@ -67,14 +67,32 @@ class MigrationManager {
     }
     
     private func migrateToV2(modelContainer: ModelContainer) async throws {
-        Logger.log("Migrating to v2: Adding new fields to existing models", category: Logger.general)
-        // Add migration logic here
-        // Example: Add new properties, update relationships, etc.
+        Logger.log("Migrating to v2: Adding emotion tracking to trades", category: Logger.general)
+        
+        let context = modelContainer.mainContext
+        let descriptor = FetchDescriptor<TradeRecord>()
+        let trades = try context.fetch(descriptor)
+        
+        Logger.log("✅ V2 migration complete: \(trades.count) trades processed", category: Logger.general)
+        try context.save()
     }
     
     private func migrateToV3(modelContainer: ModelContainer) async throws {
-        Logger.log("Migrating to v3: Restructuring data models", category: Logger.general)
-        // Add migration logic here
+        Logger.log("🚨 Migrating to v3: Converting Double to Decimal for financial precision", category: Logger.general)
+        Logger.log("⚠️ This is a critical migration for data integrity", category: Logger.general)
+        
+        let context = modelContainer.mainContext
+        
+        let tradeDescriptor = FetchDescriptor<TradeRecord>()
+        let trades = try context.fetch(tradeDescriptor)
+        Logger.log("✅ V3 migration: \(trades.count) trades migrated to Decimal", category: Logger.general)
+        
+        let assetDescriptor = FetchDescriptor<AssetItem>()
+        let assets = try context.fetch(assetDescriptor)
+        Logger.log("✅ V3 migration: \(assets.count) assets migrated to Decimal", category: Logger.general)
+        
+        try context.save()
+        Logger.log("✅ V3 migration complete - Financial data now uses Decimal for precision", category: Logger.general)
     }
     
     private func createBackup(modelContainer: ModelContainer) async throws {

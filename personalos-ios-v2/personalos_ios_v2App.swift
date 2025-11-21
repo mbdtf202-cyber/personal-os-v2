@@ -10,6 +10,7 @@ struct personalos_ios_v2App: App {
     @State private var healthManager = HealthStoreManager()
 
     init() {
+        DecimalTransformer.register()
         setupTheme()
         setupMonitoring()
     }

@@ -6,14 +6,26 @@ final class TradeRecord {
     var id: String
     var symbol: String
     var type: TradeType
-    var price: Double
-    var quantity: Double
+    @Attribute(.transformable(by: DecimalTransformer.self))
+    var price: Decimal
+    @Attribute(.transformable(by: DecimalTransformer.self))
+    var quantity: Decimal
     var assetType: AssetType
     var emotion: TradeEmotion
     var note: String
     var date: Date
 
-    init(id: String = UUID().uuidString, symbol: String, type: TradeType, price: Double, quantity: Double, assetType: AssetType, emotion: TradeEmotion, note: String, date: Date = Date()) {
+    init(
+        id: String = UUID().uuidString,
+        symbol: String,
+        type: TradeType,
+        price: Decimal,
+        quantity: Decimal,
+        assetType: AssetType,
+        emotion: TradeEmotion,
+        note: String,
+        date: Date = Date()
+    ) {
         self.id = id
         self.symbol = symbol
         self.type = type
@@ -23,6 +35,10 @@ final class TradeRecord {
         self.emotion = emotion
         self.note = note
         self.date = date
+    }
+    
+    var totalValue: Decimal {
+        price * quantity
     }
 }
 
