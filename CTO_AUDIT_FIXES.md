@@ -48,7 +48,7 @@ private static var ninetyDaysAgo: Date {
 ---
 
 ### [P1] 配置管理 - ProcessInfo 误区
-**状态：✅ 已完成**
+**状态：✅ 已完成（RC2 简化）**
 
 **修复位置：** `APIConfig.swift`
 
@@ -60,13 +60,14 @@ private static var ninetyDaysAgo: Date {
 1. ProcessInfo 仅在 DEBUG 模式使用
 2. 生产环境回退到 `CompileTimeSecrets`（编译时注入）
 3. CI/CD 流程集成密钥注入脚本
+4. **RC2 更新：** 删除 APIKeyObfuscator（过度设计且未维护）
 
-**优先级：** Keychain → 混淆 Key → 编译时注入 → DEBUG 环境变量
+**简化后优先级：** Keychain → 编译时注入 → DEBUG 环境变量
 
 ---
 
 ### [P1] 监控系统 - 可观测性剧场
-**状态：✅ 已完成**
+**状态：✅ 已完成（RC2 优化）**
 
 **新增文件：** `personalos-ios-v2/Core/Monitoring/FirebaseCrashReporter.swift`
 
@@ -74,12 +75,14 @@ private static var ninetyDaysAgo: Date {
 1. 创建 Firebase Crashlytics 集成层
 2. 修改 `CrashReporter.swift` 优先使用 Firebase
 3. 回退机制：用户邮件分享崩溃日志
-4. 包含完整的集成文档和步骤
+4. **RC2 更新：** 使用 `#if canImport(FirebaseCrashlytics)` 替代注释代码
 
 **生产环境流程：**
 ```
 崩溃发生 → Firebase Crashlytics 上报 → 回退：提示用户分享日志
 ```
+
+**代码卫生：** 移除大段注释代码，使用编译器标志控制
 
 ---
 

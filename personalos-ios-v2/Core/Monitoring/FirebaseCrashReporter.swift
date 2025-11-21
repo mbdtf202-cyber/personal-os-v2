@@ -15,12 +15,7 @@ class FirebaseCrashReporter {
     private init() {}
     
     func report(_ crash: CrashLog) async {
-        // ⚠️ 实际集成时需要添加 Firebase SDK
-        // 1. 在 Podfile 或 SPM 中添加：FirebaseCrashlytics
-        // 2. 在 AppDelegate 中初始化：FirebaseApp.configure()
-        // 3. 取消注释以下代码：
-        
-        /*
+        #if canImport(FirebaseCrashlytics)
         import FirebaseCrashlytics
         
         let crashlytics = Crashlytics.crashlytics()
@@ -41,16 +36,18 @@ class FirebaseCrashReporter {
         )
         
         crashlytics.record(error: error)
-        */
-        
         Logger.log("Firebase Crashlytics: Crash reported", category: Logger.general)
+        #else
+        // Firebase 未集成时的回退逻辑
+        Logger.log("Firebase Crashlytics not available - crash logged locally", category: Logger.general)
         AnalyticsLogger.shared.log(.error(
-            message: "Crash reported to Firebase",
+            message: "Crash logged (Firebase not configured)",
             error: NSError(domain: "CrashReporter", code: -1, userInfo: [
                 "exception": crash.exception,
                 "reason": crash.reason
             ])
         ))
+        #endif
     }
     
     func setUserIdentifier(_ userId: String) {
