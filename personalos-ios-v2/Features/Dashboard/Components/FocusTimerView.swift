@@ -277,9 +277,14 @@ struct FocusTimerView: View {
             priority: 1
         )
         session.isCompleted = true
-        modelContext.insert(session)
-        try? modelContext.save()
-        Logger.log("Focus session completed: \(currentMode.rawValue)", category: Logger.general)
+        Task {
+            do {
+                try await RepositoryContainer.shared.habitRepository.save(session)
+                Logger.log("Focus session completed: \(currentMode.rawValue)", category: Logger.general)
+            } catch {
+                ErrorHandler.shared.handle(error, context: "FocusTimerView.completeFocusSession")
+            }
+        }
     }
 }
 

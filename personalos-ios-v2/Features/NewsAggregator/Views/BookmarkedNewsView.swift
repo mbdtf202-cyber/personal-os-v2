@@ -81,9 +81,14 @@ struct BookmarkedNewsView: View {
     }
     
     private func removeBookmark(_ item: NewsItem) {
-        modelContext.delete(item)
-        try? modelContext.save()
-        HapticsManager.shared.light()
+        Task {
+            do {
+                try await RepositoryContainer.shared.newsRepository.delete(item)
+                HapticsManager.shared.light()
+            } catch {
+                ErrorHandler.shared.handle(error, context: "BookmarkedNewsView.removeBookmark")
+            }
+        }
     }
     
     private func shareArticle(url: URL, title: String) {

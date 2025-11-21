@@ -20,16 +20,11 @@ struct DashboardView: View {
     @State private var isFocusActive = false
     @State private var activityData: [(String, Double)] = []
 
-    init(todoRepository: TodoRepository? = nil) {
-        if let repository = todoRepository {
-            _viewModel = State(initialValue: DashboardViewModel(todoRepository: repository))
-        } else {
-            // 临时方案：使用 modelContext 创建 repository
-            // 实际应该通过 DI 容器注入
-            let container = try! ModelContainer(for: TodoItem.self)
-            let repository = TodoRepository(modelContext: container.mainContext)
-            _viewModel = State(initialValue: DashboardViewModel(todoRepository: repository))
-        }
+    init() {
+        // 使用全局 RepositoryContainer
+        _viewModel = State(initialValue: DashboardViewModel(
+            todoRepository: RepositoryContainer.shared.todoRepository
+        ))
     }
 
     var body: some View {

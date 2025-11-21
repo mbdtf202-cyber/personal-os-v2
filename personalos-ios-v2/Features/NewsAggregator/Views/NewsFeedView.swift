@@ -321,18 +321,22 @@ struct NewsFeedView: View {
     
     private func bookmarkArticle(_ item: NewsItem) {
         // Check if already bookmarked
-        if let existingBookmark = bookmarkedNews.first(where: { $0.id == item.id }) {
-            // Remove bookmark
-            modelContext.delete(existingBookmark)
-            try? modelContext.save()
-            HapticsManager.shared.light()
-            Logger.log("Bookmark removed: \(item.title)", category: Logger.general)
-        } else {
-            // Add bookmark
-            modelContext.insert(item)
-            try? modelContext.save()
-            HapticsManager.shared.success()
-            Logger.log("Article bookmarked: \(item.title)", category: Logger.general)
+        Task {
+            do {
+                if let existingBookmark = bookmarkedNews.first(where: { $0.id == item.id }) {
+                    // Remove bookmark
+                    try await RepositoryContainer.shared.newsRepository.delete(existingBookmark)
+                    HapticsManager.shared.light()
+                    Logger.log("Bookmark removed: \(item.title)", category: Logger.general)
+                } else {
+                    // Add bookmark
+                    try await RepositoryContainer.shared.newsRepository.save(item)
+                    HapticsManager.shared.success()
+                    Logger.log("Article bookmarked: \(item.title)", category: Logger.general)
+                }
+            } catch {
+                ErrorHandler.shared.handle(error, context: "NewsFeedView.bookmarkArticle")
+            }
         }
     }
     
@@ -342,10 +346,15 @@ struct NewsFeedView: View {
             category: "Reading",
             priority: 1
         )
-        modelContext.insert(task)
-        try? modelContext.save()
-        HapticsManager.shared.success()
-        Logger.log("Task created from article", category: Logger.general)
+        Task {
+            do {
+                try await RepositoryContainer.shared.todoRepository.save(task)
+                HapticsManager.shared.success()
+                Logger.log("Task created from article", category: Logger.general)
+            } catch {
+                ErrorHandler.shared.handle(error, context: "NewsFeedView.createTaskFromArticle")
+            }
+        }
     }
     
     private func openArticle(_ item: NewsItem) {

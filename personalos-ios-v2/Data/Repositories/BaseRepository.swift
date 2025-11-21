@@ -97,30 +97,53 @@ class HabitRepository: BaseRepository<HabitItem> {}
 
 // MARK: - Repository Container
 @MainActor
-class RepositoryContainer {
-    static let shared = RepositoryContainer()
+class RepositoryContainer: ObservableObject {
+    static var shared = RepositoryContainer()
     
-    private let modelContext: ModelContext
+    private var modelContext: ModelContext?
     
-    lazy var todoRepository: TodoRepository = TodoRepository(modelContext: modelContext)
-    lazy var projectRepository: ProjectRepository = ProjectRepository(modelContext: modelContext)
-    lazy var newsRepository: NewsRepository = NewsRepository(modelContext: modelContext)
-    lazy var tradeRepository: TradeRepository = TradeRepository(modelContext: modelContext)
-    lazy var socialPostRepository: SocialPostRepository = SocialPostRepository(modelContext: modelContext)
-    lazy var codeSnippetRepository: CodeSnippetRepository = CodeSnippetRepository(modelContext: modelContext)
-    lazy var rssFeedRepository: RSSFeedRepository = RSSFeedRepository(modelContext: modelContext)
-    lazy var habitRepository: HabitRepository = HabitRepository(modelContext: modelContext)
+    lazy var todoRepository: TodoRepository = {
+        TodoRepository(modelContext: getContext())
+    }()
     
-    init(modelContext: ModelContext? = nil) {
-        if let context = modelContext {
-            self.modelContext = context
-        } else {
-            // 创建默认容器
-            let container = try! ModelContainer(for: 
-                TodoItem.self, ProjectItem.self, NewsItem.self, TradeRecord.self,
-                SocialPost.self, CodeSnippet.self, RSSFeed.self, HabitItem.self
-            )
-            self.modelContext = container.mainContext
+    lazy var projectRepository: ProjectRepository = {
+        ProjectRepository(modelContext: getContext())
+    }()
+    
+    lazy var newsRepository: NewsRepository = {
+        NewsRepository(modelContext: getContext())
+    }()
+    
+    lazy var tradeRepository: TradeRepository = {
+        TradeRepository(modelContext: getContext())
+    }()
+    
+    lazy var socialPostRepository: SocialPostRepository = {
+        SocialPostRepository(modelContext: getContext())
+    }()
+    
+    lazy var codeSnippetRepository: CodeSnippetRepository = {
+        CodeSnippetRepository(modelContext: getContext())
+    }()
+    
+    lazy var rssFeedRepository: RSSFeedRepository = {
+        RSSFeedRepository(modelContext: getContext())
+    }()
+    
+    lazy var habitRepository: HabitRepository = {
+        HabitRepository(modelContext: getContext())
+    }()
+    
+    private init() {}
+    
+    func configure(modelContext: ModelContext) {
+        self.modelContext = modelContext
+    }
+    
+    private func getContext() -> ModelContext {
+        guard let context = modelContext else {
+            fatalError("RepositoryContainer not configured. Call configure(modelContext:) first.")
         }
+        return context
     }
 }

@@ -154,10 +154,14 @@ struct RSSFeedsView: View {
             url: newFeedURL,
             category: newFeedCategory
         )
-        modelContext.insert(feed)
-        try? modelContext.save()
-        
-        HapticsManager.shared.success()
+        Task {
+            do {
+                try await RepositoryContainer.shared.rssFeedRepository.save(feed)
+                HapticsManager.shared.success()
+            } catch {
+                ErrorHandler.shared.handle(error, context: "RSSFeedsView.addFeed")
+            }
+        }
         Logger.log("RSS feed added: \(newFeedName)", category: Logger.general)
         
         showAddFeed = false
@@ -165,9 +169,14 @@ struct RSSFeedsView: View {
     }
     
     private func deleteFeed(_ feed: RSSFeed) {
-        modelContext.delete(feed)
-        try? modelContext.save()
-        HapticsManager.shared.light()
+        Task {
+            do {
+                try await RepositoryContainer.shared.rssFeedRepository.delete(feed)
+                HapticsManager.shared.light()
+            } catch {
+                ErrorHandler.shared.handle(error, context: "RSSFeedsView.deleteFeed")
+            }
+        }
     }
     
     private func resetForm() {
@@ -178,8 +187,11 @@ struct RSSFeedsView: View {
     
     private func seedDefaultFeeds() {
         guard feeds.isEmpty else { return }
-        RSSFeed.defaultFeeds.forEach { modelContext.insert($0) }
-        try? modelContext.save()
+        Task {
+            for feed in RSSFeed.defaultFeeds {
+                try? await RepositoryContainer.shared.rssFeedRepository.save(feed)
+            }
+        }
     }
 }
 

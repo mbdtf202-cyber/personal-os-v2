@@ -199,19 +199,17 @@ struct SettingsView: View {
     private func clearAllData() {
         Task {
             do {
-                // Delete all data
-                try modelContext.delete(model: TodoItem.self)
-                try modelContext.delete(model: TradeRecord.self)
-                try modelContext.delete(model: ProjectItem.self)
-                try modelContext.delete(model: SocialPost.self)
-                try modelContext.delete(model: CodeSnippet.self)
-                
-                try modelContext.save()
+                // Delete all data using repositories
+                try await RepositoryContainer.shared.todoRepository.deleteAll()
+                try await RepositoryContainer.shared.tradeRepository.deleteAll()
+                try await RepositoryContainer.shared.projectRepository.deleteAll()
+                try await RepositoryContainer.shared.socialPostRepository.deleteAll()
+                try await RepositoryContainer.shared.codeSnippetRepository.deleteAll()
                 
                 HapticsManager.shared.success()
                 Logger.log("All data cleared", category: Logger.general)
             } catch {
-                Logger.error("Failed to clear data: \(error.localizedDescription)", category: Logger.general)
+                ErrorHandler.shared.handle(error, context: "SettingsView.clearAllData")
             }
         }
     }
