@@ -457,13 +457,16 @@ struct DashboardView: View {
 
     private func seedTasksIfNeeded() {
         guard tasks.isEmpty else { return }
-        let defaults = [
-            TodoItem(title: "完成 PersonalOS 开发", category: "Work", priority: 2),
-            TodoItem(title: "阅读技术文章", category: "Dev", priority: 1),
-            TodoItem(title: "健身打卡", category: "Life", priority: 1)
-        ]
-        defaults.forEach { modelContext.insert($0) }
-        try? modelContext.save()
+        Task {
+            let defaults = [
+                TodoItem(title: "完成 PersonalOS 开发", category: "Work", priority: 2),
+                TodoItem(title: "阅读技术文章", category: "Dev", priority: 1),
+                TodoItem(title: "健身打卡", category: "Life", priority: 1)
+            ]
+            for task in defaults {
+                try? await RepositoryContainer.shared.todoRepository.save(task)
+            }
+        }
     }
     
     private func updateActivityData() {

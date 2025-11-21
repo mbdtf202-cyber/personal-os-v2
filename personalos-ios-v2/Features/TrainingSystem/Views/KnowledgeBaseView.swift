@@ -105,8 +105,11 @@ struct KnowledgeBaseView: View {
     
     private func seedSnippetsIfNeeded() {
         guard allSnippets.isEmpty else { return }
-        CodeSnippet.defaultSnippets.forEach { modelContext.insert($0) }
-        try? modelContext.save()
+        Task {
+            for snippet in CodeSnippet.defaultSnippets {
+                try? await RepositoryContainer.shared.codeSnippetRepository.save(snippet)
+            }
+        }
     }
 }
 

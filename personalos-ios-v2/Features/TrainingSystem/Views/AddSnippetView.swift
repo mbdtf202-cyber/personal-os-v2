@@ -68,10 +68,14 @@ struct AddSnippetView: View {
             category: category
         )
         
-        modelContext.insert(snippet)
-        try? modelContext.save()
-        
-        HapticsManager.shared.success()
+        Task {
+            do {
+                try await RepositoryContainer.shared.codeSnippetRepository.save(snippet)
+                HapticsManager.shared.success()
+            } catch {
+                ErrorHandler.shared.handle(error, context: "AddSnippetView.saveSnippet")
+            }
+        }
         Logger.log("Code snippet saved: \(title)", category: Logger.general)
         
         dismiss()

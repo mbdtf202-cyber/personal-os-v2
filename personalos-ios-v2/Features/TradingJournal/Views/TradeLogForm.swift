@@ -116,10 +116,15 @@ struct TradeLogForm: View {
             note: note,
             date: tradeDate
         )
-        modelContext.insert(newTrade)
-        try? modelContext.save()
-        HapticsManager.shared.success()
-        Logger.log("Trade logged: \(type.rawValue) \(q) \(symbol) @ $\(p)", category: Logger.general)
+        Task {
+            do {
+                try await RepositoryContainer.shared.tradeRepository.save(newTrade)
+                HapticsManager.shared.success()
+                Logger.log("Trade logged: \(type.rawValue) \(q) \(symbol) @ $\(p)", category: Logger.general)
+            } catch {
+                ErrorHandler.shared.handle(error, context: "TradeLogForm.logTrade")
+            }
+        }
         dismiss()
     }
     

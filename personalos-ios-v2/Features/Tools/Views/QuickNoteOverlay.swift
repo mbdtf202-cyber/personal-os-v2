@@ -93,8 +93,15 @@ struct QuickNoteOverlay: View {
                 views: 0,
                 likes: 0
             )
-            modelContext.insert(post)
-            Logger.log("Quick note saved as Social Post", category: Logger.general)
+            Task {
+                do {
+                    try await RepositoryContainer.shared.socialPostRepository.save(post)
+                    Logger.log("Quick note saved as Social Post", category: Logger.general)
+                    HapticsManager.shared.success()
+                } catch {
+                    ErrorHandler.shared.handle(error, context: "QuickNoteOverlay.saveNote")
+                }
+            }
         } else {
             // Save as Todo Item
             let title = trimmedText.components(separatedBy: .newlines).first ?? trimmedText
@@ -103,12 +110,16 @@ struct QuickNoteOverlay: View {
                 category: "Note",
                 priority: 1
             )
-            modelContext.insert(todo)
-            Logger.log("Quick note saved as Task", category: Logger.general)
+            Task {
+                do {
+                    try await RepositoryContainer.shared.todoRepository.save(todo)
+                    Logger.log("Quick note saved as Task", category: Logger.general)
+                    HapticsManager.shared.success()
+                } catch {
+                    ErrorHandler.shared.handle(error, context: "QuickNoteOverlay.saveNote")
+                }
+            }
         }
-        
-        try? modelContext.save()
-        HapticsManager.shared.success()
     }
 }
 

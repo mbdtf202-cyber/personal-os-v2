@@ -111,10 +111,15 @@ struct ProjectDetailView: View {
             category: "Development",
             priority: 2
         )
-        modelContext.insert(task)
-        try? modelContext.save()
-        HapticsManager.shared.success()
-        Logger.log("Task created for project: \(project.name)", category: Logger.general)
+        Task {
+            do {
+                try await RepositoryContainer.shared.todoRepository.save(task)
+                HapticsManager.shared.success()
+                Logger.log("Task created for project: \(project.name)", category: Logger.general)
+            } catch {
+                ErrorHandler.shared.handle(error, context: "ProjectDetailView.createTask")
+            }
+        }
     }
     
     private func openGitHubURL() {
@@ -216,8 +221,10 @@ struct ProjectEditSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        try? modelContext.save()
-                        dismiss()
+                        Task {
+                            try? await RepositoryContainer.shared.projectRepository.save(project)
+                            dismiss()
+                        }
                     }
                 }
             }

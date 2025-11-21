@@ -70,14 +70,17 @@ struct ProjectListView: View {
     
     private func seedProjectsIfNeeded() {
         guard projects.isEmpty else { return }
-        let defaults = [
-            ProjectItem(name: "Personal OS", details: "An all-in-one iOS life operating system.", language: "Swift", stars: 124, status: .active, progress: 0.65),
-            ProjectItem(name: "AI Agent API", details: "Python backend for LLM processing.", language: "Python", stars: 45, status: .active, progress: 0.3),
-            ProjectItem(name: "Portfolio Site", details: "Next.js static site.", language: "TypeScript", stars: 12, status: .done, progress: 1.0),
-            ProjectItem(name: "Smart Home Hub", details: "IoT control center ideas.", language: "C++", stars: 0, status: .idea, progress: 0.0)
-        ]
-        defaults.forEach { modelContext.insert($0) }
-        try? modelContext.save()
+        Task {
+            let defaults = [
+                ProjectItem(name: "Personal OS", details: "An all-in-one iOS life operating system.", language: "Swift", stars: 124, status: .active, progress: 0.65),
+                ProjectItem(name: "AI Agent API", details: "Python backend for LLM processing.", language: "Python", stars: 45, status: .active, progress: 0.3),
+                ProjectItem(name: "Portfolio Site", details: "Next.js static site.", language: "TypeScript", stars: 12, status: .done, progress: 1.0),
+                ProjectItem(name: "Smart Home Hub", details: "IoT control center ideas.", language: "C++", stars: 0, status: .idea, progress: 0.0)
+            ]
+            for project in defaults {
+                try? await RepositoryContainer.shared.projectRepository.save(project)
+            }
+        }
     }
 }
 
@@ -170,27 +173,29 @@ struct GitHubSyncSheet: View {
         // Save GitHub username for later use
         UserDefaults.standard.set(username, forKey: "github_username")
         
-        // Clear existing projects before syncing
-        let fetchDescriptor = FetchDescriptor<ProjectItem>()
-        if let existingProjects = try? modelContext.fetch(fetchDescriptor) {
-            existingProjects.forEach { modelContext.delete($0) }
+        Task {
+            do {
+                // Clear existing projects
+                try await RepositoryContainer.shared.projectRepository.deleteAll()
+                
+                // Insert new projects from GitHub
+                for repo in githubService.repos {
+                    let project = ProjectItem(
+                        name: repo.name,
+                        details: repo.description ?? "No description",
+                        language: repo.language ?? "Unknown",
+                        stars: repo.stargazersCount,
+                        status: .active,
+                        progress: 0.5
+                    )
+                    try await RepositoryContainer.shared.projectRepository.save(project)
+                }
+                
+                Logger.log("Synced \(githubService.repos.count) projects from GitHub", category: Logger.general)
+            } catch {
+                ErrorHandler.shared.handle(error, context: "GitHubSyncSheet.syncProjects")
+            }
         }
-        
-        // Insert new projects from GitHub
-        githubService.repos.forEach { repo in
-            let project = ProjectItem(
-                name: repo.name,
-                details: repo.description ?? "No description",
-                language: repo.language ?? "Unknown",
-                stars: repo.stargazersCount,
-                status: .active,
-                progress: 0.5
-            )
-            modelContext.insert(project)
-        }
-        
-        try? modelContext.save()
-        Logger.log("Synced \(githubService.repos.count) projects from GitHub", category: Logger.general)
     }
 }
 

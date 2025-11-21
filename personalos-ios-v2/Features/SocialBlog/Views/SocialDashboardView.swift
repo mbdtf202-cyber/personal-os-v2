@@ -213,9 +213,15 @@ struct SocialDashboardView: View {
         Menu("Change Status") {
             ForEach([PostStatus.idea, .draft, .scheduled, .published], id: \.self) { status in
                 Button(action: {
-                    post.status = status
-                    try? modelContext.save()
-                    HapticsManager.shared.light()
+                    Task {
+                        post.status = status
+                        do {
+                            try await RepositoryContainer.shared.socialPostRepository.save(post)
+                            HapticsManager.shared.light()
+                        } catch {
+                            ErrorHandler.shared.handle(error, context: "SocialDashboardView.changeStatus")
+                        }
+                    }
                 }) {
                     Label(status.rawValue, systemImage: status == post.status ? "checkmark" : "circle")
                 }
@@ -225,9 +231,14 @@ struct SocialDashboardView: View {
         Divider()
         
         Button(role: .destructive, action: {
-            modelContext.delete(post)
-            try? modelContext.save()
-            HapticsManager.shared.light()
+            Task {
+                do {
+                    try await RepositoryContainer.shared.socialPostRepository.delete(post)
+                    HapticsManager.shared.light()
+                } catch {
+                    ErrorHandler.shared.handle(error, context: "SocialDashboardView.deletePost")
+                }
+            }
         }) {
             Label("Delete", systemImage: "trash")
         }
@@ -245,14 +256,22 @@ struct SocialDashboardView: View {
     }
 
     private func savePost(_ post: SocialPost) {
-        modelContext.insert(post)
-        try? modelContext.save()
+        Task {
+            do {
+                try await RepositoryContainer.shared.socialPostRepository.save(post)
+            } catch {
+                ErrorHandler.shared.handle(error, context: "SocialDashboardView.savePost")
+            }
+        }
     }
 
     private func seedPostsIfNeeded() {
         guard posts.isEmpty else { return }
-        SocialPost.defaultPosts.forEach { modelContext.insert($0) }
-        try? modelContext.save()
+        Task {
+            for post in SocialPost.defaultPosts {
+                try? await RepositoryContainer.shared.socialPostRepository.save(post)
+            }
+        }
     }
 }
 
@@ -442,7 +461,9 @@ struct EditPostWrapper: View {
                     post.platform = newValue.platform
                     post.status = newValue.status
                     post.date = newValue.date
-                    try? modelContext.save()
+                    Task {
+                        try? await RepositoryContainer.shared.socialPostRepository.save(post)
+                    }
                 }
             ), onSave: { _ in
                 dismiss()

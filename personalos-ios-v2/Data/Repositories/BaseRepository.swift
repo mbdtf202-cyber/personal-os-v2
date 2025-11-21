@@ -82,3 +82,45 @@ class TradeRepository: BaseRepository<TradeRecord> {
         return try await fetch(predicate: #Predicate { $0.date > cutoffDate })
     }
 }
+
+@MainActor
+class SocialPostRepository: BaseRepository<SocialPost> {}
+
+@MainActor
+class CodeSnippetRepository: BaseRepository<CodeSnippet> {}
+
+@MainActor
+class RSSFeedRepository: BaseRepository<RSSFeed> {}
+
+@MainActor
+class HabitRepository: BaseRepository<HabitItem> {}
+
+// MARK: - Repository Container
+@MainActor
+class RepositoryContainer {
+    static let shared = RepositoryContainer()
+    
+    private let modelContext: ModelContext
+    
+    lazy var todoRepository: TodoRepository = TodoRepository(modelContext: modelContext)
+    lazy var projectRepository: ProjectRepository = ProjectRepository(modelContext: modelContext)
+    lazy var newsRepository: NewsRepository = NewsRepository(modelContext: modelContext)
+    lazy var tradeRepository: TradeRepository = TradeRepository(modelContext: modelContext)
+    lazy var socialPostRepository: SocialPostRepository = SocialPostRepository(modelContext: modelContext)
+    lazy var codeSnippetRepository: CodeSnippetRepository = CodeSnippetRepository(modelContext: modelContext)
+    lazy var rssFeedRepository: RSSFeedRepository = RSSFeedRepository(modelContext: modelContext)
+    lazy var habitRepository: HabitRepository = HabitRepository(modelContext: modelContext)
+    
+    init(modelContext: ModelContext? = nil) {
+        if let context = modelContext {
+            self.modelContext = context
+        } else {
+            // 创建默认容器
+            let container = try! ModelContainer(for: 
+                TodoItem.self, ProjectItem.self, NewsItem.self, TradeRecord.self,
+                SocialPost.self, CodeSnippet.self, RSSFeed.self, HabitItem.self
+            )
+            self.modelContext = container.mainContext
+        }
+    }
+}

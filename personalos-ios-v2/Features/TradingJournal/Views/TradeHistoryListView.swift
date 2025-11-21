@@ -121,9 +121,14 @@ struct TradeHistoryListView: View {
     }
     
     private func deleteTrade(_ trade: TradeRecord) {
-        modelContext.delete(trade)
-        try? modelContext.save()
-        HapticsManager.shared.success()
+        Task {
+            do {
+                try await RepositoryContainer.shared.tradeRepository.delete(trade)
+                HapticsManager.shared.success()
+            } catch {
+                ErrorHandler.shared.handle(error, context: "TradeHistoryListView.deleteTrade")
+            }
+        }
     }
 }
 

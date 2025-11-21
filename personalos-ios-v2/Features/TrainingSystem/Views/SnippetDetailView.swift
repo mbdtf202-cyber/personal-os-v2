@@ -171,10 +171,15 @@ struct SnippetDetailView: View {
     }
     
     private func deleteSnippet() {
-        modelContext.delete(snippet)
-        try? modelContext.save()
-        HapticsManager.shared.success()
-        dismiss()
+        Task {
+            do {
+                try await RepositoryContainer.shared.codeSnippetRepository.delete(snippet)
+                HapticsManager.shared.success()
+                dismiss()
+            } catch {
+                ErrorHandler.shared.handle(error, context: "SnippetDetailView.deleteSnippet")
+            }
+        }
     }
 }
 
