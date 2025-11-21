@@ -32,7 +32,7 @@ class PortfolioViewModel {
             _ = try await priceService.fetchMultipleQuotes(symbols: symbols)
             recalculatePortfolio(from: trades)
         } catch {
-            print("Failed to refresh prices: \(error)")
+            Logger.error("Failed to refresh prices: \(error)", category: Logger.trading)
         }
     }
 }

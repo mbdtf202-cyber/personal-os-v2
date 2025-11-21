@@ -32,7 +32,7 @@ class HealthStoreManager {
             try await healthKitService.requestAuthorization()
             await syncHealthData()
         } catch {
-            print("Failed to request HealthKit authorization: \(error)")
+            Logger.error("Failed to request HealthKit authorization: \(error)", category: Logger.health)
         }
     }
     

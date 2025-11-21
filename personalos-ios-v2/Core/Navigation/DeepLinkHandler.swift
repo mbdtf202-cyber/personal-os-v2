@@ -138,7 +138,7 @@ class DeepLinkHandler {
     
     func handle(_ url: URL) {
         guard let deepLink = DeepLink(url: url) else {
-            print("Invalid deep link: \(url)")
+            Logger.warning("Invalid deep link: \(url)", category: Logger.general)
             return
         }
         

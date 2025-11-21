@@ -37,11 +37,11 @@ class MigrationManager {
         let currentVersion = getCurrentVersion()
         
         guard needsMigration() else {
-            print("No migration needed")
+            Logger.log("No migration needed", category: Logger.general)
             return
         }
         
-        print("Starting migration from v\(currentVersion.rawValue) to v\(MigrationVersion.current.rawValue)")
+        Logger.log("Starting migration from v\(currentVersion.rawValue) to v\(MigrationVersion.current.rawValue)", category: Logger.general)
         
         // Backup before migration
         try await createBackup(modelContainer: modelContainer)
@@ -52,7 +52,7 @@ class MigrationManager {
             setCurrentVersion(version)
         }
         
-        print("Migration completed successfully")
+        Logger.log("Migration completed successfully", category: Logger.general)
     }
     
     private func migrate(to version: MigrationVersion, modelContainer: ModelContainer) async throws {
@@ -67,18 +67,18 @@ class MigrationManager {
     }
     
     private func migrateToV2(modelContainer: ModelContainer) async throws {
-        print("Migrating to v2: Adding new fields to existing models")
+        Logger.log("Migrating to v2: Adding new fields to existing models", category: Logger.general)
         // Add migration logic here
         // Example: Add new properties, update relationships, etc.
     }
     
     private func migrateToV3(modelContainer: ModelContainer) async throws {
-        print("Migrating to v3: Restructuring data models")
+        Logger.log("Migrating to v3: Restructuring data models", category: Logger.general)
         // Add migration logic here
     }
     
     private func createBackup(modelContainer: ModelContainer) async throws {
-        print("Creating backup before migration")
+        Logger.log("Creating backup before migration", category: Logger.general)
         
         let backupURL = getBackupURL()
         
@@ -89,11 +89,11 @@ class MigrationManager {
         // This is a simplified example - in production, implement proper serialization
         
         UserDefaults.standard.set(Date(), forKey: backupKey)
-        print("Backup created at: \(backupURL.path)")
+        Logger.log("Backup created at: \(backupURL.path)", category: Logger.general)
     }
     
     func restoreFromBackup() async throws {
-        print("Restoring from backup")
+        Logger.log("Restoring from backup", category: Logger.general)
         let backupURL = getBackupURL()
         
         guard FileManager.default.fileExists(atPath: backupURL.path) else {
@@ -119,10 +119,10 @@ class MigrationManager {
             let sortedBackups = backupFiles.sorted { $0.lastPathComponent > $1.lastPathComponent }
             for backup in sortedBackups.dropFirst(5) {
                 try FileManager.default.removeItem(at: backup)
-                print("Removed old backup: \(backup.lastPathComponent)")
+                Logger.log("Removed old backup: \(backup.lastPathComponent)", category: Logger.general)
             }
         } catch {
-            print("Failed to cleanup backups: \(error)")
+            Logger.error("Failed to cleanup backups: \(error)", category: Logger.general)
         }
     }
 }
@@ -144,7 +144,7 @@ class DataCleanupManager {
         let context = modelContainer.mainContext
         let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date())!
         
-        print("Cleaning up data older than \(days) days")
+        Logger.log("Cleaning up data older than \(days) days", category: Logger.general)
         
         // Clean up old news items
         let newsDescriptor = FetchDescriptor<NewsItem>(
@@ -162,7 +162,7 @@ class DataCleanupManager {
         // Only clean up draft/incomplete records
         
         try context.save()
-        print("Cleanup completed: removed \(oldNews.count) old items")
+        Logger.log("Cleanup completed: removed \(oldNews.count) old items", category: Logger.general)
     }
     
     func calculateDatabaseSize() -> Int {
@@ -178,7 +178,7 @@ class DataCleanupManager {
             
             return totalSize
         } catch {
-            print("Failed to calculate database size: \(error)")
+            Logger.error("Failed to calculate database size: \(error)", category: Logger.general)
             return 0
         }
     }

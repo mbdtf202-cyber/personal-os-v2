@@ -58,7 +58,7 @@ class RemoteConfigService: ObservableObject {
         
         do {
             guard let url = URL(string: configURL), !configURL.isEmpty else {
-                print("⚠️ Invalid remote config URL, using default config")
+                Logger.warning("Invalid remote config URL, using default config", category: Logger.general)
                 await MainActor.run {
                     self.isLoaded = true
                 }
@@ -98,7 +98,7 @@ class RemoteConfigService: ObservableObject {
             self.abTestConfig = config.abTestConfig
             self.isLoaded = true
         } catch {
-            print("Failed to load cached config: \(error)")
+            Logger.error("Failed to load cached config: \(error)", category: Logger.general)
         }
     }
     
@@ -108,7 +108,7 @@ class RemoteConfigService: ObservableObject {
             UserDefaults.standard.set(data, forKey: cacheKey)
             UserDefaults.standard.set(Date().addingTimeInterval(cacheValidityDuration), forKey: cacheExpirationKey)
         } catch {
-            print("Failed to cache config: \(error)")
+            Logger.error("Failed to cache config: \(error)", category: Logger.general)
         }
     }
     
