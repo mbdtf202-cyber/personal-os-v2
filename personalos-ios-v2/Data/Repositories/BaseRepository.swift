@@ -6,6 +6,8 @@ protocol Repository {
     
     func fetch() async throws -> [Entity]
     func fetch(predicate: Predicate<Entity>?) async throws -> [Entity]
+    func fetch(predicate: Predicate<Entity>?, limit: Int?, offset: Int?) async throws -> [Entity]
+    func count(predicate: Predicate<Entity>?) async throws -> Int
     func save(_ entity: Entity) async throws
     func delete(_ entity: Entity) async throws
     func deleteAll() async throws
@@ -30,6 +32,27 @@ class BaseRepository<T: PersistentModel>: Repository {
         var descriptor = FetchDescriptor<T>()
         descriptor.predicate = predicate
         return try modelContext.fetch(descriptor)
+    }
+    
+    func fetch(predicate: Predicate<T>?, limit: Int?, offset: Int?) async throws -> [T] {
+        var descriptor = FetchDescriptor<T>()
+        descriptor.predicate = predicate
+        
+        if let limit = limit {
+            descriptor.fetchLimit = limit
+        }
+        
+        if let offset = offset {
+            descriptor.fetchOffset = offset
+        }
+        
+        return try modelContext.fetch(descriptor)
+    }
+    
+    func count(predicate: Predicate<T>?) async throws -> Int {
+        var descriptor = FetchDescriptor<T>()
+        descriptor.predicate = predicate
+        return try modelContext.fetchCount(descriptor)
     }
     
     func save(_ entity: T) async throws {
@@ -80,6 +103,15 @@ class TradeRepository: BaseRepository<TradeRecord> {
     func fetchRecent(days: Int = 90) async throws -> [TradeRecord] {
         let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
         return try await fetch(predicate: #Predicate { $0.date > cutoffDate })
+    }
+    
+    func fetchPaginated(page: Int, pageSize: Int = 50) async throws -> [TradeRecord] {
+        let offset = page * pageSize
+        return try await fetch(predicate: nil, limit: pageSize, offset: offset)
+    }
+    
+    func getTotalCount() async throws -> Int {
+        try await count(predicate: nil)
     }
 }
 
