@@ -305,13 +305,13 @@ class OfflineCache {
         }
     }
     
-    private struct CacheMetadata: Codable {
+    struct CacheMetadata: Codable {
         let data: Data
         let expirationDate: Date
     }
 }
 
-extension String {
+nonisolated extension String {
     var sha256Hash: String {
         guard let data = self.data(using: .utf8) else { return self }
         let hash = CryptoKit.SHA256.hash(data: data)

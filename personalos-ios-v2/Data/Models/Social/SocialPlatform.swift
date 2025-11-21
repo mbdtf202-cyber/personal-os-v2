@@ -6,6 +6,8 @@ enum SocialPlatform: String, CaseIterable, Codable {
     case weibo = "Weibo"
     case wechat = "WeChat"
     case blog = "Blog"
+    case linkedin = "LinkedIn"
+    case medium = "Medium"
 
     var color: Color {
         switch self {
@@ -14,6 +16,8 @@ enum SocialPlatform: String, CaseIterable, Codable {
         case .weibo: return Color(hex: "E6162D")
         case .wechat: return Color(hex: "07C160")
         case .blog: return AppTheme.mistBlue
+        case .linkedin: return Color(hex: "0A66C2")
+        case .medium: return Color.black
         }
     }
 
@@ -24,6 +28,8 @@ enum SocialPlatform: String, CaseIterable, Codable {
         case .weibo: return "w.circle.fill"
         case .wechat: return "message.fill"
         case .blog: return "doc.text.fill"
+        case .linkedin: return "person.2.fill"
+        case .medium: return "m.circle.fill"
         }
     }
 }
