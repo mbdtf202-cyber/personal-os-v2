@@ -69,7 +69,13 @@ class NetworkClient {
         configuration.timeoutIntervalForResource = config.timeout * 2
         configuration.waitsForConnectivity = true
         
-        self.session = URLSession(configuration: configuration)
+        // ✅ 集成 SSL Pinning
+        self.session = URLSession(
+            configuration: configuration,
+            delegate: SSLPinningManager.shared,
+            delegateQueue: nil
+        )
+        
         self.circuitBreaker = CircuitBreaker(
             threshold: config.circuitBreakerThreshold,
             timeout: config.circuitBreakerTimeout
