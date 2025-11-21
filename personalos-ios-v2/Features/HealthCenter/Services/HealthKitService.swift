@@ -3,6 +3,13 @@ import HealthKit
 import Combine
 import Observation
 
+// MARK: - Protocol
+protocol HealthServiceProtocol {
+    func requestAuthorization() async throws
+    func fetchDailySteps() async throws -> Double
+    func fetchWeeklyActivity() async throws -> [String: Double]
+}
+
 @MainActor
 @Observable
 class HealthKitService: HealthServiceProtocol {
