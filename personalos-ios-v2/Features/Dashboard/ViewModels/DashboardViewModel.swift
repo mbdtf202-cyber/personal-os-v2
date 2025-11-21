@@ -25,6 +25,12 @@ class DashboardViewModel: BaseViewModel {
     var showFocusTimer: Bool = false
     var showNewPostSheet: Bool = false
     var showNewTradeSheet: Bool = false
+    
+    private let todoRepository: TodoRepository
+    
+    init(todoRepository: TodoRepository) {
+        self.todoRepository = todoRepository
+    }
 
     var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -103,25 +109,32 @@ class DashboardViewModel: BaseViewModel {
         return activityData
     }
 
-    func addTask(title: String, context: ModelContext) {
+    func addTask(title: String) async {
         let item = TodoItem(title: title)
-        context.insert(item)
-
         do {
-            try context.save()
+            try await todoRepository.save(item)
+            Logger.log("Task added: \(title)", category: Logger.general)
         } catch {
-            assertionFailure("Failed to save new task: \(error.localizedDescription)")
+            ErrorHandler.shared.handle(error, context: "DashboardViewModel.addTask")
         }
     }
 
-    func toggleTask(_ task: TodoItem, context: ModelContext) {
+    func toggleTask(_ task: TodoItem) async {
         task.isCompleted.toggle()
         HapticsManager.shared.light()
-        try? context.save()
+        do {
+            try await todoRepository.save(task)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "DashboardViewModel.toggleTask")
+        }
     }
 
-    func deleteTask(_ task: TodoItem, context: ModelContext) {
-        context.delete(task)
-        try? context.save()
+    func deleteTask(_ task: TodoItem) async {
+        do {
+            try await todoRepository.delete(task)
+            Logger.log("Task deleted", category: Logger.general)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "DashboardViewModel.deleteTask")
+        }
     }
 }

@@ -56,6 +56,8 @@ struct NetworkConfig {
 }
 
 class NetworkClient {
+    static let shared = NetworkClient(config: .default)
+    
     private let session: URLSession
     private let config: NetworkConfig
     private var circuitBreaker: CircuitBreaker
@@ -263,3 +265,31 @@ class OfflineCache {
         }
     }
 }
+
+    // MARK: - Convenience Methods
+    func request<T: Codable>(url: URL) async throws -> T {
+        try await request(url.absoluteString)
+    }
+    
+    func requestData(url: URL) async throws -> Data {
+        guard !circuitBreaker.isOpen else {
+            throw NetworkError.circuitBreakerOpen
+        }
+        
+        var request = URLRequest(url: url)
+        request.timeoutInterval = config.timeout
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.noData
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            circuitBreaker.recordFailure()
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+        
+        circuitBreaker.recordSuccess()
+        return data
+    }

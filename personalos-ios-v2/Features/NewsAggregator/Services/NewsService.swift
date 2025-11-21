@@ -32,8 +32,13 @@ class NewsService: NewsServiceProtocol {
     var isLoading = false
     var error: String?
     
+    private let networkClient: NetworkClient
     private var apiKey: String {
         APIConfig.newsAPIKey
+    }
+    
+    init(networkClient: NetworkClient = NetworkClient.shared) {
+        self.networkClient = networkClient
     }
     
     func fetchTopHeadlines(category: String = "technology") async {
@@ -54,23 +59,13 @@ class NewsService: NewsServiceProtocol {
         }
         
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                error = "Failed to fetch news"
-                Logger.error("News API request failed with status: \((response as? HTTPURLResponse)?.statusCode ?? 0)", category: Logger.network)
-                isLoading = false
-                return
-            }
-            
-            let decoder = JSONDecoder()
-            let newsResponse = try decoder.decode(NewsResponse.self, from: data)
+            let newsResponse: NewsResponse = try await networkClient.request(url: url)
             articles = newsResponse.articles
             Logger.log("Successfully fetched \(articles.count) news articles", category: Logger.network)
             isLoading = false
         } catch {
             self.error = error.localizedDescription
-            Logger.error("Failed to fetch news: \(error.localizedDescription)", category: Logger.network)
+            ErrorHandler.shared.handle(error, context: "NewsService.fetchTopHeadlines")
             isLoading = false
         }
     }
@@ -86,15 +81,7 @@ class NewsService: NewsServiceProtocol {
         }
         
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                error = "Failed to fetch RSS feed"
-                Logger.error("RSS fetch failed with status: \((response as? HTTPURLResponse)?.statusCode ?? 0)", category: Logger.network)
-                isLoading = false
-                return
-            }
-            
+            let data = try await networkClient.requestData(url: url)
             let parser = RSSParser()
             let parsedArticles = parser.parse(data: data)
             
@@ -114,7 +101,7 @@ class NewsService: NewsServiceProtocol {
             isLoading = false
         } catch {
             self.error = error.localizedDescription
-            Logger.error("Failed to fetch RSS: \(error.localizedDescription)", category: Logger.network)
+            ErrorHandler.shared.handle(error, context: "NewsService.fetchFromRSS")
             isLoading = false
         }
     }
@@ -128,7 +115,7 @@ class NewsService: NewsServiceProtocol {
             guard let url = URL(string: feed.url) else { continue }
             
             do {
-                let (data, _) = try await URLSession.shared.data(from: url)
+                let data = try await networkClient.requestData(url: url)
                 let parser = RSSParser()
                 let parsedArticles = parser.parse(data: data)
                 
@@ -171,8 +158,7 @@ extension NewsService {
             throw URLError(.badURL)
         }
         
-        let (data, _) = try await URLSession.shared.data(from: url)
-        let newsResponse = try JSONDecoder().decode(NewsResponse.self, from: data)
+        let newsResponse: NewsResponse = try await networkClient.request(url: url)
         return newsResponse.articles
     }
 }

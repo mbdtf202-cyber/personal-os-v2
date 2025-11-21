@@ -3,7 +3,7 @@ import Combine
 import SwiftData
 
 struct DashboardView: View {
-    @State private var viewModel = DashboardViewModel()
+    @State private var viewModel: DashboardViewModel
     @Environment(HealthStoreManager.self) private var healthManager
     @Environment(AppRouter.self) private var router
     @Environment(\.modelContext) private var modelContext
@@ -20,7 +20,17 @@ struct DashboardView: View {
     @State private var isFocusActive = false
     @State private var activityData: [(String, Double)] = []
 
-    init() {}
+    init(todoRepository: TodoRepository? = nil) {
+        if let repository = todoRepository {
+            _viewModel = State(initialValue: DashboardViewModel(todoRepository: repository))
+        } else {
+            // 临时方案：使用 modelContext 创建 repository
+            // 实际应该通过 DI 容器注入
+            let container = try! ModelContainer(for: TodoItem.self)
+            let repository = TodoRepository(modelContext: container.mainContext)
+            _viewModel = State(initialValue: DashboardViewModel(todoRepository: repository))
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -232,7 +242,7 @@ struct DashboardView: View {
             } else {
                 ForEach(tasks.prefix(5)) { task in
                     HStack(spacing: 12) {
-                        Button(action: { viewModel.toggleTask(task, context: modelContext) }) {
+                        Button(action: { Task { await viewModel.toggleTask(task) } }) {
                             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                                 .font(.title3)
                                 .foregroundStyle(task.isCompleted ? AppTheme.matcha : priorityColor(for: task.priority))
@@ -271,7 +281,7 @@ struct DashboardView: View {
                         
                         Spacer()
                         
-                        Button(action: { viewModel.deleteTask(task, context: modelContext) }) {
+                        Button(action: { Task { await viewModel.deleteTask(task) } }) {
                             Image(systemName: "trash")
                                 .foregroundStyle(AppTheme.coral)
                                 .font(.caption)
@@ -376,7 +386,7 @@ struct DashboardView: View {
         let trimmedTitle = newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return }
 
-        viewModel.addTask(title: trimmedTitle, context: modelContext)
+        Task { await viewModel.addTask(title: trimmedTitle) }
         newTaskTitle = ""
         showAddTask = false
     }
