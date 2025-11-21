@@ -21,7 +21,7 @@ actor ImageCache {
         try? fileManager.createDirectory(at: diskCacheURL, withIntermediateDirectories: true)
     }
     
-    func image(for url: URL) -> UIImage? {
+    func image(for url: URL) async -> UIImage? {
         let key = url.absoluteString as NSString
         
         // 1. 检查内存缓存
@@ -29,29 +29,41 @@ actor ImageCache {
             return cachedImage
         }
         
-        // 2. 检查磁盘缓存
+        // 2. ✅ 异步检查磁盘缓存，避免阻塞 Actor
         let diskPath = diskCacheURL.appendingPathComponent(url.lastPathComponent)
-        if let data = try? Data(contentsOf: diskPath),
-           let image = UIImage(data: data) {
-            // 加载到内存缓存
-            memoryCache.setObject(image, forKey: key)
-            return image
-        }
         
-        return nil
+        return await Task.detached(priority: .utility) { [weak self] in
+            guard let self = self else { return nil }
+            
+            if let data = try? Data(contentsOf: diskPath),
+               let image = UIImage(data: data) {
+                // 加载到内存缓存
+                await self.cacheInMemory(image, forKey: key)
+                return image
+            }
+            
+            return nil
+        }.value
     }
     
-    func setImage(_ image: UIImage, for url: URL) {
+    private func cacheInMemory(_ image: UIImage, forKey key: NSString) {
+        memoryCache.setObject(image, forKey: key)
+    }
+    
+    func setImage(_ image: UIImage, for url: URL) async {
         let key = url.absoluteString as NSString
         
         // 1. 保存到内存缓存
         memoryCache.setObject(image, forKey: key)
         
-        // 2. 保存到磁盘缓存
+        // 2. ✅ 异步保存到磁盘，避免阻塞
         let diskPath = diskCacheURL.appendingPathComponent(url.lastPathComponent)
-        if let data = image.jpegData(compressionQuality: 0.8) {
-            try? data.write(to: diskPath)
-        }
+        
+        await Task.detached(priority: .utility) {
+            if let data = image.jpegData(compressionQuality: 0.8) {
+                try? data.write(to: diskPath, options: .atomic)
+            }
+        }.value
     }
     
     func clear() {
@@ -107,7 +119,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
         
         isLoading = true
         
-        // Check cache first
+        // Check cache first (now async)
         if let cachedImage = await ImageCache.shared.image(for: url) {
             image = cachedImage
             isLoading = false

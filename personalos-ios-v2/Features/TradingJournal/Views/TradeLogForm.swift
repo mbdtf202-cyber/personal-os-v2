@@ -3,7 +3,7 @@ import SwiftData
 
 struct TradeLogForm: View {
     @Environment(\.dismiss) var dismiss
-    @Environment(\.modelContext) private var modelContext // ⚠️ 数据库上下文
+    @Environment(\.appDependency) private var appDependency
 
     @State private var symbol: String = ""
     @State private var type: TradeType = .buy

@@ -4,8 +4,8 @@ import SwiftData
 // Models moved to UnifiedSchema.swift
 
 struct ProjectListView: View {
-    @Environment(\.modelContext) private var modelContext
     @Environment(GitHubService.self) private var githubService
+    @Environment(\.appDependency) private var appDependency
     @Query(sort: \ProjectItem.name) private var projects: [ProjectItem]
     @State private var showGitHubSync = false
     @State private var githubUsername = ""

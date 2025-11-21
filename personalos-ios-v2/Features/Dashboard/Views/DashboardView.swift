@@ -69,14 +69,10 @@ struct DashboardView: View {
                 }
             }
         }
-        .alert("Error", isPresented: Binding(
-            get: { viewModel?.isError ?? false },
-            set: { if !$0 { viewModel?.clearError() } }
-        )) {
-            Button("OK") { viewModel?.clearError() }
-        } message: {
-            Text(viewModel?.errorMessage ?? "Unknown error")
-        }
+        .handleErrors(from: viewModel ?? DashboardViewModel(
+            todoRepository: appDependency?.repositories.todo ?? TodoRepository(modelContext: modelContext),
+            modelContext: modelContext
+        ))
         .sheet(isPresented: $showQuickNote) {
             QuickNoteOverlay(isPresented: $showQuickNote)
         }

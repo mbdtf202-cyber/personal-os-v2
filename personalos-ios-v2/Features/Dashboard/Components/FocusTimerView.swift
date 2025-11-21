@@ -33,7 +33,7 @@ enum TimerMode: String, CaseIterable {
 
 struct FocusTimerView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.appDependency) private var appDependency
     @State private var timeRemaining: Int = 25 * 60
     @State private var totalTime: Int = 25 * 60
     @State private var isRunning: Bool = false

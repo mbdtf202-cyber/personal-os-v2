@@ -16,10 +16,16 @@ final class SSLPinningManager: NSObject {
             }
         }
         
-        // ✅ P0 Fix: 移除无效占位符，避免 DoS
-        // 如果 Remote Config 失败且没有真实证书，禁用 Pinning
-        Logger.warning("SSL Pinning: No valid hashes configured, disabling pinning", category: Logger.security)
-        return []
+        // ✅ Fail-Closed: 硬编码生产证书作为最后防线
+        // TODO: 使用 openssl 提取真实证书哈希替换此占位符
+        // openssl s_client -connect api.personalos.com:443 | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64
+        
+        Logger.warning("SSL Pinning: Using fallback hardcoded hashes", category: Logger.security)
+        
+        // 生产环境必须替换为真实证书哈希
+        return [
+            "PRODUCTION_CERT_HASH_PLACEHOLDER" // ⚠️ 必须替换
+        ]
     }
     
     private override init() {
