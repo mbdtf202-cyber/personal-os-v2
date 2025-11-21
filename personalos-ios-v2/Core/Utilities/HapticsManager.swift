@@ -1,67 +1,178 @@
 import UIKit
 
-/// 触觉反馈管理器
-class HapticsManager {
+@MainActor
+final class HapticsManager {
     static let shared = HapticsManager()
     
-    private init() {}
+    private let light = UIImpactFeedbackGenerator(style: .light)
+    private let medium = UIImpactFeedbackGenerator(style: .medium)
+    private let heavy = UIImpactFeedbackGenerator(style: .heavy)
+    private let soft = UIImpactFeedbackGenerator(style: .soft)
+    private let rigid = UIImpactFeedbackGenerator(style: .rigid)
+    private let selection = UISelectionFeedbackGenerator()
+    private let notification = UINotificationFeedbackGenerator()
     
-    // MARK: - Impact Feedback
+    private var isEnabled = true
+    
+    private init() {
+        prepareAll()
+    }
+    
+    private func prepareAll() {
+        light.prepare()
+        medium.prepare()
+        heavy.prepare()
+        soft.prepare()
+        rigid.prepare()
+        selection.prepare()
+        notification.prepare()
+    }
+    
+    // MARK: - Basic Haptics
     
     func light() {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred()
+        guard isEnabled else { return }
+        light.impactOccurred()
+        light.prepare()
     }
     
     func medium() {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
+        guard isEnabled else { return }
+        medium.impactOccurred()
+        medium.prepare()
     }
     
     func heavy() {
-        let generator = UIImpactFeedbackGenerator(style: .heavy)
-        generator.impactOccurred()
+        guard isEnabled else { return }
+        heavy.impactOccurred()
+        heavy.prepare()
     }
     
     func soft() {
-        if #available(iOS 13.0, *) {
-            let generator = UIImpactFeedbackGenerator(style: .soft)
-            generator.impactOccurred()
-        } else {
+        guard isEnabled else { return }
+        soft.impactOccurred()
+        soft.prepare()
+    }
+    
+    func rigid() {
+        guard isEnabled else { return }
+        rigid.impactOccurred()
+        rigid.prepare()
+    }
+    
+    func selection() {
+        guard isEnabled else { return }
+        selection.selectionChanged()
+        selection.prepare()
+    }
+    
+    // MARK: - Notification Haptics
+    
+    func success() {
+        guard isEnabled else { return }
+        notification.notificationOccurred(.success)
+        notification.prepare()
+    }
+    
+    func warning() {
+        guard isEnabled else { return }
+        notification.notificationOccurred(.warning)
+        notification.prepare()
+    }
+    
+    func error() {
+        guard isEnabled else { return }
+        notification.notificationOccurred(.error)
+        notification.prepare()
+    }
+    
+    // MARK: - Contextual Haptics
+    
+    func taskCompleted() {
+        success()
+    }
+    
+    func taskDeleted() {
+        medium()
+    }
+    
+    func buttonTap() {
+        light()
+    }
+    
+    func cardSwipe() {
+        soft()
+    }
+    
+    func pullToRefresh() {
+        medium()
+    }
+    
+    func longPress() {
+        rigid()
+    }
+    
+    func toggle() {
+        selection()
+    }
+    
+    func scroll() {
+        soft()
+    }
+    
+    func dragStart() {
+        medium()
+    }
+    
+    func dragEnd() {
+        light()
+    }
+    
+    func modalPresent() {
+        medium()
+    }
+    
+    func modalDismiss() {
+        light()
+    }
+    
+    // MARK: - Custom Patterns
+    
+    func doubleLight() {
+        guard isEnabled else { return }
+        light()
+        Task {
+            try? await Task.sleep(nanoseconds: 100_000_000)
             light()
         }
     }
     
-    func rigid() {
-        if #available(iOS 13.0, *) {
-            let generator = UIImpactFeedbackGenerator(style: .rigid)
-            generator.impactOccurred()
-        } else {
+    func crescendo() {
+        guard isEnabled else { return }
+        Task {
+            light()
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            medium()
+            try? await Task.sleep(nanoseconds: 100_000_000)
             heavy()
         }
     }
     
-    // MARK: - Notification Feedback
-    
-    func success() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
+    func heartbeat() {
+        guard isEnabled else { return }
+        Task {
+            medium()
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            medium()
+        }
     }
     
-    func warning() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.warning)
-    }
+    // MARK: - Settings
     
-    func error() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.error)
-    }
-    
-    // MARK: - Selection Feedback
-    
-    func selection() {
-        let generator = UISelectionFeedbackGenerator()
-        generator.selectionChanged()
+    func setEnabled(_ enabled: Bool) {
+        isEnabled = enabled
+        if enabled {
+            prepareAll()
+        }
     }
 }

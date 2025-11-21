@@ -15,11 +15,10 @@ struct personalos_ios_v2App: App {
     }
     
     private func setupMonitoring() {
-        // 初始化崩溃监控
-        _ = CrashReporter.shared
-        
-        // 初始化性能监控
-        _ = PerformanceMonitor.shared
+        // 初始化 MetricKit（系统级监控）
+        Task { @MainActor in
+            _ = MetricKitManager.shared
+        }
         
         // 记录应用启动
         AnalyticsLogger.shared.log(.appLaunched)
@@ -115,15 +114,17 @@ struct LoadingView: View {
         ZStack {
             AppTheme.background.ignoresSafeArea()
             
-            VStack(spacing: 20) {
-                ProgressView()
+            VStack(spacing: 24) {
+                LoadingSpinner()
                     .scaleEffect(1.5)
-                    .tint(AppTheme.mistBlue)
                 
                 Text(message)
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.secondaryText)
+                
+                LoadingDots()
             }
+            .animateOnAppear()
         }
     }
 }
