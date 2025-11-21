@@ -15,39 +15,23 @@ class FirebaseCrashReporter {
     private init() {}
     
     func report(_ crash: CrashLog) async {
-        // Firebase 未集成时的回退逻辑
-        Logger.log("Firebase Crashlytics not available - crash logged locally", category: Logger.general)
+        #if canImport(FirebaseCrashlytics)
+        // TODO: 取消注释以启用 Firebase
+        // import FirebaseCrashlytics
+        // let crashlytics = Crashlytics.crashlytics()
+        // crashlytics.setCustomValue(crash.appVersion, forKey: "app_version")
+        // crashlytics.record(error: ...)
+        #endif
+        
+        // 回退：本地日志
+        Logger.log("Crash logged locally (Firebase not configured)", category: Logger.general)
         AnalyticsLogger.shared.log(.error(
-            message: "Crash logged (Firebase not configured)",
+            message: "Crash logged",
             error: NSError(domain: "CrashReporter", code: -1, userInfo: [
                 "exception": crash.exception,
                 "reason": crash.reason
             ])
         ))
-        
-        // TODO: 集成 Firebase Crashlytics 后取消注释
-        /*
-        #if canImport(FirebaseCrashlytics)
-        import FirebaseCrashlytics
-        
-        let crashlytics = Crashlytics.crashlytics()
-        crashlytics.setCustomValue(crash.appVersion, forKey: "app_version")
-        crashlytics.setCustomValue(crash.osVersion, forKey: "os_version")
-        crashlytics.setCustomValue(crash.exception, forKey: "exception")
-        
-        let error = NSError(
-            domain: "com.personalos.crash",
-            code: -1,
-            userInfo: [
-                NSLocalizedDescriptionKey: crash.reason,
-                "stackTrace": crash.stackTrace
-            ]
-        )
-        
-        crashlytics.record(error: error)
-        Logger.log("Firebase Crashlytics: Crash reported", category: Logger.general)
-        #endif
-        */
     }
     
     func setUserIdentifier(_ userId: String) {
