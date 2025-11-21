@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 enum NetworkError: Error {
     case invalidURL
@@ -230,33 +231,68 @@ class CircuitBreaker {
     }
 }
 
-// MARK: - Offline Cache
+// MARK: - Offline Cache (Disk-based)
 class OfflineCache {
-    private let cache = NSCache<NSString, CacheEntry>()
+    private let memoryCache = NSCache<NSString, CacheEntry>()
     private let expirationTime: TimeInterval = 3600 // 1 hour
+    private let cacheDirectory: URL
+    
+    init() {
+        // ✅ P0 Fix: 使用磁盘缓存，而非仅内存
+        let paths = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
+        cacheDirectory = paths[0].appendingPathComponent("OfflineCache")
+        
+        try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+    }
     
     func get<T: Codable>(key: String) -> T? {
-        guard let entry = cache.object(forKey: key as NSString) else {
+        // 1. 先查内存缓存
+        if let entry = memoryCache.object(forKey: key as NSString) {
+            if entry.expirationDate > Date() {
+                return try? JSONDecoder().decode(T.self, from: entry.data)
+            }
+            memoryCache.removeObject(forKey: key as NSString)
+        }
+        
+        // 2. 查磁盘缓存
+        let fileURL = cacheDirectory.appendingPathComponent(key.sha256Hash)
+        
+        guard let data = try? Data(contentsOf: fileURL),
+              let metadata = try? JSONDecoder().decode(CacheMetadata.self, from: data) else {
             return nil
         }
         
-        guard entry.expirationDate > Date() else {
-            cache.removeObject(forKey: key as NSString)
+        guard metadata.expirationDate > Date() else {
+            try? FileManager.default.removeItem(at: fileURL)
             return nil
         }
         
-        return try? JSONDecoder().decode(T.self, from: entry.data)
+        // 恢复到内存缓存
+        let entry = CacheEntry(data: metadata.data, expirationDate: metadata.expirationDate)
+        memoryCache.setObject(entry, forKey: key as NSString)
+        
+        return try? JSONDecoder().decode(T.self, from: metadata.data)
     }
     
     func set<T: Codable>(key: String, value: T) {
         guard let data = try? JSONEncoder().encode(value) else { return }
         
-        let entry = CacheEntry(
-            data: data,
-            expirationDate: Date().addingTimeInterval(expirationTime)
-        )
+        let expirationDate = Date().addingTimeInterval(expirationTime)
+        let entry = CacheEntry(data: data, expirationDate: expirationDate)
         
-        cache.setObject(entry, forKey: key as NSString)
+        // 1. 写入内存缓存
+        memoryCache.setObject(entry, forKey: key as NSString)
+        
+        // 2. 异步写入磁盘
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self = self else { return }
+            
+            let metadata = CacheMetadata(data: data, expirationDate: expirationDate)
+            guard let metadataData = try? JSONEncoder().encode(metadata) else { return }
+            
+            let fileURL = self.cacheDirectory.appendingPathComponent(key.sha256Hash)
+            try? metadataData.write(to: fileURL, options: .atomic)
+        }
     }
     
     private class CacheEntry {
@@ -267,6 +303,19 @@ class OfflineCache {
             self.data = data
             self.expirationDate = expirationDate
         }
+    }
+    
+    private struct CacheMetadata: Codable {
+        let data: Data
+        let expirationDate: Date
+    }
+}
+
+extension String {
+    var sha256Hash: String {
+        guard let data = self.data(using: .utf8) else { return self }
+        let hash = CryptoKit.SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
     }
 }
 

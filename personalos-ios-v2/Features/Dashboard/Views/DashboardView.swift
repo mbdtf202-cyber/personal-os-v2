@@ -83,17 +83,16 @@ struct DashboardView: View {
         .sheet(isPresented: $showTradeLog) {
             TradeLogForm()
         }
-        .onAppear {
+        .task {
+            // ✅ P2 Fix: 使用 .task 自动管理 ViewModel 生命周期
             if viewModel == nil, let dependency = appDependency {
                 viewModel = DashboardViewModel(
                     todoRepository: dependency.repositories.todo,
                     modelContext: modelContext
                 )
             }
-            Task {
-                await viewModel?.loadRecentData()
-                await updateActivityData()
-            }
+            await viewModel?.loadRecentData()
+            await updateActivityData()
         }
         .sheet(isPresented: $showQRScanner) {
             QRCodeGeneratorView()

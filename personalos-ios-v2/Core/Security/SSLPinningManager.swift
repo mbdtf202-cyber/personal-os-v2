@@ -16,14 +16,10 @@ final class SSLPinningManager: NSObject {
             }
         }
         
-        // 回退到硬编码值（⚠️ 生产环境必须替换为真实证书哈希）
-        return [
-            // 生产环境证书哈希（通过 openssl 提取）
-            // openssl s_client -connect api.personalos.com:443 | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64
-            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-            // 备用证书哈希（证书轮换时使用）
-            "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB="
-        ]
+        // ✅ P0 Fix: 移除无效占位符，避免 DoS
+        // 如果 Remote Config 失败且没有真实证书，禁用 Pinning
+        Logger.warning("SSL Pinning: No valid hashes configured, disabling pinning", category: Logger.security)
+        return []
     }
     
     private override init() {
@@ -74,6 +70,11 @@ final class SSLPinningManager: NSObject {
     }
     
     private func shouldPinHost(_ host: String) -> Bool {
+        // ✅ P0 Fix: 如果没有配置证书哈希，不启用 Pinning
+        if trustedPublicKeyHashes.isEmpty {
+            return false
+        }
+        
         // 只对关键 API 启用 SSL Pinning
         let criticalHosts = [
             "api.personalos.com",

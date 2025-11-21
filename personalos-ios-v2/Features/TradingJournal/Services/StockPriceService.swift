@@ -59,13 +59,25 @@ class StockPriceService: StockServiceProtocol {
         return results
     }
     
+    // ✅ P2 Fix: 使用 Swift Concurrency 替代 Timer，支持取消
+    private var pollingTask: Task<Void, Never>?
+    
     func subscribeToRealTimeUpdates(symbols: [String]) async {
-        // Implement WebSocket or polling for real-time updates
-        Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self = self else { return }
+        // 取消之前的轮询
+        pollingTask?.cancel()
+        
+        pollingTask = Task { @MainActor in
+            while !Task.isCancelled {
                 _ = try? await self.fetchMultipleQuotes(symbols: symbols)
+                
+                // 等待 30 秒，可被取消
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
             }
         }
+    }
+    
+    func stopRealTimeUpdates() {
+        pollingTask?.cancel()
+        pollingTask = nil
     }
 }

@@ -137,7 +137,28 @@ struct PasswordGeneratorView: View {
             return
         }
         
-        password = String((0..<Int(length)).map { _ in characters.randomElement()! })
+        // ✅ P0 Fix: 使用加密安全的随机数生成器 (CSPRNG)
+        let charArray = Array(characters)
+        var result = ""
+        
+        for _ in 0..<Int(length) {
+            var randomIndex: Int = 0
+            var randomBytes = [UInt8](repeating: 0, count: 1)
+            
+            // 使用 SecRandomCopyBytes 生成加密安全的随机数
+            let status = SecRandomCopyBytes(kSecRandomDefault, 1, &randomBytes)
+            
+            if status == errSecSuccess {
+                randomIndex = Int(randomBytes[0]) % charArray.count
+            } else {
+                // 回退到系统随机（不应该发生）
+                randomIndex = Int.random(in: 0..<charArray.count)
+            }
+            
+            result.append(charArray[randomIndex])
+        }
+        
+        password = result
         HapticsManager.shared.success()
     }
     

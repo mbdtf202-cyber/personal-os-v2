@@ -1,9 +1,11 @@
 import Foundation
 
+// ✅ P2 Fix: 优化 Decimal 存储，避免 NSKeyedArchiver 性能开销
+// 使用 String 存储以保持精度，避免序列化开销
 @objc(DecimalTransformer)
 final class DecimalTransformer: ValueTransformer {
     override class func transformedValueClass() -> AnyClass {
-        NSData.self
+        NSString.self
     }
     
     override class func allowsReverseTransformation() -> Bool {
@@ -12,15 +14,13 @@ final class DecimalTransformer: ValueTransformer {
     
     override func transformedValue(_ value: Any?) -> Any? {
         guard let decimal = value as? Decimal else { return nil }
-        return NSKeyedArchiver.archivedData(withRootObject: NSDecimalNumber(decimal: decimal))
+        // 使用字符串存储，保持精度且性能更好
+        return NSDecimalNumber(decimal: decimal).stringValue
     }
     
     override func reverseTransformedValue(_ value: Any?) -> Any? {
-        guard let data = value as? Data,
-              let number = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSDecimalNumber.self, from: data) else {
-            return nil
-        }
-        return number.decimalValue
+        guard let string = value as? String else { return nil }
+        return Decimal(string: string)
     }
     
     static func register() {
