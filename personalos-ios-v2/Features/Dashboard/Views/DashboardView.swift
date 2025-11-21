@@ -8,7 +8,6 @@ struct DashboardView: View {
     @Environment(AppRouter.self) private var router
     @Environment(\.appDependency) private var appDependency
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \ProjectItem.name) private var projects: [ProjectItem]
     
     private var tasks: [TodoItem] {
         viewModel?.recentTasks ?? []
@@ -20,6 +19,10 @@ struct DashboardView: View {
     
     private var trades: [TradeRecord] {
         viewModel?.recentTrades ?? []
+    }
+    
+    private var projects: [ProjectItem] {
+        viewModel?.recentProjects ?? []
     }
     @State private var showAddTask = false
     @State private var newTaskTitle = ""

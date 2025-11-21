@@ -29,6 +29,7 @@ class DashboardViewModel: BaseViewModel {
     var recentTasks: [TodoItem] = []
     var recentPosts: [SocialPost] = []
     var recentTrades: [TradeRecord] = []
+    var recentProjects: [ProjectItem] = []
     
     private let todoRepository: TodoRepository
     private let modelContext: ModelContext
@@ -42,6 +43,7 @@ class DashboardViewModel: BaseViewModel {
         await loadRecentTasks()
         await loadRecentPosts()
         await loadRecentTrades()
+        await loadRecentProjects()
     }
     
     private func loadRecentTasks() async {
@@ -80,6 +82,19 @@ class DashboardViewModel: BaseViewModel {
             recentTrades = try modelContext.fetch(descriptor)
         } catch {
             ErrorHandler.shared.handle(error, context: "DashboardViewModel.loadRecentTrades")
+        }
+    }
+    
+    private func loadRecentProjects() async {
+        var descriptor = FetchDescriptor<ProjectItem>(
+            sortBy: [SortDescriptor(\.name)]
+        )
+        descriptor.fetchLimit = 10
+        
+        do {
+            recentProjects = try modelContext.fetch(descriptor)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "DashboardViewModel.loadRecentProjects")
         }
     }
 
