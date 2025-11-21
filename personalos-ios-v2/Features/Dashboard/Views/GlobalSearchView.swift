@@ -24,6 +24,9 @@ struct GlobalSearchView: View {
     @FocusState private var isFocused: Bool
     @State private var searchTask: Task<Void, Never>?
     
+    // 🔧 优化: 定义常量替代魔术数字
+    private let searchDebounceDuration: UInt64 = 300_000_000 // 300ms
+    
     var body: some View {
         ZStack {
             // 背景点击关闭
@@ -131,7 +134,7 @@ struct GlobalSearchView: View {
             // 🔧 优化: Debounce 搜索，避免每次输入都触发数据库查询
             searchTask?.cancel()
             searchTask = Task {
-                try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+                try? await Task.sleep(nanoseconds: searchDebounceDuration)
                 if !Task.isCancelled {
                     await MainActor.run {
                         performSearch(newValue)
