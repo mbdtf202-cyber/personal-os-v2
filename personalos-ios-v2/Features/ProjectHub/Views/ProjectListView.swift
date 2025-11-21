@@ -78,7 +78,7 @@ struct ProjectListView: View {
                 ProjectItem(name: "Smart Home Hub", details: "IoT control center ideas.", language: "C++", stars: 0, status: .idea, progress: 0.0)
             ]
             for project in defaults {
-                try? await RepositoryContainer.shared.projectRepository.save(project)
+                try? await appDependency!.repositories.project.save(project)
             }
         }
     }
@@ -176,7 +176,7 @@ struct GitHubSyncSheet: View {
         Task {
             do {
                 // Clear existing projects
-                try await RepositoryContainer.shared.projectRepository.deleteAll()
+                try await appDependency!.repositories.project.deleteAll()
                 
                 // Insert new projects from GitHub
                 for repo in githubService.repos {
@@ -188,7 +188,7 @@ struct GitHubSyncSheet: View {
                         status: .active,
                         progress: 0.5
                     )
-                    try await RepositoryContainer.shared.projectRepository.save(project)
+                    try await appDependency!.repositories.project.save(project)
                 }
                 
                 Logger.log("Synced \(githubService.repos.count) projects from GitHub", category: Logger.general)

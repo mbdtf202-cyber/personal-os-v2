@@ -113,7 +113,7 @@ struct ProjectDetailView: View {
         )
         Task {
             do {
-                try await RepositoryContainer.shared.todoRepository.save(task)
+                try await appDependency!.repositories.todo.save(task)
                 HapticsManager.shared.success()
                 Logger.log("Task created for project: \(project.name)", category: Logger.general)
             } catch {
@@ -222,7 +222,7 @@ struct ProjectEditSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         Task {
-                            try? await RepositoryContainer.shared.projectRepository.save(project)
+                            try? await appDependency!.repositories.project.save(project)
                             dismiss()
                         }
                     }

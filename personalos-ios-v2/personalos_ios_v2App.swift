@@ -65,12 +65,6 @@ struct RootView: View {
             appDependency = AppDependency(modelContext: modelContext, environment: .production)
             #endif
             
-            @available(*, deprecated)
-            func configureDeprecatedContainer() {
-                RepositoryContainer.shared.configure(modelContext: modelContext)
-            }
-            configureDeprecatedContainer()
-            
             Logger.log("✅ AppDependency initialized", category: Logger.general)
         }
     }

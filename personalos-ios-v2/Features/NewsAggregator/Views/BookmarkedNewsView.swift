@@ -83,7 +83,7 @@ struct BookmarkedNewsView: View {
     private func removeBookmark(_ item: NewsItem) {
         Task {
             do {
-                try await RepositoryContainer.shared.newsRepository.delete(item)
+                try await appDependency!.repositories.news.delete(item)
                 HapticsManager.shared.light()
             } catch {
                 ErrorHandler.shared.handle(error, context: "BookmarkedNewsView.removeBookmark")

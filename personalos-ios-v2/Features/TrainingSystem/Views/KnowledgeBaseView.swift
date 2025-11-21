@@ -107,7 +107,7 @@ struct KnowledgeBaseView: View {
         guard allSnippets.isEmpty else { return }
         Task {
             for snippet in CodeSnippet.defaultSnippets {
-                try? await RepositoryContainer.shared.codeSnippetRepository.save(snippet)
+                try? await appDependency!.repositories.codeSnippet.save(snippet)
             }
         }
     }

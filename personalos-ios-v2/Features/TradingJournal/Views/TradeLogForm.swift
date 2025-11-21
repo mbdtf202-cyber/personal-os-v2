@@ -118,7 +118,7 @@ struct TradeLogForm: View {
         )
         Task {
             do {
-                try await RepositoryContainer.shared.tradeRepository.save(newTrade)
+                try await appDependency!.repositories.trade.save(newTrade)
                 HapticsManager.shared.success()
                 Logger.log("Trade logged: \(type.rawValue) \(q) \(symbol) @ $\(p)", category: Logger.general)
             } catch {

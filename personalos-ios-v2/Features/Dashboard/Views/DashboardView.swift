@@ -8,36 +8,18 @@ struct DashboardView: View {
     @Environment(AppRouter.self) private var router
     @Environment(\.appDependency) private var appDependency
     @Environment(\.modelContext) private var modelContext
-    @Query(
-        filter: #Predicate<TodoItem> { _ in true },
-        sort: \TodoItem.createdAt,
-        order: .reverse
-    ) private var allTasks: [TodoItem]
-    
-    @Query(
-        filter: #Predicate<SocialPost> { _ in true },
-        sort: \SocialPost.date,
-        order: .reverse
-    ) private var allPosts: [SocialPost]
-    
-    @Query(
-        filter: #Predicate<TradeRecord> { _ in true },
-        sort: \TradeRecord.date,
-        order: .reverse
-    ) private var allTrades: [TradeRecord]
-    
     @Query(sort: \ProjectItem.name) private var projects: [ProjectItem]
     
     private var tasks: [TodoItem] {
-        Array(allTasks.prefix(10))
+        viewModel?.recentTasks ?? []
     }
     
     private var posts: [SocialPost] {
-        Array(allPosts.prefix(10))
+        viewModel?.recentPosts ?? []
     }
     
     private var trades: [TradeRecord] {
-        Array(allTrades.prefix(10))
+        viewModel?.recentTrades ?? []
     }
     @State private var showAddTask = false
     @State private var newTaskTitle = ""
@@ -103,9 +85,15 @@ struct DashboardView: View {
         }
         .onAppear {
             if viewModel == nil, let dependency = appDependency {
-                viewModel = DashboardViewModel(todoRepository: dependency.repositories.todo)
+                viewModel = DashboardViewModel(
+                    todoRepository: dependency.repositories.todo,
+                    modelContext: modelContext
+                )
             }
-            updateActivityData()
+            Task {
+                await viewModel?.loadRecentData()
+                await updateActivityData()
+            }
         }
         .sheet(isPresented: $showQRScanner) {
             QRCodeGeneratorView()
@@ -513,9 +501,9 @@ struct DashboardView: View {
         }
     }
     
-    private func updateActivityData() {
+    private func updateActivityData() async {
         guard let vm = viewModel else { return }
-        activityData = vm.calculateActivityData(tasks: tasks, posts: posts, trades: trades)
+        activityData = await vm.calculateActivityData()
     }
 }
 

@@ -26,10 +26,61 @@ class DashboardViewModel: BaseViewModel {
     var showNewPostSheet: Bool = false
     var showNewTradeSheet: Bool = false
     
-    private let todoRepository: TodoRepository
+    var recentTasks: [TodoItem] = []
+    var recentPosts: [SocialPost] = []
+    var recentTrades: [TradeRecord] = []
     
-    init(todoRepository: TodoRepository) {
+    private let todoRepository: TodoRepository
+    private let modelContext: ModelContext
+    
+    init(todoRepository: TodoRepository, modelContext: ModelContext) {
         self.todoRepository = todoRepository
+        self.modelContext = modelContext
+    }
+    
+    func loadRecentData() async {
+        await loadRecentTasks()
+        await loadRecentPosts()
+        await loadRecentTrades()
+    }
+    
+    private func loadRecentTasks() async {
+        var descriptor = FetchDescriptor<TodoItem>(
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 10
+        
+        do {
+            recentTasks = try modelContext.fetch(descriptor)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "DashboardViewModel.loadRecentTasks")
+        }
+    }
+    
+    private func loadRecentPosts() async {
+        var descriptor = FetchDescriptor<SocialPost>(
+            sortBy: [SortDescriptor(\.date, order: .reverse)]
+        )
+        descriptor.fetchLimit = 10
+        
+        do {
+            recentPosts = try modelContext.fetch(descriptor)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "DashboardViewModel.loadRecentPosts")
+        }
+    }
+    
+    private func loadRecentTrades() async {
+        var descriptor = FetchDescriptor<TradeRecord>(
+            sortBy: [SortDescriptor(\.date, order: .reverse)]
+        )
+        descriptor.fetchLimit = 10
+        
+        do {
+            recentTrades = try modelContext.fetch(descriptor)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "DashboardViewModel.loadRecentTrades")
+        }
     }
 
     var greeting: String {
@@ -75,7 +126,7 @@ class DashboardViewModel: BaseViewModel {
         }
     }
     
-    func calculateActivityData(tasks: [TodoItem], posts: [SocialPost], trades: [TradeRecord]) -> [(String, Double)] {
+    func calculateActivityData() async -> [(String, Double)] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -87,21 +138,34 @@ class DashboardViewModel: BaseViewModel {
             let dayStart = calendar.startOfDay(for: date)
             let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
             
-            let completedTasks = tasks.filter { task in
-                task.isCompleted && task.createdAt >= dayStart && task.createdAt < dayEnd
-            }.count
+            // 使用数据库层面的过滤，而不是内存过滤
+            let completedTasks = try? modelContext.fetch(
+                FetchDescriptor<TodoItem>(
+                    predicate: #Predicate { task in
+                        task.isCompleted && task.createdAt >= dayStart && task.createdAt < dayEnd
+                    }
+                )
+            ).count ?? 0
             
-            let postsCount = posts.filter { post in
-                post.date >= dayStart && post.date < dayEnd
-            }.count
+            let postsCount = try? modelContext.fetch(
+                FetchDescriptor<SocialPost>(
+                    predicate: #Predicate { post in
+                        post.date >= dayStart && post.date < dayEnd
+                    }
+                )
+            ).count ?? 0
             
-            let tradesCount = trades.filter { trade in
-                trade.date >= dayStart && trade.date < dayEnd
-            }.count
+            let tradesCount = try? modelContext.fetch(
+                FetchDescriptor<TradeRecord>(
+                    predicate: #Predicate { trade in
+                        trade.date >= dayStart && trade.date < dayEnd
+                    }
+                )
+            ).count ?? 0
             
             let totalActivity = Double(completedTasks + postsCount + tradesCount)
             let dayIndex = calendar.component(.weekday, from: date)
-            let dayName = weekDays[(dayIndex + 5) % 7] // Adjust for Monday start
+            let dayName = weekDays[(dayIndex + 5) % 7]
             
             activityData.append((dayName, totalActivity))
         }

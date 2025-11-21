@@ -128,7 +128,7 @@ struct HealthHomeView: View {
     private func toggleHabit(_ habit: HabitItem) {
         habit.isCompleted.toggle()
         Task {
-            try? await RepositoryContainer.shared.habitRepository.save(habit)
+            try? await appDependency!.repositories.habit.save(habit)
         }
     }
 
@@ -136,7 +136,7 @@ struct HealthHomeView: View {
         guard habits.isEmpty else { return }
         Task {
             for habit in HabitItem.defaultHabits {
-                try? await RepositoryContainer.shared.habitRepository.save(habit)
+                try? await appDependency!.repositories.habit.save(habit)
             }
         }
     }

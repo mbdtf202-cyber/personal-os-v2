@@ -325,12 +325,12 @@ struct NewsFeedView: View {
             do {
                 if let existingBookmark = bookmarkedNews.first(where: { $0.id == item.id }) {
                     // Remove bookmark
-                    try await RepositoryContainer.shared.newsRepository.delete(existingBookmark)
+                    try await appDependency!.repositories.news.delete(existingBookmark)
                     HapticsManager.shared.light()
                     Logger.log("Bookmark removed: \(item.title)", category: Logger.general)
                 } else {
                     // Add bookmark
-                    try await RepositoryContainer.shared.newsRepository.save(item)
+                    try await appDependency!.repositories.news.save(item)
                     HapticsManager.shared.success()
                     Logger.log("Article bookmarked: \(item.title)", category: Logger.general)
                 }
@@ -348,7 +348,7 @@ struct NewsFeedView: View {
         )
         Task {
             do {
-                try await RepositoryContainer.shared.todoRepository.save(task)
+                try await appDependency!.repositories.todo.save(task)
                 HapticsManager.shared.success()
                 Logger.log("Task created from article", category: Logger.general)
             } catch {

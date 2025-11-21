@@ -173,7 +173,7 @@ struct SnippetDetailView: View {
     private func deleteSnippet() {
         Task {
             do {
-                try await RepositoryContainer.shared.codeSnippetRepository.delete(snippet)
+                try await appDependency!.repositories.codeSnippet.delete(snippet)
                 HapticsManager.shared.success()
                 dismiss()
             } catch {
