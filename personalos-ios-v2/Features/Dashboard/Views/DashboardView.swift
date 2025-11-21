@@ -98,19 +98,7 @@ struct DashboardView: View {
         .sheet(isPresented: $showQRScanner) {
             QRCodeGeneratorView()
         }
-        .onAppear {
-            seedTasksIfNeeded()
-            updateActivityData()
-        }
-        .onChange(of: tasks.count) { _, _ in
-            updateActivityData()
-        }
-        .onChange(of: posts.count) { _, _ in
-            updateActivityData()
-        }
-        .onChange(of: trades.count) { _, _ in
-            updateActivityData()
-        }
+
     }
     
     // MARK: - Subviews
@@ -217,24 +205,7 @@ struct DashboardView: View {
         }
     }
 
-    private func seedTasksIfNeeded() {
-        guard tasks.isEmpty, let dependency = appDependency else { return }
-        Task {
-            let defaults = [
-                TodoItem(title: "完成 PersonalOS 开发", category: "Work", priority: 2),
-                TodoItem(title: "阅读技术文章", category: "Dev", priority: 1),
-                TodoItem(title: "健身打卡", category: "Life", priority: 1)
-            ]
-            for task in defaults {
-                try? await dependency.repositories.todo.save(task)
-            }
-        }
-    }
-    
-    private func updateActivityData() async {
-        guard let vm = viewModel else { return }
-        activityData = await vm.calculateActivityData()
-    }
+
 }
 
 #Preview {

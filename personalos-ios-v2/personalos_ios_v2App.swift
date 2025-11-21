@@ -103,6 +103,12 @@ struct RootView: View {
             #endif
             
             Logger.log("✅ AppDependency initialized", category: Logger.general)
+            
+            if let dependency = appDependency {
+                Task {
+                    await DataBootstrapper.shared.bootstrap(dependency: dependency)
+                }
+            }
         }
     }
 }
