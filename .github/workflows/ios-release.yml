@@ -1,0 +1,58 @@
+name: iOS Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release:
+    name: Build Release
+    runs-on: macos-14
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Select Xcode
+      run: sudo xcode-select -s /Applications/Xcode_15.2.app
+      
+    - name: Install dependencies
+      run: |
+        brew install xcpretty
+        
+    - name: Build Archive
+      run: |
+        xcodebuild archive \
+          -project personalos-ios-v2.xcodeproj \
+          -scheme personalos-ios-v2 \
+          -archivePath ./build/PersonalOS.xcarchive \
+          -destination 'generic/platform=iOS' \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          | xcpretty
+      
+    - name: Create IPA
+      run: |
+        xcodebuild -exportArchive \
+          -archivePath ./build/PersonalOS.xcarchive \
+          -exportPath ./build \
+          -exportOptionsPlist ExportOptions.plist \
+          | xcpretty
+      continue-on-error: true
+      
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: PersonalOS-${{ github.ref_name }}
+        path: ./build/*.ipa
+      continue-on-error: true
+      
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ./build/*.ipa
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true

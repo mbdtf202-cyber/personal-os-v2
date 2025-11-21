@@ -8,75 +8,85 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: macos-latest
+    name: Build and Test
+    runs-on: macos-14
     
     steps:
-    - uses: actions/checkout@v3
-    
+    - name: Checkout
+      uses: actions/checkout@v4
+      
     - name: Select Xcode
-      run: sudo xcode-select -s /Applications/Xcode_15.0.app
-    
-    - name: Cache Swift Package Manager
-      uses: actions/cache@v3
-      with:
-        path: .build
-        key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
-        restore-keys: |
-          ${{ runner.os }}-spm-
-    
-    - name: Install SwiftLint
-      run: brew install swiftlint
-    
-    - name: Run SwiftLint
-      run: swiftlint lint --reporter github-actions-logging
-      continue-on-error: true
-    
+      run: sudo xcode-select -s /Applications/Xcode_15.2.app
+      
+    - name: Show Xcode version
+      run: xcodebuild -version
+      
+    - name: Show available schemes
+      run: xcodebuild -list -project personalos-ios-v2.xcodeproj
+      
     - name: Build
       run: |
         xcodebuild clean build \
           -project personalos-ios-v2.xcodeproj \
           -scheme personalos-ios-v2 \
-          -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.0' \
+          -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.2' \
           CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO
-    
-    - name: Run Tests
+          CODE_SIGNING_REQUIRED=NO \
+          | xcpretty
+      
+    - name: Run Unit Tests
       run: |
         xcodebuild test \
           -project personalos-ios-v2.xcodeproj \
           -scheme personalos-ios-v2 \
-          -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.0' \
+          -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.2' \
+          -enableCodeCoverage YES \
           CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO
-    
-    - name: Upload Test Results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: test-results
-        path: |
-          **/TestResults.xcresult
-    
+          CODE_SIGNING_REQUIRED=NO \
+          | xcpretty --test --color
+      
     - name: Generate Code Coverage
       run: |
-        xcrun xccov view --report --json DerivedData/Logs/Test/*.xcresult > coverage.json
+        xcrun llvm-cov export \
+          -format="lcov" \
+          -instr-profile=$(find ~/Library/Developer/Xcode/DerivedData -name "*.profdata") \
+          $(find ~/Library/Developer/Xcode/DerivedData -name "personalos-ios-v2") \
+          > coverage.lcov
       continue-on-error: true
-    
-    - name: Upload Coverage
+      
+    - name: Upload Coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
-        files: ./coverage.json
+        files: ./coverage.lcov
         fail_ci_if_error: false
+      continue-on-error: true
 
-  lint:
-    runs-on: macos-latest
+  swiftlint:
+    name: SwiftLint
+    runs-on: macos-14
     
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Install SwiftLint
+      run: brew install swiftlint
+      
+    - name: Run SwiftLint
+      run: swiftlint lint --reporter github-actions-logging
+
+  security-scan:
+    name: Security Scan
+    runs-on: macos-14
     
-    - name: Install SwiftFormat
-      run: brew install swiftformat
-    
-    - name: Check Formatting
-      run: swiftformat --lint .
-      continue-on-error: true
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Check for secrets
+      run: |
+        if grep -r "sk-" . --exclude-dir=.git --exclude-dir=.github; then
+          echo "⚠️ Potential API keys found!"
+          exit 1
+        fi
+        echo "✅ No secrets detected"

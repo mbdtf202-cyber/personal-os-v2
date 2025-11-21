@@ -11,13 +11,38 @@ struct personalos_ios_v2App: App {
 
     init() {
         setupTheme()
+        setupMonitoring()
+    }
+    
+    private func setupMonitoring() {
+        // 初始化崩溃监控
+        _ = CrashReporter.shared
+        
+        // 初始化性能监控
+        _ = PerformanceMonitor.shared
+        
+        // 记录应用启动
+        AnalyticsLogger.shared.log(.appLaunched)
+        
+        // 检查 iCloud 状态
+        CloudSyncManager.shared.checkiCloudStatus()
+        
+        Logger.log("✅ Monitoring systems initialized", category: Logger.general)
     }
 
     var body: some Scene {
         WindowGroup {
             RootView()
         }
-        .modelContainer(for: [
+        .modelContainer(createModelContainer())
+        .environment(router)
+        .environment(healthManager)
+        .environmentObject(themeManager)
+        .environmentObject(remoteConfig)
+    }
+    
+    private func createModelContainer() -> ModelContainer {
+        let schema = Schema([
             TodoItem.self,
             HealthLog.self,
             SocialPost.self,
@@ -29,10 +54,22 @@ struct personalos_ios_v2App: App {
             HabitItem.self,
             CodeSnippet.self
         ])
-        .environment(router)
-        .environment(healthManager)
-        .environmentObject(themeManager)
-        .environmentObject(remoteConfig)
+        
+        let configuration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            allowsSave: true,
+            cloudKitDatabase: .automatic // 启用 iCloud 同步
+        )
+        
+        do {
+            let container = try ModelContainer(for: schema, configurations: configuration)
+            Logger.log("✅ ModelContainer created with iCloud sync", category: Logger.general)
+            return container
+        } catch {
+            Logger.error("Failed to create ModelContainer: \(error)", category: Logger.general)
+            fatalError("Could not create ModelContainer: \(error)")
+        }
     }
     
     private func setupTheme() {
