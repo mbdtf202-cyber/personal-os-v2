@@ -16,7 +16,7 @@ struct NewsCard: View {
                 
                 Spacer()
                 
-                Text(article.publishedAt, style: .relative)
+                Text(article.publishedAt)
                     .font(.caption2)
                     .foregroundStyle(AppTheme.secondaryText)
             }
