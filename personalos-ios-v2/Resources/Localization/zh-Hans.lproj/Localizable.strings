@@ -1,0 +1,52 @@
+/* Dashboard */
+"dashboard.greeting.morning" = "早上好";
+"dashboard.greeting.afternoon" = "下午好";
+"dashboard.greeting.evening" = "晚上好";
+"dashboard.greeting.night" = "晚安";
+"dashboard.title" = "仪表盘";
+"dashboard.search" = "搜索";
+"dashboard.focus" = "今日专注";
+"dashboard.pending" = "待办";
+"dashboard.allClear" = "全部完成！放松一下吧。";
+
+/* Tasks */
+"tasks.title" = "任务";
+"tasks.add" = "添加任务";
+"tasks.completed" = "已完成";
+"tasks.pending" = "待办";
+"tasks.delete" = "删除";
+
+/* Social */
+"social.title" = "社交指挥中心";
+"social.newPost" = "新建内容";
+"social.drafts" = "草稿与想法";
+"social.published" = "已发布";
+"social.scheduled" = "已排期";
+
+/* Trading */
+"trading.title" = "交易日志";
+"trading.logTrade" = "记录交易";
+"trading.portfolio" = "投资组合";
+"trading.balance" = "总余额";
+
+/* News */
+"news.title" = "新闻聚合";
+"news.bookmarks" = "书签";
+"news.sources" = "来源";
+
+/* Settings */
+"settings.title" = "设置";
+"settings.sync" = "同步设置";
+"settings.theme" = "主题";
+"settings.about" = "关于";
+
+/* Common */
+"common.save" = "保存";
+"common.cancel" = "取消";
+"common.delete" = "删除";
+"common.edit" = "编辑";
+"common.done" = "完成";
+"common.loading" = "加载中...";
+"common.error" = "错误";
+"common.retry" = "重试";
+"common.ok" = "好的";

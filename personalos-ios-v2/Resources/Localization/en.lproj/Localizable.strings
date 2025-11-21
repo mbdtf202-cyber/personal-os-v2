@@ -1,0 +1,52 @@
+/* Dashboard */
+"dashboard.greeting.morning" = "Good Morning";
+"dashboard.greeting.afternoon" = "Good Afternoon";
+"dashboard.greeting.evening" = "Good Evening";
+"dashboard.greeting.night" = "Good Night";
+"dashboard.title" = "Dashboard";
+"dashboard.search" = "Search";
+"dashboard.focus" = "Today's Focus";
+"dashboard.pending" = "Pending";
+"dashboard.allClear" = "All clear! Time to relax.";
+
+/* Tasks */
+"tasks.title" = "Tasks";
+"tasks.add" = "Add Task";
+"tasks.completed" = "Completed";
+"tasks.pending" = "Pending";
+"tasks.delete" = "Delete";
+
+/* Social */
+"social.title" = "Social Command";
+"social.newPost" = "New Post";
+"social.drafts" = "Drafts & Ideas";
+"social.published" = "Published";
+"social.scheduled" = "Scheduled";
+
+/* Trading */
+"trading.title" = "Trading Journal";
+"trading.logTrade" = "Log Trade";
+"trading.portfolio" = "Portfolio";
+"trading.balance" = "Total Balance";
+
+/* News */
+"news.title" = "News Feed";
+"news.bookmarks" = "Bookmarks";
+"news.sources" = "Sources";
+
+/* Settings */
+"settings.title" = "Settings";
+"settings.sync" = "Sync Settings";
+"settings.theme" = "Theme";
+"settings.about" = "About";
+
+/* Common */
+"common.save" = "Save";
+"common.cancel" = "Cancel";
+"common.delete" = "Delete";
+"common.edit" = "Edit";
+"common.done" = "Done";
+"common.loading" = "Loading...";
+"common.error" = "Error";
+"common.retry" = "Retry";
+"common.ok" = "OK";
