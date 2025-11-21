@@ -45,7 +45,7 @@ class RemoteConfigService: ObservableObject {
         self.configURL = AppConfig.API.remoteConfigURL
         self.featureFlags = FeatureFlags()
         self.abTestConfig = ABTestConfig()
-        self.networkClient = NetworkClient.shared
+        self.networkClient = NetworkClient(config: .default)
         
         loadCachedConfig()
     }
@@ -66,7 +66,7 @@ class RemoteConfigService: ObservableObject {
             }
             
             // 🔧 P1 Fix: 使用 NetworkClient 替代裸 URLSession
-            let config: RemoteConfig = try await networkClient.request(url: url)
+            let config: RemoteConfig = try await networkClient.request(url.absoluteString)
             
             await MainActor.run {
                 self.featureFlags = config.featureFlags

@@ -287,8 +287,9 @@ struct StatusBadge: View {
 
 #Preview {
     let container = try! ModelContainer(for: ProjectItem.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let networkClient = NetworkClient(config: .github)
     
     ProjectListView()
         .modelContainer(container)
-        .environment(GitHubService())
+        .environment(GitHubService(networkClient: networkClient))
 }

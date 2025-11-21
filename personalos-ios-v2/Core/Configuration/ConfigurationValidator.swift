@@ -44,10 +44,7 @@ class ConfigurationValidator {
             warnings.append("Stock prices will use mock data")
         }
         
-        // Check GitHub Token (optional but recommended)
-        if APIConfig.githubToken.isEmpty {
-            warnings.append("GitHub token not configured. API rate limits will be lower.")
-        }
+        // GitHub token is optional, no validation needed
         
         let isValid = missingKeys.isEmpty
         

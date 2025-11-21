@@ -19,8 +19,8 @@ class CloudSyncManager: ObservableObject {
     }
     
     func checkiCloudStatus() {
-        container.accountStatus { [weak self] status, error in
-            Task { @MainActor in
+        container.accountStatus { status, error in
+            Task { @MainActor [weak self] in
                 self?.iCloudAvailable = (status == .available)
                 
                 if let error = error {
@@ -37,16 +37,11 @@ class CloudSyncManager: ObservableObject {
         
         syncStatus = .syncing
         
-        do {
-            // SwiftData 自动处理 iCloud 同步
-            // 只需确保 ModelContainer 配置了 CloudKit
-            Logger.log("✅ iCloud sync enabled", category: Logger.sync)
-            syncStatus = .synced
-            lastSyncDate = Date()
-        } catch {
-            syncStatus = .failed(error)
-            throw error
-        }
+        // SwiftData 自动处理 iCloud 同步
+        // 只需确保 ModelContainer 配置了 CloudKit
+        Logger.log("✅ iCloud sync enabled", category: Logger.sync)
+        syncStatus = .synced
+        lastSyncDate = Date()
     }
     
     func manualSync() async {
