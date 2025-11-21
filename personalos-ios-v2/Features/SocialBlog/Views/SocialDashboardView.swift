@@ -40,10 +40,13 @@ struct SocialDashboardView: View {
 
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 24) {
-                        // 1. Stats Header
-                        statsHeader
+                        SocialStatsHeader(
+                            totalViews: stats.totalViews,
+                            engagementRate: stats.engagementRate,
+                            totalPosts: posts.count
+                        )
                         
-                        // 2. Calendar
+                        // Calendar
                         VStack(alignment: .leading, spacing: 8) {
                             ContentCalendarView(posts: posts, selectedDate: $vm.selectedDate)
                             
@@ -67,8 +70,7 @@ struct SocialDashboardView: View {
                             }
                         }
                         
-                        // 3. Up Next (Scheduled)
-                        sectionHeader(title: "Up Next", icon: "clock.fill", color: .blue)
+                        SocialSectionHeader(title: "Up Next", icon: "clock.fill", color: .blue)
                         if upcomingPosts.isEmpty {
                             SocialEmptyStateView(message: "No scheduled posts.")
                         } else {
@@ -84,8 +86,7 @@ struct SocialDashboardView: View {
                             }
                         }
 
-                        // 4. Drafts & Ideas
-                        sectionHeader(title: "Drafts & Ideas", icon: "lightbulb.fill", color: .orange)
+                        SocialSectionHeader(title: "Drafts & Ideas", icon: "lightbulb.fill", color: .orange)
                         if drafts.isEmpty && vm.selectedDate != nil {
                             SocialEmptyStateView(message: "No drafts for this date.")
                         } else if drafts.isEmpty {
@@ -184,15 +185,6 @@ struct SocialDashboardView: View {
         }
     }
     
-    // MARK: - Components
-    
-    private var statsHeader: some View {
-        HStack(spacing: 16) {
-            StatBox(title: "Total Views", value: stats.totalViews, icon: "eye.fill", color: AppTheme.almond)
-            StatBox(title: "Engagement", value: stats.engagementRate, icon: "chart.line.uptrend.xyaxis", color: AppTheme.matcha)
-        }
-    }
-    
     @ViewBuilder
     private func statusContextMenu(for: SocialPost) -> some View {
         Button(action: { vm.selectedPost = post }) {
@@ -224,189 +216,8 @@ struct SocialDashboardView: View {
         }
     }
     
-    private func sectionHeader(title: String, icon: String, color: Color) -> some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundStyle(color)
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(AppTheme.primaryText)
-            Spacer()
-        }
-    }
-
-
 }
 
-struct StatBox: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundStyle(color)
-                Spacer()
-            }
-            Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundStyle(AppTheme.primaryText)
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(AppTheme.secondaryText)
-        }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: AppTheme.shadow, radius: 5, y: 2)
-    }
-}
-
-struct PostRowView: View {
-    let post: SocialPost
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            // Platform Icon
-            ZStack {
-                Circle()
-                    .fill(post.platform.color.opacity(0.1))
-                    .frame(width: 44, height: 44)
-                Image(systemName: post.platform.icon)
-                    .foregroundStyle(post.platform.color)
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(post.title.isEmpty ? "Untitled Post" : post.title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(AppTheme.primaryText)
-                    .lineLimit(1)
-                HStack {
-                    Text(post.status.rawValue)
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(post.status.color.opacity(0.2))
-                        .foregroundStyle(post.status.color)
-                        .cornerRadius(4)
-                    Text("• \(post.date.formatted(date: .abbreviated, time: .omitted))")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.secondaryText)
-                }
-            }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(AppTheme.tertiaryText)
-        }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: AppTheme.shadow, radius: 5, y: 2)
-    }
-}
-
-struct PublishedPostRow: View {
-    @Bindable var post: SocialPost
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                // Platform Icon
-                ZStack {
-                    Circle()
-                        .fill(post.platform.color.opacity(0.1))
-                        .frame(width: 36, height: 36)
-                    Image(systemName: post.platform.icon)
-                        .font(.caption)
-                        .foregroundStyle(post.platform.color)
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(post.title.isEmpty ? "Untitled Post" : post.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(AppTheme.primaryText)
-                        .lineLimit(1)
-                    Text(post.date.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption2)
-                        .foregroundStyle(AppTheme.secondaryText)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundStyle(AppTheme.tertiaryText)
-            }
-            
-            // Engagement Stats
-            HStack(spacing: 16) {
-                HStack(spacing: 4) {
-                    Image(systemName: "eye.fill")
-                        .font(.caption2)
-                        .foregroundStyle(AppTheme.mistBlue)
-                    TextField("Views", value: $post.views, format: .number)
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.secondaryText)
-                        .keyboardType(.numberPad)
-                        .frame(width: 60)
-                }
-                
-                HStack(spacing: 4) {
-                    Image(systemName: "heart.fill")
-                        .font(.caption2)
-                        .foregroundStyle(AppTheme.coral)
-                    TextField("Likes", value: $post.likes, format: .number)
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.secondaryText)
-                        .keyboardType(.numberPad)
-                        .frame(width: 60)
-                }
-                
-                Spacer()
-                
-                if post.views > 0 {
-                    Text("\((Double(post.likes) / Double(post.views) * 100), specifier: "%.1f")% engagement")
-                        .font(.caption2)
-                        .foregroundStyle(AppTheme.matcha)
-                }
-            }
-        }
-        .padding()
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: AppTheme.shadow, radius: 5, y: 2)
-    }
-}
-
-struct SocialEmptyStateView: View {
-    let message: String
-    
-    var body: some View {
-        HStack {
-            Spacer()
-            VStack(spacing: 8) {
-                Image(systemName: "tray")
-                    .font(.largeTitle)
-                    .foregroundStyle(AppTheme.tertiaryText)
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.secondaryText)
-            }
-            Spacer()
-        }
-        .padding(.vertical, 20)
-    }
-}
 
 // MARK: - Edit Post Wrapper
 struct EditPostWrapper: View {

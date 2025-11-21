@@ -23,33 +23,17 @@ struct TradingDashboardView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
-                        // Price Error Banner
                         if let error = stockPriceService.error, showPriceError {
-                            HStack {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(AppTheme.coral)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Price Update Failed")
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                    Text(error)
-                                        .font(.caption)
-                                        .foregroundStyle(AppTheme.secondaryText)
-                                }
-                                Spacer()
-                                Button(action: { showPriceError = false }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(AppTheme.tertiaryText)
-                                }
-                            }
-                            .padding()
-                            .background(AppTheme.coral.opacity(0.1))
-                            .cornerRadius(12)
+                            PriceErrorBanner(error: error, onDismiss: { showPriceError = false })
                         }
                         
-                        balanceCard
-                        tradingStatsGrid
-                        equityChart
+                        BalanceCard(
+                            totalBalance: viewModel.totalBalance,
+                            dayPnL: viewModel.dayPnL,
+                            dayPnLPercent: viewModel.dayPnLPercent
+                        )
+                        TradingStatsGrid(trades: recentTrades)
+                        EquityChart(equityCurve: viewModel.equityCurve)
                         performanceMetrics
                         holdingsList
                         recentTradesSection
@@ -106,141 +90,6 @@ struct TradingDashboardView: View {
                 }
             }
         }
-    }
-    
-    // MARK: - Components
-    
-    private var balanceCard: some View {
-        let isPositive = viewModel.dayPnL >= 0
-
-        return VStack(spacing: 8) {
-            Text("Total Balance")
-                .font(.subheadline)
-                .foregroundStyle(AppTheme.secondaryText)
-            Text("$\(viewModel.totalBalance, specifier: "%.2f")")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundStyle(AppTheme.primaryText)
-            HStack {
-                Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
-                Text("\(isPositive ? "+" : "-")$\(abs(viewModel.dayPnL), specifier: "%.2f") (\(abs(viewModel.dayPnLPercent), specifier: "%.2f")%)")
-            }
-            .font(.caption)
-            .fontWeight(.semibold)
-            .foregroundStyle(isPositive ? AppTheme.matcha : AppTheme.coral)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background((isPositive ? AppTheme.matcha : AppTheme.coral).opacity(0.15))
-            .clipShape(Capsule())
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(20)
-    }
-    
-    private var equityChart: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Equity Curve (7D)")
-                .font(.headline)
-                .foregroundStyle(AppTheme.primaryText)
-            
-            if viewModel.equityCurve.isEmpty {
-                Text("Log trades to view your equity curve.")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.secondaryText)
-            } else {
-                Chart {
-                    ForEach(viewModel.equityCurve) { point in
-                        LineMark(
-                            x: .value("Day", point.day),
-                            y: .value("Value", point.value)
-                        )
-                        .interpolationMethod(.catmullRom)
-                        .foregroundStyle(AppTheme.almond)
-                        .symbol(Circle())
-
-                        AreaMark(
-                            x: .value("Day", point.day),
-                            y: .value("Value", point.value)
-                        )
-                        .interpolationMethod(.catmullRom)
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [AppTheme.almond.opacity(0.3), .clear],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                    }
-                }
-                .frame(height: 200)
-                .chartYAxis {
-                    AxisMarks(position: .leading) { value in
-                        AxisGridLine()
-                        AxisValueLabel()
-                            .font(.caption2)
-                    }
-                }
-            }
-        }
-        .padding(16)
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(20)
-    }
-    
-    private var tradingStatsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            QuickStatCard(
-                title: "Total Trades",
-                value: "\(recentTrades.count)",
-                icon: "chart.bar.fill",
-                color: AppTheme.mistBlue
-            )
-            
-            QuickStatCard(
-                title: "Win Rate",
-                value: winRate,
-                icon: "target",
-                color: AppTheme.matcha
-            )
-            
-            QuickStatCard(
-                title: "Avg Trade",
-                value: avgTradeSize,
-                icon: "dollarsign.circle.fill",
-                color: AppTheme.almond
-            )
-            
-            QuickStatCard(
-                title: "Best Trade",
-                value: bestTrade,
-                icon: "arrow.up.circle.fill",
-                color: AppTheme.matcha
-            )
-        }
-    }
-    
-    private var winRate: String {
-        guard !recentTrades.isEmpty else { return "0%" }
-        let profitableTrades = recentTrades.filter { trade in
-            // Simple heuristic: buy at lower price, sell at higher
-            return trade.type == .sell
-        }.count
-        let rate = Double(profitableTrades) / Double(recentTrades.count) * 100
-        return String(format: "%.1f%%", rate)
-    }
-    
-    private var avgTradeSize: String {
-        guard !recentTrades.isEmpty else { return "$0" }
-        let total = recentTrades.reduce(0.0) { $0 + ($1.price * $1.quantity) }
-        let avg = total / Double(recentTrades.count)
-        return String(format: "$%.0f", avg)
-    }
-    
-    private var bestTrade: String {
-        guard !recentTrades.isEmpty else { return "$0" }
-        let maxValue = recentTrades.map { $0.price * $0.quantity }.max() ?? 0
-        return String(format: "$%.0f", maxValue)
     }
     
     private var performanceMetrics: some View {
