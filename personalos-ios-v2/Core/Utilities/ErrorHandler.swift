@@ -49,8 +49,13 @@ enum AppError: LocalizedError {
 class ErrorHandler {
     static let shared = ErrorHandler()
     
-    var currentError: AppError?
+    // 🔧 P2 Fix: 使用错误队列替代单一错误，避免竞争
+    private(set) var errorQueue: [ErrorEntry] = []
     var showError: Bool = false
+    
+    var currentError: AppError? {
+        errorQueue.first?.error
+    }
     
     private init() {}
     
@@ -65,17 +70,38 @@ class ErrorHandler {
             appError = .unknown(error)
         }
         
-        currentError = appError
-        showError = true
+        let entry = ErrorEntry(error: appError, context: context)
+        errorQueue.append(entry)
+        
+        if !showError {
+            showError = true
+        }
         
         // 记录错误日志
         Logger.error("[\(context)] \(appError.errorDescription ?? "Unknown error")", category: Logger.general)
     }
     
     func clearError() {
-        currentError = nil
+        if !errorQueue.isEmpty {
+            errorQueue.removeFirst()
+        }
+        
+        if errorQueue.isEmpty {
+            showError = false
+        }
+    }
+    
+    func clearAllErrors() {
+        errorQueue.removeAll()
         showError = false
     }
+}
+
+struct ErrorEntry: Identifiable {
+    let id = UUID()
+    let error: AppError
+    let context: String
+    let timestamp = Date()
 }
 
 // MARK: - View Extension

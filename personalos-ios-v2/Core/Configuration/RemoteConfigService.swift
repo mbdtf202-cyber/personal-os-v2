@@ -38,10 +38,14 @@ class RemoteConfigService: ObservableObject {
     private let cacheExpirationKey = "config_cache_expiration"
     private let cacheValidityDuration: TimeInterval = 3600 // 1 hour
     
+    // 🔧 P1 Fix: 使用统一的 NetworkClient
+    private let networkClient: NetworkClient
+    
     private init() {
         self.configURL = AppConfig.API.remoteConfigURL
         self.featureFlags = FeatureFlags()
         self.abTestConfig = ABTestConfig()
+        self.networkClient = NetworkClient.shared
         
         loadCachedConfig()
     }
@@ -61,8 +65,8 @@ class RemoteConfigService: ObservableObject {
                 return
             }
             
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let config = try JSONDecoder().decode(RemoteConfig.self, from: data)
+            // 🔧 P1 Fix: 使用 NetworkClient 替代裸 URLSession
+            let config: RemoteConfig = try await networkClient.request(url: url)
             
             await MainActor.run {
                 self.featureFlags = config.featureFlags

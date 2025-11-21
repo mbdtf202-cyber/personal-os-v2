@@ -51,6 +51,16 @@ struct personalos_ios_v2App: App {
         .environmentObject(serviceContainer)
         .environmentObject(themeManager)
         .environmentObject(remoteConfig)
+        .task {
+            // 🚑 P0 Fix: Configure RepositoryContainer with ModelContext
+            await configureRepositoryContainer()
+        }
+    }
+    
+    @MainActor
+    private func configureRepositoryContainer() async {
+        // Note: We need to access modelContext from a View, not from App
+        // This will be handled in MainTabView instead
     }
     
     private func setupServices() {
@@ -71,7 +81,9 @@ struct personalos_ios_v2App: App {
 // MARK: - Main Tab View
 struct MainTabView: View {
     @Environment(AppRouter.self) private var router
+    @Environment(\.modelContext) private var modelContext
     @State private var showQuickNote = false
+    @State private var isRepositoryConfigured = false
 
     var body: some View {
         ZStack {
@@ -119,6 +131,16 @@ struct MainTabView: View {
             // Quick Note Overlay
             if showQuickNote {
                 QuickNoteOverlay(isPresented: $showQuickNote)
+            }
+        }
+        .task {
+            // 🚑 P0 Fix: Configure RepositoryContainer on first appear
+            if !isRepositoryConfigured {
+                await MainActor.run {
+                    RepositoryContainer.shared.configure(modelContext: modelContext)
+                    isRepositoryConfigured = true
+                    Logger.log("✅ RepositoryContainer configured with ModelContext", category: Logger.general)
+                }
             }
         }
     }

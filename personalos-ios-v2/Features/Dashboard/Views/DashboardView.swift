@@ -3,7 +3,7 @@ import Combine
 import SwiftData
 
 struct DashboardView: View {
-    @State private var viewModel: DashboardViewModel
+    @State private var viewModel: DashboardViewModel?
     @Environment(HealthStoreManager.self) private var healthManager
     @Environment(AppRouter.self) private var router
     @Environment(\.modelContext) private var modelContext
@@ -20,11 +20,9 @@ struct DashboardView: View {
     @State private var isFocusActive = false
     @State private var activityData: [(String, Double)] = []
 
+    // 🔧 P1 Fix: 延迟初始化 ViewModel，等待 RepositoryContainer 配置完成
     init() {
-        // 使用全局 RepositoryContainer
-        _viewModel = State(initialValue: DashboardViewModel(
-            todoRepository: RepositoryContainer.shared.todoRepository
-        ))
+        // ViewModel 将在 onAppear 中初始化
     }
 
     var body: some View {
@@ -56,15 +54,21 @@ struct DashboardView: View {
                 }
             }
             .overlay {
-                if viewModel.showGlobalSearch {
-                    GlobalSearchView(isPresented: $viewModel.showGlobalSearch)
+                if let vm = viewModel, vm.showGlobalSearch {
+                    GlobalSearchView(isPresented: Binding(
+                        get: { vm.showGlobalSearch },
+                        set: { vm.showGlobalSearch = $0 }
+                    ))
                 }
             }
         }
-        .alert("Error", isPresented: $viewModel.isError) {
-            Button("OK") { viewModel.clearError() }
+        .alert("Error", isPresented: Binding(
+            get: { viewModel?.isError ?? false },
+            set: { _ in }
+        )) {
+            Button("OK") { viewModel?.clearError() }
         } message: {
-            Text(viewModel.errorMessage ?? "Unknown error")
+            Text(viewModel?.errorMessage ?? "Unknown error")
         }
         .sheet(isPresented: $showQuickNote) {
             QuickNoteOverlay(isPresented: $showQuickNote)
@@ -76,6 +80,12 @@ struct DashboardView: View {
             QRCodeGeneratorView()
         }
         .onAppear {
+            // 🔧 P1 Fix: 确保 ViewModel 已初始化
+            if viewModel == nil {
+                viewModel = DashboardViewModel(
+                    todoRepository: RepositoryContainer.shared.todoRepository
+                )
+            }
             seedTasksIfNeeded()
             updateActivityData()
         }
@@ -181,13 +191,17 @@ struct DashboardView: View {
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(AppTheme.secondaryText)
-                Text("\(viewModel.greeting), Creator")
+                Text("\(viewModel?.greeting ?? "Good Day"), Creator")
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundStyle(AppTheme.primaryText)
             }
             Spacer()
-            Button(action: { withAnimation { viewModel.showGlobalSearch = true } }) {
+            Button(action: { 
+                withAnimation { 
+                    viewModel?.showGlobalSearch = true 
+                } 
+            }) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(AppTheme.primaryText)
@@ -237,7 +251,11 @@ struct DashboardView: View {
             } else {
                 ForEach(tasks.prefix(5)) { task in
                     HStack(spacing: 12) {
-                        Button(action: { Task { await viewModel.toggleTask(task) } }) {
+                        Button(action: { 
+                            Task { 
+                                await viewModel?.toggleTask(task) 
+                            } 
+                        }) {
                             Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                                 .font(.title3)
                                 .foregroundStyle(task.isCompleted ? AppTheme.matcha : priorityColor(for: task.priority))
@@ -276,7 +294,11 @@ struct DashboardView: View {
                         
                         Spacer()
                         
-                        Button(action: { Task { await viewModel.deleteTask(task) } }) {
+                        Button(action: { 
+                            Task { 
+                                await viewModel?.deleteTask(task) 
+                            } 
+                        }) {
                             Image(systemName: "trash")
                                 .foregroundStyle(AppTheme.coral)
                                 .font(.caption)
@@ -381,7 +403,9 @@ struct DashboardView: View {
         let trimmedTitle = newTaskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return }
 
-        Task { await viewModel.addTask(title: trimmedTitle) }
+        Task { 
+            await viewModel?.addTask(title: trimmedTitle) 
+        }
         newTaskTitle = ""
         showAddTask = false
     }
@@ -465,7 +489,9 @@ struct DashboardView: View {
     }
     
     private func updateActivityData() {
-        activityData = viewModel.calculateActivityData(tasks: tasks, posts: posts, trades: trades)
+        if let vm = viewModel {
+            activityData = vm.calculateActivityData(tasks: tasks, posts: posts, trades: trades)
+        }
     }
 }
 

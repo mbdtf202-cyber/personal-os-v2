@@ -56,14 +56,18 @@ struct NetworkConfig {
 }
 
 class NetworkClient {
+    // 🔧 P1 Fix: 统一单例管理，共享 CircuitBreaker 状态
     static let shared = NetworkClient(config: .default)
+    static let news = NetworkClient(config: .news)
+    static let stocks = NetworkClient(config: .stocks)
+    static let github = NetworkClient(config: .github)
     
     private let session: URLSession
     private let config: NetworkConfig
     private var circuitBreaker: CircuitBreaker
     private let offlineCache: OfflineCache
     
-    init(config: NetworkConfig) {
+    private init(config: NetworkConfig) {
         self.config = config
         
         let configuration = URLSessionConfiguration.default

@@ -2,51 +2,29 @@ import SwiftUI
 import SwiftData
 
 struct SocialDashboardView: View {
-    @Environment(\.modelContext) private var modelContext
     @Query(sort: \SocialPost.date, order: .reverse) private var posts: [SocialPost]
-    @State private var showEditor = false
-    @State private var newPost = SocialPost(title: "", platform: .twitter, status: .idea, date: Date(), content: "", views: 0, likes: 0)
-    @State private var selectedPost: SocialPost?
-    @State private var selectedDate: Date?
+    @State private var viewModel: SocialDashboardViewModel?
 
+    // 🔧 P1 Fix: 使用 ViewModel 计算属性
     private var upcomingPosts: [SocialPost] {
-        let filtered = posts.filter { $0.status == .scheduled }
-        if let date = selectedDate {
-            return filtered.filter { Calendar.current.isDate($0.date, inSameDayAs: date) }.sorted { $0.date < $1.date }
-        }
-        return filtered.sorted { $0.date < $1.date }
+        guard let vm = viewModel else { return [] }
+        return vm.filterPosts(posts, by: .scheduled, date: vm.selectedDate)
     }
 
     private var drafts: [SocialPost] {
-        let filtered = posts.filter { $0.status == .draft || $0.status == .idea }
-        if let date = selectedDate {
-            return filtered.filter { Calendar.current.isDate($0.date, inSameDayAs: date) }
-        }
-        return filtered
+        guard let vm = viewModel else { return [] }
+        let ideas = vm.filterPosts(posts, by: .idea, date: vm.selectedDate)
+        let drafts = vm.filterPosts(posts, by: .draft, date: vm.selectedDate)
+        return ideas + drafts
     }
     
     private var publishedPosts: [SocialPost] {
-        let filtered = posts.filter { $0.status == .published }
-        if let date = selectedDate {
-            return filtered.filter { Calendar.current.isDate($0.date, inSameDayAs: date) }
-        }
-        return filtered.sorted { $0.date > $1.date }
+        guard let vm = viewModel else { return [] }
+        return vm.filterPosts(posts, by: .published, date: vm.selectedDate).sorted { $0.date > $1.date }
     }
     
-    private var totalViews: String {
-        let total = posts.reduce(0) { $0 + $1.views }
-        if total >= 1000 {
-            return String(format: "%.1fK", Double(total) / 1000.0)
-        }
-        return "\(total)"
-    }
-    
-    private var engagementRate: String {
-        let totalViews = posts.reduce(0) { $0 + $1.views }
-        let totalLikes = posts.reduce(0) { $0 + $1.likes }
-        guard totalViews > 0 else { return "0%" }
-        let rate = (Double(totalLikes) / Double(totalViews)) * 100
-        return String(format: "%.1f%%", rate)
+    private var stats: (totalViews: String, engagementRate: String) {
+        viewModel?.calculateStats(from: posts) ?? ("0", "0%")
     }
     
     var body: some View {
@@ -61,11 +39,14 @@ struct SocialDashboardView: View {
                         
                         // 2. Calendar
                         VStack(alignment: .leading, spacing: 8) {
-                            ContentCalendarView(posts: posts, selectedDate: $selectedDate)
+                            ContentCalendarView(posts: posts, selectedDate: Binding(
+                                get: { viewModel?.selectedDate },
+                                set: { viewModel?.selectedDate = $0 }
+                            ))
                             
-                            if selectedDate != nil {
+                            if viewModel?.selectedDate != nil {
                                 Button(action: { 
-                                    selectedDate = nil
+                                    viewModel?.selectedDate = nil
                                     HapticsManager.shared.light()
                                 }) {
                                     HStack {
@@ -91,7 +72,7 @@ struct SocialDashboardView: View {
                             ForEach(upcomingPosts) { post in
                                 PostRowView(post: post)
                                     .onTapGesture {
-                                        selectedPost = post
+                                        viewModel?.selectedPost = post
                                         HapticsManager.shared.light()
                                     }
                                     .contextMenu {
@@ -102,7 +83,7 @@ struct SocialDashboardView: View {
 
                         // 4. Drafts & Ideas
                         sectionHeader(title: "Drafts & Ideas", icon: "lightbulb.fill", color: .orange)
-                        if drafts.isEmpty && selectedDate != nil {
+                        if drafts.isEmpty && viewModel?.selectedDate != nil {
                             SocialEmptyStateView(message: "No drafts for this date.")
                         } else if drafts.isEmpty {
                             SocialEmptyStateView(message: "No drafts. Tap + to create one.")
@@ -110,7 +91,7 @@ struct SocialDashboardView: View {
                             ForEach(drafts) { post in
                                 PostRowView(post: post)
                                     .onTapGesture {
-                                        selectedPost = post
+                                        viewModel?.selectedPost = post
                                         HapticsManager.shared.light()
                                     }
                                     .contextMenu {
@@ -125,7 +106,7 @@ struct SocialDashboardView: View {
                             ForEach(publishedPosts.prefix(5)) { post in
                                 PublishedPostRow(post: post)
                                     .onTapGesture {
-                                        selectedPost = post
+                                        viewModel?.selectedPost = post
                                         HapticsManager.shared.light()
                                     }
                                     .contextMenu {
@@ -164,8 +145,8 @@ struct SocialDashboardView: View {
                     HStack {
                         Spacer()
                         Button(action: {
-                            newPost = SocialPost(title: "", platform: .twitter, status: .idea, date: Date(), content: "", views: 0, likes: 0)
-                            showEditor = true
+                            viewModel?.newPost = SocialPost(title: "", platform: .twitter, status: .idea, date: Date(), content: "", views: 0, likes: 0)
+                            viewModel?.showEditor = true
                         }) {
                             Image(systemName: "plus")
                                 .font(.system(size: 24, weight: .bold))
@@ -181,30 +162,50 @@ struct SocialDashboardView: View {
             }
             .navigationTitle("Social Command")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showEditor) {
-                MarkdownEditorView(post: $newPost, onSave: { post in
-                    savePost(post)
-                })
+            .sheet(isPresented: Binding(
+                get: { viewModel?.showEditor ?? false },
+                set: { viewModel?.showEditor = $0 }
+            )) {
+                if let vm = viewModel {
+                    MarkdownEditorView(post: Binding(
+                        get: { vm.newPost },
+                        set: { vm.newPost = $0 }
+                    ), onSave: { post in
+                        Task { await vm.savePost(post) }
+                    })
+                }
             }
-            .sheet(item: $selectedPost) { post in
-                EditPostWrapper(post: post)
+            .sheet(item: Binding(
+                get: { viewModel?.selectedPost },
+                set: { viewModel?.selectedPost = $0 }
+            )) { post in
+                EditPostWrapper(post: post, viewModel: viewModel)
             }
         }
-        .onAppear(perform: seedPostsIfNeeded)
+        .onAppear {
+            if viewModel == nil {
+                viewModel = SocialDashboardViewModel(
+                    socialPostRepository: RepositoryContainer.shared.socialPostRepository
+                )
+            }
+            Task {
+                await viewModel?.seedDefaultPosts()
+            }
+        }
     }
     
     // MARK: - Components
     
     private var statsHeader: some View {
         HStack(spacing: 16) {
-            StatBox(title: "Total Views", value: totalViews, icon: "eye.fill", color: AppTheme.almond)
-            StatBox(title: "Engagement", value: engagementRate, icon: "chart.line.uptrend.xyaxis", color: AppTheme.matcha)
+            StatBox(title: "Total Views", value: stats.totalViews, icon: "eye.fill", color: AppTheme.almond)
+            StatBox(title: "Engagement", value: stats.engagementRate, icon: "chart.line.uptrend.xyaxis", color: AppTheme.matcha)
         }
     }
     
     @ViewBuilder
     private func statusContextMenu(for post: SocialPost) -> some View {
-        Button(action: { selectedPost = post }) {
+        Button(action: { viewModel?.selectedPost = post }) {
             Label("Edit", systemImage: "pencil")
         }
         
@@ -214,13 +215,7 @@ struct SocialDashboardView: View {
             ForEach([PostStatus.idea, .draft, .scheduled, .published], id: \.self) { status in
                 Button(action: {
                     Task {
-                        post.status = status
-                        do {
-                            try await RepositoryContainer.shared.socialPostRepository.save(post)
-                            HapticsManager.shared.light()
-                        } catch {
-                            ErrorHandler.shared.handle(error, context: "SocialDashboardView.changeStatus")
-                        }
+                        await viewModel?.changePostStatus(post, to: status)
                     }
                 }) {
                     Label(status.rawValue, systemImage: status == post.status ? "checkmark" : "circle")
@@ -232,12 +227,7 @@ struct SocialDashboardView: View {
         
         Button(role: .destructive, action: {
             Task {
-                do {
-                    try await RepositoryContainer.shared.socialPostRepository.delete(post)
-                    HapticsManager.shared.light()
-                } catch {
-                    ErrorHandler.shared.handle(error, context: "SocialDashboardView.deletePost")
-                }
+                await viewModel?.deletePost(post)
             }
         }) {
             Label("Delete", systemImage: "trash")
@@ -255,24 +245,7 @@ struct SocialDashboardView: View {
         }
     }
 
-    private func savePost(_ post: SocialPost) {
-        Task {
-            do {
-                try await RepositoryContainer.shared.socialPostRepository.save(post)
-            } catch {
-                ErrorHandler.shared.handle(error, context: "SocialDashboardView.savePost")
-            }
-        }
-    }
 
-    private func seedPostsIfNeeded() {
-        guard posts.isEmpty else { return }
-        Task {
-            for post in SocialPost.defaultPosts {
-                try? await RepositoryContainer.shared.socialPostRepository.save(post)
-            }
-        }
-    }
 }
 
 struct StatBox: View {
@@ -449,7 +422,7 @@ struct SocialEmptyStateView: View {
 struct EditPostWrapper: View {
     @Bindable var post: SocialPost
     @Environment(\.dismiss) var dismiss
-    @Environment(\.modelContext) private var modelContext
+    let viewModel: SocialDashboardViewModel?
     
     var body: some View {
         NavigationStack {
@@ -462,7 +435,7 @@ struct EditPostWrapper: View {
                     post.status = newValue.status
                     post.date = newValue.date
                     Task {
-                        try? await RepositoryContainer.shared.socialPostRepository.save(post)
+                        await viewModel?.savePost(post)
                     }
                 }
             ), onSave: { _ in

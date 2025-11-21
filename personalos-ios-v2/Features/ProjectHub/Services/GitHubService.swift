@@ -32,7 +32,8 @@ class GitHubService: GitHubServiceProtocol {
     
     private let networkClient: NetworkClient
     
-    init(networkClient: NetworkClient = NetworkClient(config: .github)) {
+    // 🔧 P1 Fix: 使用专用的 github 配置单例
+    init(networkClient: NetworkClient = NetworkClient.github) {
         self.networkClient = networkClient
     }
     

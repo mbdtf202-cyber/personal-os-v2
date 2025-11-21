@@ -18,7 +18,8 @@ class StockPriceService: StockServiceProtocol {
     private let networkClient: NetworkClient
     private let apiKey: String
     
-    init(networkClient: NetworkClient = NetworkClient(config: .stocks)) {
+    // 🔧 P1 Fix: 使用专用的 stocks 配置单例
+    init(networkClient: NetworkClient = NetworkClient.stocks) {
         self.networkClient = networkClient
         self.apiKey = AppConfig.API.stockAPIKey
     }

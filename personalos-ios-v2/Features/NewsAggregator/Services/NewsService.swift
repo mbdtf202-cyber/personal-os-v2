@@ -37,7 +37,8 @@ class NewsService: NewsServiceProtocol {
         APIConfig.newsAPIKey
     }
     
-    init(networkClient: NetworkClient = NetworkClient.shared) {
+    // 🔧 P1 Fix: 使用专用的 news 配置单例
+    init(networkClient: NetworkClient = NetworkClient.news) {
         self.networkClient = networkClient
     }
     
