@@ -7,6 +7,13 @@ struct AppConfig {
     static let version = "1.0.0"
     static let buildNumber = "1"
     
+    // MARK: - Constants
+    struct Keys {
+        static let newsAPIKey = "news_api"
+        static let githubToken = "github_token"
+        static let stockAPIKey = "stock_api"
+    }
+    
     // MARK: - API Configuration
     struct API {
         static let baseURL = "https://api.personalos.com"
@@ -14,11 +21,21 @@ struct AppConfig {
         static let timeout: TimeInterval = 30
         static let retryCount = 3
         
-        // Service-specific endpoints
-        static let newsAPIKey = ProcessInfo.processInfo.environment["NEWS_API_KEY"] ?? ""
-        static let githubToken = ProcessInfo.processInfo.environment["GITHUB_TOKEN"] ?? ""
-        static let stockAPIKey = ProcessInfo.processInfo.environment["STOCK_API_KEY"] ?? ""
-    }
+        // Service-specific endpoints - 从 Keychain 读取
+        static var newsAPIKey: String {
+            KeychainManager.shared.getAPIKey(for: Keys.newsAPIKey) ?? 
+            ProcessInfo.processInfo.environment["NEWS_API_KEY"] ?? ""
+        }
+        
+        static var githubToken: String {
+            KeychainManager.shared.getAPIKey(for: Keys.githubToken) ?? 
+            ProcessInfo.processInfo.environment["GITHUB_TOKEN"] ?? ""
+        }
+        
+        static var stockAPIKey: String {
+            KeychainManager.shared.getAPIKey(for: Keys.stockAPIKey) ?? 
+            ProcessInfo.processInfo.environment["STOCK_API_KEY"] ?? ""
+        }
     
     // MARK: - Feature Flags
     struct Features {

@@ -23,14 +23,8 @@ class HealthStoreManager {
     }
 
     init() {
-        Task {
-            do {
-                try await healthKitService.requestAuthorization()
-                await syncHealthData()
-            } catch {
-                print("Failed to request HealthKit authorization: \(error)")
-            }
-        }
+        // 构造函数保持纯净，不执行副作用
+        // 数据加载由显式调用触发
     }
     
     func requestHealthKitAuthorization() async {

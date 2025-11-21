@@ -2,14 +2,16 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
-    @AppStorage("stockAPIKey") private var stockAPIKey = ""
-    @AppStorage("newsAPIKey") private var newsAPIKey = ""
+    @State private var stockAPIKey = ""
+    @State private var newsAPIKey = ""
     @AppStorage("selectedTheme") private var selectedTheme: String = ThemeStyle.glass.rawValue
     @AppStorage("enableHaptics") private var enableHaptics = true
     @AppStorage("enableNotifications") private var enableNotifications = true
     @State private var showSaveConfirmation = false
     @State private var showClearDataAlert = false
     @Environment(\.modelContext) private var modelContext
+    
+    private let keychain = KeychainManager.shared
     
     var body: some View {
         NavigationStack {
@@ -163,12 +165,22 @@ struct SettingsView: View {
             } message: {
                 Text("This will permanently delete all your data. This action cannot be undone.")
             }
+            .onAppear {
+                loadAPIKeys()
+            }
         }
     }
     
+    private func loadAPIKeys() {
+        stockAPIKey = keychain.getAPIKey(for: AppConfig.Keys.stockAPIKey) ?? ""
+        newsAPIKey = keychain.getAPIKey(for: AppConfig.Keys.newsAPIKey) ?? ""
+    }
+    
     private func saveAPIKeys() {
-        // Keys are automatically saved via @AppStorage
-        // Update APIConfig to use these values
+        // 保存到 Keychain（安全存储）
+        keychain.saveAPIKey(stockAPIKey, for: AppConfig.Keys.stockAPIKey)
+        keychain.saveAPIKey(newsAPIKey, for: AppConfig.Keys.newsAPIKey)
+        
         withAnimation {
             showSaveConfirmation = true
         }
@@ -180,7 +192,8 @@ struct SettingsView: View {
             }
         }
         
-        Logger.log("API keys updated", category: Logger.general)
+        HapticsManager.shared.success()
+        Logger.log("API keys saved securely to Keychain", category: Logger.general)
     }
     
     private func clearAllData() {
