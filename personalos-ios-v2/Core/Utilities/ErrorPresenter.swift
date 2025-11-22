@@ -25,7 +25,7 @@ enum ErrorSeverity {
     }
 }
 
-struct AppError: Identifiable {
+struct PresentableError: Identifiable {
     let id = UUID()
     let title: String
     let message: String
@@ -47,7 +47,7 @@ struct AppError: Identifiable {
         self.retryAction = retryAction
     }
     
-    static func from(_ error: Error, context: String? = nil) -> AppError {
+    static func from(_ error: Error, context: String? = nil) -> PresentableError {
         let message: String
         let severity: ErrorSeverity
         let isRecoverable: Bool
@@ -86,7 +86,7 @@ struct AppError: Identifiable {
         
         let title = context ?? "Error"
         
-        return AppError(
+        return PresentableError(
             title: title,
             message: message,
             severity: severity,
@@ -100,12 +100,12 @@ struct AppError: Identifiable {
 class ErrorPresenter {
     static let shared = ErrorPresenter()
     
-    var currentError: AppError?
+    var currentError: PresentableError?
     var toastMessage: String?
     
     private init() {}
     
-    func present(_ error: AppError) {
+    func present(_ error: PresentableError) {
         if error.severity == .critical {
             currentError = error
         } else {
@@ -114,7 +114,7 @@ class ErrorPresenter {
     }
     
     func present(_ error: Error, context: String? = nil) {
-        let appError = AppError.from(error, context: context)
+        let appError = PresentableError.from(error, context: context)
         present(appError)
     }
     
@@ -150,7 +150,7 @@ struct ToastView: View {
 
 // MARK: - Error Alert View
 struct ErrorAlertView: View {
-    let error: AppError
+    let error: PresentableError
     let onDismiss: () -> Void
     let onRetry: (() async -> Void)?
     

@@ -18,7 +18,7 @@ struct ModulesPreviewGrid: View {
                     icon: "chart.line.uptrend.xyaxis",
                     color: AppTheme.almond,
                     mainText: trades.first.map { "\($0.symbol)" } ?? "No trades",
-                    subText: trades.first.map { "$\(NSDecimalNumber(decimal: $0.price).doubleValue.formatted(.number.precision(.fractionLength(2))))" } ?? "Start investing"
+                    subText: trades.first.map { "$\(String(format: "%.2f", $0.price))" } ?? "Start investing"
                 )
                 .onTapGesture {
                     router.navigate(to: .wealth)

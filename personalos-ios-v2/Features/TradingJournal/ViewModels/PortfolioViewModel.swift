@@ -4,9 +4,9 @@ import Observation
 @Observable
 @MainActor
 class PortfolioViewModel {
-    var totalBalance: Double = 0.0
-    var dayPnL: Double = 0.0
-    var dayPnLPercent: Double = 0.0
+    var totalBalance: Decimal = 0
+    var dayPnL: Decimal = 0
+    var dayPnLPercent: Decimal = 0
     var assets: [AssetItem] = []
     var equityCurve: [EquityPoint] = []
     
@@ -15,7 +15,10 @@ class PortfolioViewModel {
 
     func recalculatePortfolio(from trades: [TradeRecord]) {
         let result = calculator.calculate(with: trades) { symbol, fallback in
-            priceService?.quotes[symbol]?.price ?? fallback
+            if let price = priceService?.quotes[symbol]?.price {
+                return Decimal(price)
+            }
+            return Decimal(fallback)
         }
 
         assets = result.assets
@@ -37,15 +40,4 @@ class PortfolioViewModel {
     }
 }
 
-struct EquityPoint: Identifiable {
-    let id = UUID()
-    var day: String
-    var value: Double
-}
 
-struct HoldingSnapshot {
-    var quantity: Double = 0
-    var totalCost: Double = 0
-    var latestPrice: Double = 0
-    var assetType: AssetType
-}

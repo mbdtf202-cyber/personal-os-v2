@@ -80,8 +80,8 @@ struct NewsCard: View {
                     .foregroundStyle(AppTheme.matcha)
                 }
                 
-                if let url = article.url {
-                    Link(destination: URL(string: url)!) {
+                if !article.url.isEmpty, let articleURL = URL(string: article.url) {
+                    Link(destination: articleURL) {
                         HStack(spacing: 4) {
                             Image(systemName: "safari")
                             Text("Read")
@@ -93,7 +93,7 @@ struct NewsCard: View {
             }
         }
         .padding()
-        .background(Color.white)
+        .background(AppTheme.secondaryBackground)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
     }

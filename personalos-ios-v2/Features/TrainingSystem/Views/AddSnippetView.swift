@@ -4,6 +4,7 @@ import SwiftData
 struct AddSnippetView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appDependency) private var appDependency
     
     @State private var title = ""
     @State private var language = "Swift"

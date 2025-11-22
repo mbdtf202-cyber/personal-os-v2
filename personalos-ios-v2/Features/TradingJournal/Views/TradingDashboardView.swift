@@ -4,7 +4,7 @@ import SwiftData
 
 struct TradingDashboardView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(StockPriceService.self) private var stockPriceService
+    @State private var stockPriceService = StockPriceService()
     
     // ✅ P0 Fix: 数据库级过滤，避免内存遍历 10,000+ 条记录
     // 使用静态计算的日期，让 SwiftData 在 SQLite 层面过滤
@@ -13,12 +13,14 @@ struct TradingDashboardView: View {
     }
     
     @Query(
-        filter: #Predicate<TradeRecord> { trade in
-            trade.date > TradingDashboardView.ninetyDaysAgo
-        },
         sort: \TradeRecord.date,
         order: .reverse
-    ) private var recentTrades: [TradeRecord]
+    ) private var allTrades: [TradeRecord]
+    
+    private var recentTrades: [TradeRecord] {
+        let cutoffDate = Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? Date()
+        return allTrades.filter { $0.date > cutoffDate }
+    }
     @State private var viewModel = PortfolioViewModel()
     @State private var showLogForm = false
     @State private var showPriceError = false
@@ -36,9 +38,9 @@ struct TradingDashboardView: View {
                         }
                         
                         BalanceCard(
-                            totalBalance: viewModel.totalBalance,
-                            dayPnL: viewModel.dayPnL,
-                            dayPnLPercent: viewModel.dayPnLPercent
+                            totalBalance: Double(truncating: viewModel.totalBalance as NSNumber),
+                            dayPnL: Double(truncating: viewModel.dayPnL as NSNumber),
+                            dayPnLPercent: Double(truncating: viewModel.dayPnLPercent as NSNumber)
                         )
                         TradingStatsGrid(trades: recentTrades)
                         EquityChart(equityCurve: viewModel.equityCurve)
@@ -109,14 +111,14 @@ struct TradingDashboardView: View {
             HStack(spacing: 16) {
                 MetricBox(
                     title: "Total P&L",
-                    value: String(format: "$%.2f", viewModel.dayPnL),
-                    subtitle: String(format: "%.2f%%", viewModel.dayPnLPercent),
+                    value: String(format: "$%.2f", Double(truncating: viewModel.dayPnL as NSNumber)),
+                    subtitle: String(format: "%.2f%%", Double(truncating: viewModel.dayPnLPercent as NSNumber)),
                     isPositive: viewModel.dayPnL >= 0
                 )
                 
                 MetricBox(
                     title: "Portfolio Value",
-                    value: String(format: "$%.2f", viewModel.totalBalance),
+                    value: String(format: "$%.2f", Double(truncating: viewModel.totalBalance as NSNumber)),
                     subtitle: "\(viewModel.assets.count) assets",
                     isPositive: true
                 )

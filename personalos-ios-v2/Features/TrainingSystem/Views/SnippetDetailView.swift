@@ -5,6 +5,7 @@ struct SnippetDetailView: View {
     @Bindable var snippet: CodeSnippet
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.appDependency) private var appDependency
     @State private var showDeleteAlert = false
     
     var body: some View {

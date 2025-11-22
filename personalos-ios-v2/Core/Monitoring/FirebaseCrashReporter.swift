@@ -26,11 +26,9 @@ class FirebaseCrashReporter {
         // 回退：本地日志
         Logger.log("Crash logged locally (Firebase not configured)", category: Logger.general)
         AnalyticsLogger.shared.log(.error(
-            message: "Crash logged",
-            error: NSError(domain: "CrashReporter", code: -1, userInfo: [
-                "exception": crash.exception,
-                "reason": crash.reason
-            ])
+            domain: "CrashReporter",
+            code: -1,
+            description: "Crash: \(crash.exception) - \(crash.reason)"
         ))
     }
     

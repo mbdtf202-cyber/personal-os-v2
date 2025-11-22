@@ -20,7 +20,7 @@ final class ErrorPresenterTests: XCTestCase {
     }
     
     func testDismiss() {
-        let error = AppError(title: "Test", message: "Test error", severity: .error)
+        let error = PresentableError(title: "Test", message: "Test error", severity: .error)
         presenter.currentError = error
         
         presenter.dismiss()
@@ -30,7 +30,7 @@ final class ErrorPresenterTests: XCTestCase {
     
     func testAppErrorFromNetworkError() {
         let error = NetworkError.timeout
-        let appError = AppError.from(error, context: "Test")
+        let appError = PresentableError.from(error, context: "Test")
         
         XCTAssertEqual(appError.title, "Test")
         XCTAssertTrue(appError.isRecoverable)

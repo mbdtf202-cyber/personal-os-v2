@@ -1,5 +1,6 @@
 import Foundation
 import OSLog
+import UIKit
 
 @MainActor
 class CrashReporter {
@@ -105,18 +106,11 @@ class CrashReporter {
         // 清除标记
         UserDefaults.standard.removeObject(forKey: "has_pending_crash_report")
         
-        // 生成邮件内容
-        let emailBody = generateCrashEmailBody(latestCrash)
+        // 生成邮件内容并记录
+        _ = generateCrashEmailBody(latestCrash)
         
-        // 通过 AnalyticsLogger 记录
-        AnalyticsLogger.shared.log(.error(
-            message: "Crash Report Available",
-            error: NSError(domain: "CrashReporter", code: -1, userInfo: [
-                "exception": latestCrash.exception,
-                "reason": latestCrash.reason
-            ])
-        ))
-        
+        // 记录崩溃报告
+        Logger.error("Crash Report Available - Exception: \(latestCrash.exception), Reason: \(latestCrash.reason)", category: Logger.general)
         Logger.log("Crash report ready for user sharing", category: Logger.general)
     }
     

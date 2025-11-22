@@ -4,22 +4,32 @@ import Observation
 @Observable
 @MainActor
 class AppRouter {
-    enum Tab {
-        case dashboard  // 🏠 总览 + 健康
-        case growth     // 🚀 成长 (Project + Knowledge + Tools)
-        case social     // 💬 社媒
-        case wealth     // 💰 财富 (Trading)
-        case news       // 📰 资讯
-    }
-    
     var selectedTab: Tab = .dashboard
-    var showGlobalSearch: Bool = false
+    var navigationPath = NavigationPath()
+    
+    enum Tab: Hashable {
+        case dashboard
+        case growth
+        case social
+        case wealth
+        case news
+    }
     
     func navigate(to tab: Tab) {
         selectedTab = tab
     }
     
-    func toggleGlobalSearch() {
-        showGlobalSearch.toggle()
+    func push<T: Hashable>(_ value: T) {
+        navigationPath.append(value)
+    }
+    
+    func pop() {
+        if !navigationPath.isEmpty {
+            navigationPath.removeLast()
+        }
+    }
+    
+    func popToRoot() {
+        navigationPath = NavigationPath()
     }
 }

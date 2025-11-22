@@ -88,7 +88,9 @@ struct DashboardView: View {
                 )
             }
             await viewModel?.loadRecentData()
-            await updateActivityData()
+            if let vm = viewModel {
+                activityData = await vm.calculateActivityData()
+            }
         }
         .sheet(isPresented: $showQRScanner) {
             QRCodeGeneratorView()

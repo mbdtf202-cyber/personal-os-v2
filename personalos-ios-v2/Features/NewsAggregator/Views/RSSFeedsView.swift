@@ -4,6 +4,7 @@ import SwiftData
 struct RSSFeedsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appDependency) private var appDependency
     @Query(sort: \RSSFeed.name) private var feeds: [RSSFeed]
     @State private var showAddFeed = false
     @State private var newFeedName = ""

@@ -6,21 +6,19 @@ final class AssetItem {
     var id: UUID
     var symbol: String
     var name: String
-    @Attribute(.transformable(by: DecimalTransformer.self))
-    var quantity: Decimal
-    @Attribute(.transformable(by: DecimalTransformer.self))
-    var currentPrice: Decimal
-    @Attribute(.transformable(by: DecimalTransformer.self))
-    var avgCost: Decimal
+    // ✅ 使用 Double 而不是 Decimal，SwiftData 原生支持
+    var quantity: Double
+    var currentPrice: Double
+    var avgCost: Double
     var type: AssetType
 
     init(
         id: UUID = UUID(),
         symbol: String,
         name: String,
-        quantity: Decimal,
-        currentPrice: Decimal,
-        avgCost: Decimal,
+        quantity: Double,
+        currentPrice: Double,
+        avgCost: Double,
         type: AssetType
     ) {
         self.id = id
@@ -32,17 +30,30 @@ final class AssetItem {
         self.type = type
     }
     
-    var marketValue: Decimal {
+    var marketValue: Double {
         quantity * currentPrice
     }
     
-    var pnl: Decimal {
+    var pnl: Double {
         (currentPrice - avgCost) * quantity
     }
     
-    var pnlPercent: Decimal {
+    var pnlPercent: Double {
         guard avgCost != 0 else { return 0 }
         return (currentPrice - avgCost) / avgCost
+    }
+    
+    // 提供 Decimal 版本用于精确计算
+    var quantityDecimal: Decimal {
+        Decimal(quantity)
+    }
+    
+    var currentPriceDecimal: Decimal {
+        Decimal(currentPrice)
+    }
+    
+    var avgCostDecimal: Decimal {
+        Decimal(avgCost)
     }
 }
 

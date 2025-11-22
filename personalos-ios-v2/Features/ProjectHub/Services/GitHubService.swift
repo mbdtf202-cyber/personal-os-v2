@@ -1,6 +1,13 @@
 import Foundation
 import Combine
 
+protocol GitHubServiceProtocol {
+    var repos: [GitHubRepo] { get }
+    var isLoading: Bool { get }
+    var error: String? { get }
+    func fetchUserRepos(username: String) async
+}
+
 struct GitHubRepo: Codable, Identifiable {
     let id: Int
     let name: String

@@ -4,6 +4,7 @@ import SwiftData
 struct NewsFeedView: View {
     @Environment(NewsService.self) private var newsService
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.appDependency) private var appDependency
     @Query(sort: \NewsItem.date, order: .reverse) private var bookmarkedNews: [NewsItem]
     
     @State private var selectedCategory = "All"
@@ -58,6 +59,25 @@ struct NewsFeedView: View {
         }
     }
     
+    // Computed property for empty state message
+    private var emptyStateMessage: String {
+        if !searchQuery.isEmpty {
+            return "No results found for '\(searchQuery)'"
+        }
+        if APIConfig.hasValidNewsAPIKey {
+            return "No news available"
+        }
+        return "Configure News API key in Settings"
+    }
+    
+    // Computed property for retry action
+    private var retryAction: (() async -> Void)? {
+        if searchQuery.isEmpty && APIConfig.hasValidNewsAPIKey {
+            return refreshNews
+        }
+        return nil
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -66,32 +86,7 @@ struct NewsFeedView: View {
                 VStack(spacing: 0) {
                     // Search Bar (when active)
                     if showSearch {
-                        HStack(spacing: 12) {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundStyle(AppTheme.secondaryText)
-                            
-                            TextField("Search news...", text: $searchQuery)
-                                .textFieldStyle(.plain)
-                            
-                            if !searchQuery.isEmpty {
-                                Button(action: { searchQuery = "" }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(AppTheme.tertiaryText)
-                                }
-                            }
-                            
-                            Button("Cancel") {
-                                showSearch = false
-                                searchQuery = ""
-                            }
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.mistBlue)
-                        }
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
+                        searchBar
                     }
                     
                     // Category Filter (using NewsHeader component)
@@ -115,16 +110,29 @@ struct NewsFeedView: View {
                             .padding(.top, 60)
                         } else if filteredNews.isEmpty {
                             NewsEmptyState(
-                                message: searchQuery.isEmpty ? 
-                                    (APIConfig.hasValidNewsAPIKey ? "No news available" : "Configure News API key in Settings") :
-                                    "No results found for '\(searchQuery)'",
-                                onRetry: searchQuery.isEmpty && APIConfig.hasValidNewsAPIKey ? refreshNews : nil
+                                message: emptyStateMessage,
+                                onRetry: retryAction
                             )
                         } else {
                             LazyVStack(spacing: 16) {
                                 // Error Banner
                                 if let error = newsService.error {
-                                    ErrorBanner(error: error, onRetry: refreshNews)
+                                    HStack {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundStyle(AppTheme.coral)
+                                        Text(error)
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.secondaryText)
+                                        Spacer()
+                                        Button("Retry") {
+                                            Task { await refreshNews() }
+                                        }
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.mistBlue)
+                                    }
+                                    .padding()
+                                    .background(AppTheme.coral.opacity(0.1))
+                                    .cornerRadius(12)
                                 }
                                 
                                 ForEach(filteredNews) { item in
@@ -154,39 +162,7 @@ struct NewsFeedView: View {
             }
             .navigationTitle(L.News.title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Menu {
-                        Button(action: { showRSSFeeds = true }) {
-                            Label("RSS Feeds", systemImage: "antenna.radiowaves.left.and.right")
-                        }
-                        
-                        Button(action: { showBookmarks = true }) {
-                            Label("Bookmarks (\(bookmarkedNews.count))", systemImage: "bookmark.fill")
-                        }
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                            .font(.system(size: 20))
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 16) {
-                        Button(action: { showSearch.toggle() }) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 18))
-                        }
-                        
-                        Button {
-                            Task { await refreshNews() }
-                        } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 18))
-                        }
-                        .disabled(newsService.isLoading)
-                    }
-                }
-            }
+            .toolbar(content: toolbarContent)
             .sheet(isPresented: $showRSSFeeds) {
                 RSSFeedsView(onLoadFeeds: { feeds in
                     Task {
@@ -210,11 +186,7 @@ struct NewsFeedView: View {
                 }
             }
             .onChange(of: selectedCategory) { _, _ in
-                Task {
-                    if APIConfig.hasValidNewsAPIKey {
-                        await refreshNews()
-                    }
-                }
+                handleCategoryChange()
             }
             .fullScreenCover(item: $selectedArticleURL) { identifiableURL in
                 SafariView(url: identifiableURL.url)
@@ -237,6 +209,14 @@ struct NewsFeedView: View {
                     date: Date(),
                     url: URL(string: article.url)
                 )
+            }
+        }
+    }
+    
+    private func handleCategoryChange() {
+        Task {
+            if APIConfig.hasValidNewsAPIKey {
+                await refreshNews()
             }
         }
     }
@@ -322,18 +302,78 @@ struct NewsFeedView: View {
     }
     
     private func convertToNewsArticle(_ item: NewsItem) -> NewsArticle {
-        NewsArticle(
-            source: NewsArticle.Source(id: nil, name: item.source),
-            author: nil,
+        let dateFormatter = ISO8601DateFormatter()
+        return NewsArticle(
             title: item.title,
             description: item.summary,
             url: item.url?.absoluteString ?? "",
             urlToImage: item.imageURL,
-            publishedAt: item.date,
-            content: nil
+            publishedAt: dateFormatter.string(from: item.date),
+            source: NewsArticle.NewsSource(name: item.source)
         )
     }
     
+    @ToolbarContentBuilder
+    private func toolbarContent() -> some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarLeading) {
+            Menu {
+                Button(action: { showRSSFeeds = true }) {
+                    Label("RSS Feeds", systemImage: "antenna.radiowaves.left.and.right")
+                }
+                
+                Button(action: { showBookmarks = true }) {
+                    Label("Bookmarks (\(bookmarkedNews.count))", systemImage: "bookmark.fill")
+                }
+            } label: {
+                Image(systemName: "line.3.horizontal.decrease.circle")
+                    .font(.system(size: 20))
+            }
+        }
+        
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            Button(action: { showSearch.toggle() }) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 18))
+            }
+            
+            Button {
+                Task { await refreshNews() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 18))
+            }
+            .disabled(newsService.isLoading)
+        }
+    }
+    
+    private var searchBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(AppTheme.secondaryText)
+            
+            TextField("Search news...", text: $searchQuery)
+                .textFieldStyle(.plain)
+            
+            if !searchQuery.isEmpty {
+                Button(action: { searchQuery = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(AppTheme.tertiaryText)
+                }
+            }
+            
+            Button("Cancel") {
+                showSearch = false
+                searchQuery = ""
+            }
+            .font(.subheadline)
+            .foregroundStyle(AppTheme.mistBlue)
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+    }
 
 }
 

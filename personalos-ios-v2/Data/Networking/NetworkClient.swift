@@ -231,6 +231,12 @@ class CircuitBreaker {
     }
 }
 
+// MARK: - Cache Metadata (must be outside class for Sendable)
+struct CacheMetadata: Codable, Sendable {
+    let data: Data
+    let expirationDate: Date
+}
+
 // MARK: - Offline Cache (Disk-based)
 class OfflineCache {
     private let memoryCache = NSCache<NSString, CacheEntry>()
@@ -284,13 +290,15 @@ class OfflineCache {
         memoryCache.setObject(entry, forKey: key as NSString)
         
         // 2. 异步写入磁盘
-        Task.detached(priority: .utility) { [weak self] in
-            guard let self = self else { return }
-            
+        let cacheDir = self.cacheDirectory
+        let cacheKey = key.sha256Hash
+        Task.detached(priority: .utility) {
             let metadata = CacheMetadata(data: data, expirationDate: expirationDate)
-            guard let metadataData = try? JSONEncoder().encode(metadata) else { return }
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            guard let metadataData = try? encoder.encode(metadata) else { return }
             
-            let fileURL = self.cacheDirectory.appendingPathComponent(key.sha256Hash)
+            let fileURL = cacheDir.appendingPathComponent(cacheKey)
             try? metadataData.write(to: fileURL, options: .atomic)
         }
     }
@@ -305,13 +313,14 @@ class OfflineCache {
         }
     }
     
-    struct CacheMetadata: Codable {
+    private struct CacheMetadata: Codable, Sendable {
         let data: Data
         let expirationDate: Date
     }
 }
 
-    // MARK: - Convenience Methods
+// MARK: - NetworkClient Convenience Methods
+extension NetworkClient {
     func request<T: Codable>(url: URL) async throws -> T {
         try await request(url.absoluteString)
     }

@@ -6,6 +6,7 @@ import SwiftData
 struct ProjectListView: View {
     @Environment(GitHubService.self) private var githubService
     @Environment(\.appDependency) private var appDependency
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \ProjectItem.name) private var projects: [ProjectItem]
     @State private var showGitHubSync = false
     @State private var githubUsername = ""
@@ -173,10 +174,14 @@ struct GitHubSyncSheet: View {
         // Save GitHub username for later use
         UserDefaults.standard.set(username, forKey: "github_username")
         
-        Task {
+        Task { @MainActor in
             do {
                 // Clear existing projects
-                try await appDependency?.repositories.project.deleteAll()
+                let descriptor = FetchDescriptor<ProjectItem>()
+                let existingProjects = try modelContext.fetch(descriptor)
+                for project in existingProjects {
+                    modelContext.delete(project)
+                }
                 
                 // Insert new projects from GitHub
                 for repo in githubService.repos {
@@ -188,9 +193,10 @@ struct GitHubSyncSheet: View {
                         status: .active,
                         progress: 0.5
                     )
-                    try await appDependency?.repositories.project.save(project)
+                    modelContext.insert(project)
                 }
                 
+                try modelContext.save()
                 Logger.log("Synced \(githubService.repos.count) projects from GitHub", category: Logger.general)
             } catch {
                 ErrorHandler.shared.handle(error, context: "GitHubSyncSheet.syncProjects")

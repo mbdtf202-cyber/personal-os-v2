@@ -56,9 +56,9 @@ final class DataBootstrapper {
             }
             
             let defaultHabits = [
-                HabitItem(title: "Morning Exercise", icon: "figure.walk"),
-                HabitItem(title: "Read 30 Minutes", icon: "book.fill"),
-                HabitItem(title: "Meditation", icon: "brain.head.profile")
+                HabitItem(title: "Morning Exercise", icon: "figure.walk", isCompleted: false, streak: 0),
+                HabitItem(title: "Read 30 Minutes", icon: "book.fill", isCompleted: false, streak: 0),
+                HabitItem(title: "Meditation", icon: "brain.head.profile", isCompleted: false, streak: 0)
             ]
             
             for habit in defaultHabits {

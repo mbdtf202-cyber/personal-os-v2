@@ -154,29 +154,29 @@ class DashboardViewModel: BaseViewModel {
             let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
             
             // 使用数据库层面的过滤，而不是内存过滤
-            let completedTasks = try? modelContext.fetch(
+            let completedTasks = (try? modelContext.fetch(
                 FetchDescriptor<TodoItem>(
                     predicate: #Predicate { task in
                         task.isCompleted && task.createdAt >= dayStart && task.createdAt < dayEnd
                     }
                 )
-            ).count ?? 0
+            ).count) ?? 0
             
-            let postsCount = try? modelContext.fetch(
+            let postsCount = (try? modelContext.fetch(
                 FetchDescriptor<SocialPost>(
                     predicate: #Predicate { post in
                         post.date >= dayStart && post.date < dayEnd
                     }
                 )
-            ).count ?? 0
+            ).count) ?? 0
             
-            let tradesCount = try? modelContext.fetch(
+            let tradesCount = (try? modelContext.fetch(
                 FetchDescriptor<TradeRecord>(
                     predicate: #Predicate { trade in
                         trade.date >= dayStart && trade.date < dayEnd
                     }
                 )
-            ).count ?? 0
+            ).count) ?? 0
             
             let totalActivity = Double(completedTasks + postsCount + tradesCount)
             let dayIndex = calendar.component(.weekday, from: date)

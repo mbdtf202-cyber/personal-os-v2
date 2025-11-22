@@ -4,13 +4,13 @@ import UIKit
 final class HapticsManager {
     static let shared = HapticsManager()
     
-    private let light = UIImpactFeedbackGenerator(style: .light)
-    private let medium = UIImpactFeedbackGenerator(style: .medium)
-    private let heavy = UIImpactFeedbackGenerator(style: .heavy)
-    private let soft = UIImpactFeedbackGenerator(style: .soft)
-    private let rigid = UIImpactFeedbackGenerator(style: .rigid)
-    private let selection = UISelectionFeedbackGenerator()
-    private let notification = UINotificationFeedbackGenerator()
+    private let lightGenerator = UIImpactFeedbackGenerator(style: .light)
+    private let mediumGenerator = UIImpactFeedbackGenerator(style: .medium)
+    private let heavyGenerator = UIImpactFeedbackGenerator(style: .heavy)
+    private let softGenerator = UIImpactFeedbackGenerator(style: .soft)
+    private let rigidGenerator = UIImpactFeedbackGenerator(style: .rigid)
+    private let selectionGenerator = UISelectionFeedbackGenerator()
+    private let notificationGenerator = UINotificationFeedbackGenerator()
     
     private var isEnabled = true
     
@@ -19,71 +19,71 @@ final class HapticsManager {
     }
     
     private func prepareAll() {
-        light.prepare()
-        medium.prepare()
-        heavy.prepare()
-        soft.prepare()
-        rigid.prepare()
-        selection.prepare()
-        notification.prepare()
+        lightGenerator.prepare()
+        mediumGenerator.prepare()
+        heavyGenerator.prepare()
+        softGenerator.prepare()
+        rigidGenerator.prepare()
+        selectionGenerator.prepare()
+        notificationGenerator.prepare()
     }
     
     // MARK: - Basic Haptics
     
     func light() {
         guard isEnabled else { return }
-        light.impactOccurred()
-        light.prepare()
+        lightGenerator.impactOccurred()
+        lightGenerator.prepare()
     }
     
     func medium() {
         guard isEnabled else { return }
-        medium.impactOccurred()
-        medium.prepare()
+        mediumGenerator.impactOccurred()
+        mediumGenerator.prepare()
     }
     
     func heavy() {
         guard isEnabled else { return }
-        heavy.impactOccurred()
-        heavy.prepare()
+        heavyGenerator.impactOccurred()
+        heavyGenerator.prepare()
     }
     
     func soft() {
         guard isEnabled else { return }
-        soft.impactOccurred()
-        soft.prepare()
+        softGenerator.impactOccurred()
+        softGenerator.prepare()
     }
     
     func rigid() {
         guard isEnabled else { return }
-        rigid.impactOccurred()
-        rigid.prepare()
+        rigidGenerator.impactOccurred()
+        rigidGenerator.prepare()
     }
     
     func selection() {
         guard isEnabled else { return }
-        selection.selectionChanged()
-        selection.prepare()
+        selectionGenerator.selectionChanged()
+        selectionGenerator.prepare()
     }
     
     // MARK: - Notification Haptics
     
     func success() {
         guard isEnabled else { return }
-        notification.notificationOccurred(.success)
-        notification.prepare()
+        notificationGenerator.notificationOccurred(.success)
+        notificationGenerator.prepare()
     }
     
     func warning() {
         guard isEnabled else { return }
-        notification.notificationOccurred(.warning)
-        notification.prepare()
+        notificationGenerator.notificationOccurred(.warning)
+        notificationGenerator.prepare()
     }
     
     func error() {
         guard isEnabled else { return }
-        notification.notificationOccurred(.error)
-        notification.prepare()
+        notificationGenerator.notificationOccurred(.error)
+        notificationGenerator.prepare()
     }
     
     // MARK: - Contextual Haptics

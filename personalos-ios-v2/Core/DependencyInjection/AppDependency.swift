@@ -1,6 +1,12 @@
 import SwiftUI
 import SwiftData
 
+enum ServiceEnvironment {
+    case production
+    case mock
+    case test
+}
+
 @MainActor
 struct AppDependency {
     let modelContext: ModelContext
@@ -20,10 +26,9 @@ struct AppDependency {
     
     struct Services {
         let health: HealthServiceProtocol
-        let github: GitHubServiceProtocol
-        let news: NewsServiceProtocol
-        let stock: StockServiceProtocol
+        let news: NewsService
         let networkClient: NetworkClient
+        let github: GitHubService
     }
     
     init(modelContext: ModelContext, environment: ServiceEnvironment = .production) {
@@ -42,22 +47,23 @@ struct AppDependency {
         
         let networkClient = NetworkClient(config: .default)
         
+        let githubClient = NetworkClient(config: .github)
+        
         switch environment {
         case .production:
             self.services = Services(
                 health: HealthKitService(),
-                github: GitHubService(networkClient: NetworkClient(config: .github)),
                 news: NewsService(networkClient: NetworkClient(config: .news)),
-                stock: StockPriceService(networkClient: NetworkClient(config: .stocks)),
-                networkClient: networkClient
+                networkClient: networkClient,
+                github: GitHubService(networkClient: githubClient)
             )
         case .mock, .test:
+            // 测试环境使用真实服务，但可以配置为返回模拟数据
             self.services = Services(
-                health: MockHealthService(),
-                github: MockGitHubService(),
-                news: MockNewsService(),
-                stock: MockStockService(),
-                networkClient: networkClient
+                health: HealthKitService(),
+                news: NewsService(networkClient: networkClient),
+                networkClient: networkClient,
+                github: GitHubService(networkClient: githubClient)
             )
         }
     }

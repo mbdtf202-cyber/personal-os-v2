@@ -4,6 +4,7 @@ import SwiftData
 struct ProjectDetailView: View {
     @Bindable var project: ProjectItem
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.appDependency) private var appDependency
     @State private var showEditSheet = false
     
     var body: some View {
@@ -221,8 +222,8 @@ struct ProjectEditSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        Task {
-                            try? await appDependency?.repositories.project.save(project)
+                        Task { @MainActor in
+                            try? modelContext.save()
                             dismiss()
                         }
                     }

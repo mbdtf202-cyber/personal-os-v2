@@ -271,12 +271,11 @@ struct FocusTimerView: View {
     }
     
     private func saveFocusSession() {
-        let session = TodoItem(
+        let session = HabitItem(
             title: "Focus Session Completed",
-            category: "Productivity",
-            priority: 1
+            icon: "brain.head.profile",
+            isCompleted: true
         )
-        session.isCompleted = true
         Task {
             do {
                 try await appDependency?.repositories.habit.save(session)

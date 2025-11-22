@@ -193,9 +193,9 @@ class MigrationManager {
         try context.save()
         
         // 记录迁移统计到分析系统
-        AnalyticsLogger.shared.log(.custom(
-            event: "migration_v3_completed",
-            parameters: [
+        AnalyticsLogger.shared.log(.userAction(
+            name: "migration_v3_completed",
+            properties: [
                 "trades_total": trades.count,
                 "trades_cleaned": cleanedCount,
                 "trades_invalid": invalidCount,

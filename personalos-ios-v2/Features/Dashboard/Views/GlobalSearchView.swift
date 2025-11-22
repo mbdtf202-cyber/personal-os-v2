@@ -212,7 +212,7 @@ struct GlobalSearchView: View {
                 SearchResult(
                     type: .trade,
                     title: trade.symbol,
-                    subtitle: String(format: "%@ - $%.2f", trade.type.rawValue, trade.price),
+                    subtitle: String(format: "%@ - $%.2f", trade.type.rawValue, Double(truncating: trade.price as NSNumber)),
                     icon: "chart.line.uptrend.xyaxis",
                     color: AppTheme.matcha
                 )

@@ -4,6 +4,7 @@ import SwiftData
 struct TradeHistoryListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
+    @Environment(\.appDependency) private var appDependency
     @Query(sort: \TradeRecord.date, order: .reverse) private var allTrades: [TradeRecord]
     
     @State private var searchText = ""
@@ -39,7 +40,7 @@ struct TradeHistoryListView: View {
     }
     
     private var totalVolume: Double {
-        allTrades.reduce(0) { $0 + ($1.quantity * $1.price) }
+        allTrades.reduce(0.0) { $0 + ($1.quantity * $1.price) }
     }
     
     var body: some View {
@@ -50,8 +51,8 @@ struct TradeHistoryListView: View {
                 VStack(spacing: 0) {
                     // Stats Header
                     HStack(spacing: 16) {
-                        StatCard(title: "Total Trades", value: "\(totalTrades)", color: AppTheme.mistBlue)
-                        StatCard(title: "Volume", value: "$\(Int(totalVolume/1000))K", color: AppTheme.almond)
+                        TradeStatCard(title: "Total Trades", value: "\(totalTrades)", color: AppTheme.mistBlue)
+                        TradeStatCard(title: "Volume", value: "$\(Int(totalVolume/1000))K", color: AppTheme.almond)
                     }
                     .padding()
                     
@@ -132,7 +133,7 @@ struct TradeHistoryListView: View {
     }
 }
 
-struct StatCard: View {
+private struct TradeStatCard: View {
     let title: String
     let value: String
     let color: Color

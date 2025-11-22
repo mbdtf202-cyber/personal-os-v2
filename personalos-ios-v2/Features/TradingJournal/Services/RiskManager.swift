@@ -153,10 +153,10 @@ class RiskManager: ObservableObject {
     }
     
     func calculatePortfolioRisk(assets: [AssetItem]) -> Double {
-        let totalValue = assets.reduce(0) { $0 + $1.marketValue }
+        let totalValue = assets.reduce(0.0) { $0 + $1.marketValue }
         guard totalValue > 0 else { return 0 }
         
-        let totalRisk = assets.reduce(0) { sum, asset in
+        let totalRisk = assets.reduce(0.0) { sum, asset in
             let volatility = 0.2 // Default 20% volatility
             return sum + (asset.marketValue * volatility)
         }

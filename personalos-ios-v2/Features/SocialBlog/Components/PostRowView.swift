@@ -74,11 +74,6 @@ struct PostRowView: View {
     }
     
     private var platformColor: Color {
-        switch post.platform {
-        case .twitter: return .blue
-        case .linkedin: return .blue
-        case .medium: return .green
-        case .blog: return .purple
-        }
+        return post.platform.color
     }
 }

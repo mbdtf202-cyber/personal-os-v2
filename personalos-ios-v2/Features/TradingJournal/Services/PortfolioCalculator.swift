@@ -1,7 +1,7 @@
 import Foundation
 
 /// 纯计算引擎：根据交易记录计算持仓、资产和权益曲线
-/// ✅ 使用 Decimal 确保金融计算精度
+/// ✅ 使用 Double 以兼容 SwiftData 模型
 struct PortfolioCalculator {
     struct Result {
         var assets: [AssetItem]
@@ -12,16 +12,16 @@ struct PortfolioCalculator {
     }
 
     /// `priceLookup` 用于注入实时价格。回退到 `lastTradePrice`。
-    func calculate(with trades: [TradeRecord], priceLookup: (String, Decimal) -> Decimal) -> Result {
+    func calculate(with trades: [TradeRecord], priceLookup: (String, Double) -> Decimal) -> Result {
         let sortedTrades = trades.sorted { $0.date < $1.date }
         let holdings = computeHoldings(from: sortedTrades)
         let assets = buildAssets(from: holdings, priceLookup: priceLookup)
 
-        let totalBalance = assets.reduce(Decimal.zero) { $0 + $1.marketValue }
+        let totalBalance = Decimal(assets.reduce(0.0) { $0 + $1.marketValue })
         let equityCurve = buildEquityCurve(from: sortedTrades)
 
-        let latest = equityCurve.last?.value ?? Decimal.zero
-        let previous = equityCurve.dropLast().last?.value ?? Decimal.zero
+        let latest = equityCurve.last?.value ?? 0
+        let previous = equityCurve.dropLast().last?.value ?? 0
         let dayPnL = latest - previous
         let dayPnLPercent = previous != 0 ? (dayPnL / previous) * 100 : 0
 
@@ -59,11 +59,12 @@ struct PortfolioCalculator {
         return holdings
     }
 
-    private func buildAssets(from holdings: [String: HoldingSnapshot], priceLookup: (String, Decimal) -> Decimal) -> [AssetItem] {
-        holdings.compactMap { symbol, snapshot in
+    private func buildAssets(from holdings: [String: HoldingSnapshot], priceLookup: (String, Double) -> Decimal) -> [AssetItem] {
+        holdings.compactMap { symbol, snapshot -> AssetItem? in
             guard snapshot.quantity > 0 else { return nil }
-            let avgCost = snapshot.quantity > 0 ? snapshot.totalCost / snapshot.quantity : Decimal.zero
-            let currentPrice = priceLookup(symbol, snapshot.latestPrice)
+            let avgCost = snapshot.quantity > 0 ? snapshot.totalCost / snapshot.quantity : 0.0
+            let currentPriceDecimal = priceLookup(symbol, snapshot.latestPrice)
+            let currentPrice = Double(truncating: currentPriceDecimal as NSNumber)
 
             return AssetItem(
                 symbol: symbol,
@@ -102,12 +103,12 @@ struct PortfolioCalculator {
                 tradeIndex += 1
             }
 
-            let equity = holdings.values.reduce(Decimal.zero) { partial, snapshot in
+            let equity = holdings.values.reduce(0.0) { partial, snapshot in
                 partial + snapshot.quantity * snapshot.latestPrice
             }
 
             let symbol = calendar.shortWeekdaySymbols[calendar.component(.weekday, from: dayStart) - 1]
-            points.append(EquityPoint(day: symbol, value: equity))
+            points.append(EquityPoint(day: symbol, value: Decimal(equity)))
         }
 
         return points
@@ -137,9 +138,9 @@ struct PortfolioCalculator {
 
 struct HoldingSnapshot {
     var assetType: AssetType
-    var quantity: Decimal = 0
-    var totalCost: Decimal = 0
-    var latestPrice: Decimal = 0
+    var quantity: Double = 0
+    var totalCost: Double = 0
+    var latestPrice: Double = 0
 }
 
 struct EquityPoint: Identifiable {

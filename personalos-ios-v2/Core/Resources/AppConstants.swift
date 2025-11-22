@@ -85,9 +85,9 @@ enum AppConstants {
     }
     
     enum Animation {
-        static let quick = Animation.easeInOut(duration: 0.2)
-        static let standard = Animation.easeInOut(duration: 0.3)
-        static let slow = Animation.easeInOut(duration: 0.5)
+        static let quick: SwiftUI.Animation = .easeInOut(duration: 0.2)
+        static let standard: SwiftUI.Animation = .easeInOut(duration: 0.3)
+        static let slow: SwiftUI.Animation = .easeInOut(duration: 0.5)
     }
 }
 

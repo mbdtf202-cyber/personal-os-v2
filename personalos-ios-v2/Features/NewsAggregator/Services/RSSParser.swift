@@ -2,7 +2,7 @@ import Foundation
 
 /// RSS 解析器 - 在后台线程执行
 /// ✅ 避免阻塞主线程
-actor RSSParserActor: NSObject, XMLParserDelegate {
+class RSSParser: NSObject, XMLParserDelegate {
     private var currentElement = ""
     private var currentTitle = ""
     private var currentLink = ""
@@ -12,7 +12,7 @@ actor RSSParserActor: NSObject, XMLParserDelegate {
     
     private var articles: [(title: String, link: String, description: String, pubDate: String)] = []
     
-    func parse(data: Data) async -> [(title: String, link: String, description: String, pubDate: String)] {
+    func parse(data: Data) -> [(title: String, link: String, description: String, pubDate: String)] {
         articles = []
         let parser = XMLParser(data: data)
         parser.delegate = self

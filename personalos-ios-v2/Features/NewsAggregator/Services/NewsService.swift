@@ -1,6 +1,11 @@
 import Foundation
 import Combine
 
+protocol NewsServiceProtocol {
+    func fetchNews(category: String?) async throws -> [NewsArticle]
+    func searchNews(query: String) async throws -> [NewsArticle]
+}
+
 struct NewsArticle: Codable, Identifiable {
     let id = UUID()
     let title: String
@@ -78,7 +83,7 @@ class NewsService: NewsServiceProtocol {
         do {
             let data = try await networkClient.requestData(url: url)
             let parser = RSSParser()
-            let parsedArticles = parser.parse(data: data)
+            let parsedArticles = await parser.parse(data: data)
             
             // Convert to NewsArticle format
             articles = parsedArticles.map { article in
@@ -112,7 +117,7 @@ class NewsService: NewsServiceProtocol {
             do {
                 let data = try await networkClient.requestData(url: url)
                 let parser = RSSParser()
-                let parsedArticles = parser.parse(data: data)
+                let parsedArticles = await parser.parse(data: data)
                 
                 let feedArticles = parsedArticles.map { article in
                     NewsArticle(

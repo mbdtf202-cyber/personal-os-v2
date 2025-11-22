@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var showSaveConfirmation = false
     @State private var showClearDataAlert = false
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.appDependency) private var appDependency
     
     private let keychain = KeychainManager.shared
     

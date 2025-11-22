@@ -6,10 +6,10 @@ final class TradeRecord {
     var id: String
     var symbol: String
     var type: TradeType
-    @Attribute(.transformable(by: DecimalTransformer.self))
-    var price: Decimal
-    @Attribute(.transformable(by: DecimalTransformer.self))
-    var quantity: Decimal
+    // ✅ 使用 Double 而不是 Decimal，SwiftData 原生支持
+    // 对于金融应用，在显示时转换为 Decimal 进行精确计算
+    var price: Double
+    var quantity: Double
     var assetType: AssetType
     var emotion: TradeEmotion
     var note: String
@@ -19,8 +19,8 @@ final class TradeRecord {
         id: String = UUID().uuidString,
         symbol: String,
         type: TradeType,
-        price: Decimal,
-        quantity: Decimal,
+        price: Double,
+        quantity: Double,
         assetType: AssetType,
         emotion: TradeEmotion,
         note: String,
@@ -37,8 +37,17 @@ final class TradeRecord {
         self.date = date
     }
     
-    var totalValue: Decimal {
+    var totalValue: Double {
         price * quantity
+    }
+    
+    // 提供 Decimal 版本用于精确计算
+    var priceDecimal: Decimal {
+        Decimal(price)
+    }
+    
+    var quantityDecimal: Decimal {
+        Decimal(quantity)
     }
 }
 

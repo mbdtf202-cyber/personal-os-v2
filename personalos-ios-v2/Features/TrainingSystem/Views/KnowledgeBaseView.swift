@@ -3,6 +3,7 @@ import SwiftData
 
 struct KnowledgeBaseView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.appDependency) private var appDependency
     @Query(sort: \CodeSnippet.date, order: .reverse) private var allSnippets: [CodeSnippet]
     @State private var selectedCategory: KnowledgeCategory?
     @State private var searchText = ""

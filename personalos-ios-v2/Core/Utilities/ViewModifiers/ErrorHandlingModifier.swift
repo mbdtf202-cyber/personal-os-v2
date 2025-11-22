@@ -11,7 +11,7 @@ struct ErrorHandlingModifier: ViewModifier {
                     viewModel.clearError()
                 }
             } message: {
-                Text(viewModel.errorMessage)
+                Text(viewModel.errorMessage ?? "An error occurred")
             }
     }
 }

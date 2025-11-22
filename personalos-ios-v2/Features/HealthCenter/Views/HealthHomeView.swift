@@ -127,18 +127,15 @@ struct HealthHomeView: View {
 
     private func toggleHabit(_ habit: HabitItem) {
         habit.isCompleted.toggle()
-        Task {
-            try? await appDependency?.repositories.habit.save(habit)
-        }
+        try? modelContext.save()
     }
 
     private func seedHabitsIfNeeded() {
         guard habits.isEmpty else { return }
-        Task {
-            for habit in HabitItem.defaultHabits {
-                try? await appDependency?.repositories.habit.save(habit)
-            }
+        for habit in HabitItem.defaultHabits {
+            modelContext.insert(habit)
         }
+        try? modelContext.save()
     }
 }
 

@@ -2,7 +2,9 @@ import Foundation
 
 extension Decimal {
     var isNaN: Bool {
-        self.isNaN
+        // Decimal type doesn't have NaN values like floating point types
+        // Check if the value is valid by comparing with itself
+        return self != self
     }
     
     var isInfinite: Bool {
@@ -11,7 +13,8 @@ extension Decimal {
     }
     
     var isFinite: Bool {
-        !isNaN && !isInfinite
+        // Decimal values are always finite (no infinity)
+        !isNaN
     }
     
     var isZero: Bool {

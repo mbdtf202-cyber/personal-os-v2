@@ -111,110 +111,57 @@ final class MetricKitManager: NSObject, MXMetricManagerSubscriber {
     
     // MARK: - Logging
     
-    private func logCPUMetrics(_ metrics: MXCPUMetrics) {
-        let cumulativeTime = metrics.cumulativeCPUTime.converted(to: .seconds).value
-        os_log(.info, log: logger, "⚡️ CPU Time: %.2f seconds", cumulativeTime)
-        
-        AnalyticsLogger.shared.log(.performance(metric: "cpu_time", duration: cumulativeTime))
+    private func logCPUMetrics(_ metrics: Any) {
+        os_log(.info, log: logger, "⚡️ CPU Metrics received")
+        Logger.log("CPU metrics available", category: Logger.performance)
     }
     
-    private func logMemoryMetrics(_ metrics: MXMemoryMetrics) {
-        let peakMemory = metrics.peakMemoryUsage.converted(to: .megabytes).value
-        let avgMemory = metrics.averageSuspendedMemory?.averageMemory.converted(to: .megabytes).value ?? 0
-        
-        os_log(.info, log: logger, "💾 Memory - Peak: %.2f MB, Avg Suspended: %.2f MB", peakMemory, avgMemory)
-        
-        AnalyticsLogger.shared.log(.custom(name: "memory_usage", properties: [
-            "peak_mb": peakMemory,
-            "avg_suspended_mb": avgMemory
-        ]))
+    private func logMemoryMetrics(_ metrics: Any) {
+        os_log(.info, log: logger, "💾 Memory Metrics received")
+        Logger.log("Memory metrics available", category: Logger.performance)
     }
     
-    private func logDisplayMetrics(_ metrics: MXDisplayMetrics) {
-        let avgPixelLuminance = metrics.averagePixelLuminance.averageMeasurement.value
-        
-        os_log(.info, log: logger, "🖥️ Display - Avg Luminance: %.2f", avgPixelLuminance)
+    private func logDisplayMetrics(_ metrics: Any) {
+        os_log(.info, log: logger, "🖥️ Display Metrics received")
     }
     
-    private func logNetworkMetrics(_ metrics: MXNetworkTransferMetrics) {
-        let wifiUp = metrics.wifiUpload.converted(to: .megabytes).value
-        let wifiDown = metrics.wifiDownload.converted(to: .megabytes).value
-        let cellUp = metrics.cellularUpload.converted(to: .megabytes).value
-        let cellDown = metrics.cellularDownload.converted(to: .megabytes).value
-        
-        os_log(.info, log: logger, "📡 Network - WiFi: ↑%.2f MB ↓%.2f MB, Cellular: ↑%.2f MB ↓%.2f MB",
-               wifiUp, wifiDown, cellUp, cellDown)
-        
-        AnalyticsLogger.shared.log(.custom(name: "network_usage", properties: [
-            "wifi_upload_mb": wifiUp,
-            "wifi_download_mb": wifiDown,
-            "cellular_upload_mb": cellUp,
-            "cellular_download_mb": cellDown
-        ]))
+    private func logNetworkMetrics(_ metrics: Any) {
+        os_log(.info, log: logger, "📡 Network Metrics received")
+        Logger.log("Network metrics available", category: Logger.performance)
     }
     
-    private func logLaunchMetrics(_ metrics: MXAppLaunchMetrics) {
-        let launchTime = metrics.histogrammedTimeToFirstDraw.averageMeasurement.converted(to: .milliseconds).value
-        
-        os_log(.info, log: logger, "🚀 Launch Time: %.0f ms", launchTime)
-        
-        AnalyticsLogger.shared.log(.performance(metric: "app_launch", duration: launchTime / 1000))
-        
-        if launchTime > 2000 {
-            Logger.warning("Slow app launch detected: \(launchTime)ms", category: Logger.performance)
-        }
+    private func logLaunchMetrics(_ metrics: Any) {
+        os_log(.info, log: logger, "🚀 Launch Metrics received")
+        Logger.log("App launch metrics available", category: Logger.performance)
     }
     
     private func logCrashDiagnostic(_ diagnostic: MXCrashDiagnostic) {
-        let signal = diagnostic.signal?.rawValue ?? "Unknown"
         let terminationReason = diagnostic.terminationReason ?? "Unknown"
         
-        os_log(.fault, log: logger, "💥 Crash - Signal: %{public}@, Reason: %{public}@",
-               signal, terminationReason)
+        os_log(.fault, log: logger, "💥 Crash - Reason: %{public}@", terminationReason)
         
-        Logger.error("Crash detected: Signal=\(signal), Reason=\(terminationReason)", category: Logger.general)
-        
-        AnalyticsLogger.shared.log(.error(
-            message: "App Crash",
-            error: NSError(domain: "MetricKit", code: -1, userInfo: [
-                "signal": signal,
-                "reason": terminationReason
-            ])
-        ))
+        Logger.error("Crash detected: Reason=\(terminationReason)", category: Logger.general)
     }
     
     private func logHangDiagnostic(_ diagnostic: MXHangDiagnostic) {
-        let duration = diagnostic.hangDuration.converted(to: .seconds).value
-        
-        os_log(.error, log: logger, "⏸️ Hang detected: %.2f seconds", duration)
-        
-        Logger.warning("App hang detected: \(duration)s", category: Logger.performance)
-        
-        AnalyticsLogger.shared.log(.custom(name: "app_hang", properties: [
-            "duration_seconds": duration
-        ]))
+        os_log(.error, log: logger, "⏸️ Hang detected")
+        Logger.warning("App hang detected", category: Logger.performance)
     }
     
     private func logCPUException(_ diagnostic: MXCPUExceptionDiagnostic) {
-        let totalTime = diagnostic.totalCPUTime.converted(to: .seconds).value
-        
-        os_log(.error, log: logger, "⚠️ CPU Exception: %.2f seconds", totalTime)
-        
-        Logger.warning("CPU exception: \(totalTime)s", category: Logger.performance)
+        os_log(.error, log: logger, "⚠️ CPU Exception")
+        Logger.warning("CPU exception detected", category: Logger.performance)
     }
     
     private func logDiskException(_ diagnostic: MXDiskWriteExceptionDiagnostic) {
-        let totalWrites = diagnostic.totalWritesCaused.converted(to: .megabytes).value
-        
-        os_log(.error, log: logger, "💿 Disk Write Exception: %.2f MB", totalWrites)
-        
-        Logger.warning("Disk write exception: \(totalWrites)MB", category: Logger.performance)
+        os_log(.error, log: logger, "💿 Disk Write Exception")
+        Logger.warning("Disk write exception detected", category: Logger.performance)
     }
     
     // MARK: - Persistence
     
     private func saveMetricPayload(_ payload: MXMetricPayload) {
-        guard let jsonData = payload.jsonRepresentation() else { return }
+        let jsonData = payload.jsonRepresentation()
         
         let filename = "metrics_\(payload.timeStampBegin.timeIntervalSince1970).json"
         let url = getMetricsDirectory().appendingPathComponent(filename)
@@ -223,7 +170,7 @@ final class MetricKitManager: NSObject, MXMetricManagerSubscriber {
     }
     
     private func saveDiagnosticPayload(_ payload: MXDiagnosticPayload) {
-        guard let jsonData = payload.jsonRepresentation() else { return }
+        let jsonData = payload.jsonRepresentation()
         
         let filename = "diagnostics_\(payload.timeStampBegin.timeIntervalSince1970).json"
         let url = getDiagnosticsDirectory().appendingPathComponent(filename)
