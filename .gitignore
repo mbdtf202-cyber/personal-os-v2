@@ -6,11 +6,24 @@
 *.xcuserstate
 *.xcuserdatad
 
-# API Keys & Secrets
+# API Keys & Secrets (✅ P2 EXTREME: 强化秘密管理)
 APIKeys.plist
 Secrets.swift
+**/Secrets.swift
+**/APIKeys.plist
+CompileTimeSecrets.swift
+**/CompileTimeSecrets.swift
+# 确保任何包含 "secret" 或 "key" 的配置文件都被排除
+*secret*.swift
+*Secret*.swift
+*apikey*.swift
+*APIKey*.swift
+
+# Build Configuration (保留模板和基础配置)
 *.xcconfig
-!Config.xcconfig.template
+!.xcconfig/Debug.xcconfig
+!.xcconfig/Release.xcconfig
+.xcconfig/FeatureFlags.xcconfig
 
 # Build
 build/
@@ -63,3 +76,6 @@ backup_*.json
 # Test Coverage
 *.xcresult
 coverage.json
+
+# Build Analysis
+.build_size_history

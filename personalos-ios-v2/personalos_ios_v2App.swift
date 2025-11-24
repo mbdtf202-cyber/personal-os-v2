@@ -13,6 +13,9 @@ struct personalos_ios_v2App: App {
         DecimalTransformer.register()
         setupTheme()
         setupMonitoring()
+        
+        // 验证 Feature Flags
+        FeatureFlags.validateFeatures()
     }
     
     private func setupMonitoring() {
@@ -100,17 +103,6 @@ struct personalos_ios_v2App: App {
             // ✅ P0 Fix: 生产环境安全恢复策略
             Logger.error("⚠️ ModelContainer creation failed in RELEASE mode", category: Logger.general)
             CrashReporter.shared.recordError(error, context: "ModelContainer creation failed")
-            
-            // 尝试备份现有数据
-            let backupService = DataBackupService()
-            Task {
-                do {
-                    try await backupService.createEmergencyBackup()
-                    Logger.log("✅ Emergency backup created", category: Logger.general)
-                } catch {
-                    Logger.error("Failed to create emergency backup: \(error)", category: Logger.general)
-                }
-            }
             #endif
             
             // ✅ 如果启用了 CloudKit 但失败，尝试降级到本地存储

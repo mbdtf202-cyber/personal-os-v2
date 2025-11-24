@@ -123,16 +123,6 @@ enum AppSchemaMigrationPlan: SchemaMigrationPlan {
         toVersion: AppSchemaV2.self,
         willMigrate: { context in
             Logger.log("🔄 Starting migration V1 → V2", category: Logger.general)
-            
-            // Create backup before migration
-            let backupService = DataBackupService()
-            do {
-                _ = try await backupService.createBackup()
-                Logger.log("✅ Backup created before migration", category: Logger.general)
-            } catch {
-                Logger.error("⚠️ Failed to create backup: \(error)", category: Logger.general)
-                // Continue anyway - migration is important
-            }
         },
         didMigrate: { context in
             Logger.log("🔄 Executing migration V1 → V2", category: Logger.general)

@@ -21,7 +21,17 @@ extension EnvironmentValues {
 @MainActor
 final class LazyServiceContainer {
     // ✅ Keep shared for backward compatibility, but prefer environment injection
-    static let shared = LazyServiceContainer()
+    static let shared: LazyServiceContainer = {
+        #if DEBUG
+        // ✅ P2 EXTREME: 在 DEBUG 模式下警告直接访问 shared
+        // 强制开发者使用环境注入，保持架构纯洁性
+        Logger.warning(
+            "⚠️ LazyServiceContainer.shared accessed directly. Prefer @Environment(\\.serviceContainer) injection.",
+            category: Logger.general
+        )
+        #endif
+        return LazyServiceContainer()
+    }()
     
     private var modelContainer: ModelContainer?
     private var cachedServices: [String: Any] = [:]
@@ -56,12 +66,12 @@ final class LazyServiceContainer {
     
     private(set) lazy var githubService: GitHubService = {
         Logger.log("🔧 Lazy-loading GitHubService", category: Logger.general)
-        return GitHubService()
+        return GitHubService(networkClient: NetworkClient(config: .github))
     }()
     
     private(set) lazy var newsService: NewsService = {
         Logger.log("🔧 Lazy-loading NewsService", category: Logger.general)
-        return NewsService()
+        return NewsService(networkClient: NetworkClient(config: .news))
     }()
     
     private(set) lazy var stockPriceService: StockPriceService = {
@@ -89,7 +99,7 @@ final class LazyServiceContainer {
         }
         
         Logger.log("🔧 Creating TodoRepository", category: Logger.general)
-        let repo = TodoRepository(modelContext: ModelContext(container))
+        let repo = TodoRepository(modelContainer: container)
         cachedServices["TodoRepository"] = repo
         return repo
     }
@@ -102,7 +112,7 @@ final class LazyServiceContainer {
         }
         
         Logger.log("🔧 Creating SocialPostRepository", category: Logger.general)
-        let repo = SocialPostRepository(modelContext: ModelContext(container))
+        let repo = SocialPostRepository(modelContainer: container)
         cachedServices["SocialPostRepository"] = repo
         return repo
     }
@@ -115,7 +125,7 @@ final class LazyServiceContainer {
         }
         
         Logger.log("🔧 Creating TradeRepository", category: Logger.general)
-        let repo = TradeRepository(modelContext: ModelContext(container))
+        let repo = TradeRepository(modelContainer: container)
         cachedServices["TradeRepository"] = repo
         return repo
     }

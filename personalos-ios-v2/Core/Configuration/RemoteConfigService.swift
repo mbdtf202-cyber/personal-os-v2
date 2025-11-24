@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-struct FeatureFlags: Codable {
+struct RemoteFeatureFlags: Codable {
     var healthCenter: Bool = true
     var projectHub: Bool = true
     var newsAggregator: Bool = true
@@ -29,7 +29,7 @@ struct ABTestConfig: Codable {
 final class RemoteConfigService {
     static let shared = RemoteConfigService()
     
-    private(set) var featureFlags: FeatureFlags
+    private(set) var featureFlags: RemoteFeatureFlags
     private(set) var abTestConfig: ABTestConfig
     private(set) var isLoaded: Bool = false
     private(set) var apiKeys: [String: String] = [:]
@@ -44,7 +44,7 @@ final class RemoteConfigService {
     
     private init() {
         self.configURL = AppConfig.API.remoteConfigURL
-        self.featureFlags = FeatureFlags()
+        self.featureFlags = RemoteFeatureFlags()
         self.abTestConfig = ABTestConfig()
         self.networkClient = NetworkClient(config: .default)
         
@@ -158,6 +158,6 @@ final class RemoteConfigService {
 }
 
 struct RemoteConfig: Codable {
-    var featureFlags: FeatureFlags
+    var featureFlags: RemoteFeatureFlags
     var abTestConfig: ABTestConfig
 }

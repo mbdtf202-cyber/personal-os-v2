@@ -1,6 +1,6 @@
 import Foundation
 
-enum ConfigurationError: Error, LocalizedError {
+enum ConfigValidationError: Error, LocalizedError {
     case missingAPIKey(service: String)
     case invalidConfiguration(message: String)
     
@@ -63,7 +63,7 @@ class ConfigurationValidator {
         let status = validate()
         
         if !status.isValid {
-            throw ConfigurationError.invalidConfiguration(
+            throw ConfigValidationError.invalidConfiguration(
                 message: "Missing: \(status.missingKeys.joined(separator: ", "))"
             )
         }

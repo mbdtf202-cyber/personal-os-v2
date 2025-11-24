@@ -1,0 +1,10 @@
+{
+  "dashboard": true,
+  "trading": false,
+  "social": false,
+  "news": false,
+  "health": false,
+  "projectHub": false,
+  "training": false,
+  "tools": false
+}

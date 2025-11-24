@@ -1,5 +1,4 @@
 import SwiftData
 import Foundation
 
-@MainActor
-class TradeRepository: BaseRepository<TradeRecord> {}
+typealias TradeRepository = BaseRepository<TradeRecord>

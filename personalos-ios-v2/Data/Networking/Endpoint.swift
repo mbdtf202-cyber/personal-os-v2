@@ -136,7 +136,7 @@ extension NetworkClient {
     @MainActor
     func request<T: Codable>(_ endpoint: Endpoint) async throws -> T {
         guard let url = endpoint.makeURL() else {
-            throw NetworkError.invalidURL
+            throw AppError.network(.invalidResponse, retryable: false)
         }
         
         return try await request(

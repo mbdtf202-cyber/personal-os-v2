@@ -145,6 +145,9 @@ final class StructuredLogger {
                 message: message,
                 metadata: context
             )
+            
+            // ✅ P2 EXTREME: 写入黑匣子日志用于崩溃后分析
+            BlackBoxLogger.shared.log(message, level: level, context: context)
         }
     }
     

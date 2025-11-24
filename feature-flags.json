@@ -1,0 +1,10 @@
+{
+  "dashboard": true,
+  "trading": true,
+  "social": true,
+  "news": true,
+  "health": true,
+  "projectHub": true,
+  "training": true,
+  "tools": true
+}

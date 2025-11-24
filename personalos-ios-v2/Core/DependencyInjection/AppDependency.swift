@@ -34,15 +34,19 @@ struct AppDependency {
     init(modelContext: ModelContext, environment: ServiceEnvironment = .production) {
         self.modelContext = modelContext
         
+        guard let modelContainer = modelContext.container else {
+            fatalError("ModelContext must have a valid container")
+        }
+        
         self.repositories = Repositories(
-            todo: TodoRepository(modelContext: modelContext),
-            project: ProjectRepository(modelContext: modelContext),
-            news: NewsRepository(modelContext: modelContext),
-            trade: TradeRepository(modelContext: modelContext),
-            socialPost: SocialPostRepository(modelContext: modelContext),
-            codeSnippet: CodeSnippetRepository(modelContext: modelContext),
-            rssFeed: RSSFeedRepository(modelContext: modelContext),
-            habit: HabitRepository(modelContext: modelContext)
+            todo: TodoRepository(modelContainer: modelContainer),
+            project: ProjectRepository(modelContainer: modelContainer),
+            news: NewsRepository(modelContainer: modelContainer),
+            trade: TradeRepository(modelContainer: modelContainer),
+            socialPost: SocialPostRepository(modelContainer: modelContainer),
+            codeSnippet: CodeSnippetRepository(modelContainer: modelContainer),
+            rssFeed: RSSFeedRepository(modelContainer: modelContainer),
+            habit: HabitRepository(modelContainer: modelContainer)
         )
         
         let networkClient = NetworkClient(config: .default)

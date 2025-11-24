@@ -51,7 +51,7 @@ struct SocialDashboardView: View {
     }
     
     private var stats: (totalViews: String, engagementRate: String) {
-        viewModel.calculateStats(from: posts)
+        viewModel.calculateStats(from: allPosts)
     }
     
     var body: some View {
@@ -376,8 +376,7 @@ struct EditPostWrapper: View {
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(for: SocialPost.self, configurations: config)
-    let context = ModelContext(container)
-    let repository = SocialPostRepository(modelContext: context)
+    let repository = SocialPostRepository(modelContainer: container)
     let viewModel = SocialDashboardViewModel(socialPostRepository: repository)
     
     return SocialDashboardView(viewModel: viewModel)

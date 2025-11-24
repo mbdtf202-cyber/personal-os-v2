@@ -1,5 +1,4 @@
 import SwiftData
 import Foundation
 
-@MainActor
-class TodoRepository: BaseRepository<TodoItem> {}
+typealias TodoRepository = BaseRepository<TodoItem>

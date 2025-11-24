@@ -1,5 +1,4 @@
 import SwiftData
 import Foundation
 
-@MainActor
-class ProjectRepository: BaseRepository<ProjectItem> {}
+typealias ProjectRepository = BaseRepository<ProjectItem>

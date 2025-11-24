@@ -121,24 +121,37 @@ class NetworkClient {
             return cached
         }
         
+        // ✅ P2 EXTREME: 获取缓存的 ETag/Last-Modified 用于条件请求
+        var conditionalHeaders = headers ?? [:]
+        if let cacheValidation = offlineCache.getValidationHeaders(key: endpoint) {
+            conditionalHeaders.merge(cacheValidation) { _, new in new }
+        }
+        
         var lastError: Error?
         
         for attempt in 0..<config.maxRetries {
             do {
-                let result: T = try await performRequest(
+                let (result, responseHeaders): (T, [String: String]) = try await performRequestWithHeaders(
                     endpoint,
                     method: method,
-                    headers: headers,
+                    headers: conditionalHeaders,
                     body: body
                 )
                 
                 await MainActor.run { circuitBreaker.recordSuccess() }
-                offlineCache.set(key: endpoint, value: result)
+                offlineCache.set(key: endpoint, value: result, headers: responseHeaders)
                 
                 PerformanceMonitor.shared.recordCustomMetric(name: "network_success", value: 1)
                 PerformanceMonitor.shared.recordCustomMetric(name: "retry_count", value: Double(attempt))
                 
                 return result
+            } catch let error as NetworkNotModifiedError {
+                // ✅ P2 EXTREME: 304 Not Modified - 使用缓存
+                if let cached: T = offlineCache.get(key: endpoint) {
+                    PerformanceMonitor.shared.recordCustomMetric(name: "cache_304_hit", value: 1)
+                    return cached
+                }
+                throw error
             } catch {
                 lastError = error
                 await MainActor.run { circuitBreaker.recordFailure() }
@@ -173,6 +186,22 @@ class NetworkClient {
         headers: [String: String]?,
         body: Data?
     ) async throws -> T {
+        let (result, _): (T, [String: String]) = try await performRequestWithHeaders(
+            endpoint,
+            method: method,
+            headers: headers,
+            body: body
+        )
+        return result
+    }
+    
+    /// ✅ P2 EXTREME: 支持 ETag/Last-Modified 的请求方法
+    private func performRequestWithHeaders<T: Codable>(
+        _ endpoint: String,
+        method: HTTPMethod,
+        headers: [String: String]?,
+        body: Data?
+    ) async throws -> (T, [String: String]) {
         guard let url = URL(string: endpoint) else {
             throw AppError.network(.invalidResponse, retryable: false)
         }
@@ -189,6 +218,11 @@ class NetworkClient {
             throw AppError.network(.invalidResponse, retryable: true)
         }
         
+        // ✅ P2 EXTREME: 处理 304 Not Modified
+        if httpResponse.statusCode == 304 {
+            throw NetworkNotModifiedError()
+        }
+        
         guard (200...299).contains(httpResponse.statusCode) else {
             if httpResponse.statusCode == 429 {
                 throw AppError.network(.rateLimited, retryable: true)
@@ -203,11 +237,21 @@ class NetworkClient {
             }
         }
         
+        // 提取响应头
+        var responseHeaders: [String: String] = [:]
+        if let etag = httpResponse.value(forHTTPHeaderField: "ETag") {
+            responseHeaders["ETag"] = etag
+        }
+        if let lastModified = httpResponse.value(forHTTPHeaderField: "Last-Modified") {
+            responseHeaders["Last-Modified"] = lastModified
+        }
+        
         do {
             // ✅ P0 Fix: 统一日期解码策略为 ISO8601
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode(T.self, from: data)
+            let result = try decoder.decode(T.self, from: data)
+            return (result, responseHeaders)
         } catch {
             throw AppError.network(.invalidResponse, retryable: false)
         }
@@ -239,7 +283,12 @@ enum CachePolicy {
 struct CacheMetadata: Codable, Sendable {
     let data: Data
     let expirationDate: Date
+    let etag: String?
+    let lastModified: String?
 }
+
+// MARK: - Network Errors
+struct NetworkNotModifiedError: Error {}
 
 // MARK: - Offline Cache (Disk-based)
 class OfflineCache {
@@ -253,6 +302,36 @@ class OfflineCache {
         cacheDirectory = paths[0].appendingPathComponent("OfflineCache")
         
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+    }
+    
+    /// ✅ P2 EXTREME: 获取验证头用于条件请求
+    func getValidationHeaders(key: String) -> [String: String]? {
+        let fileURL = cacheDirectory.appendingPathComponent(key.sha256Hash)
+        
+        guard let data = try? Data(contentsOf: fileURL) else {
+            return nil
+        }
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        
+        guard let metadata = try? decoder.decode(CacheMetadata.self, from: data) else {
+            return nil
+        }
+        
+        guard metadata.expirationDate > Date() else {
+            return nil
+        }
+        
+        var headers: [String: String] = [:]
+        if let etag = metadata.etag {
+            headers["If-None-Match"] = etag
+        }
+        if let lastModified = metadata.lastModified {
+            headers["If-Modified-Since"] = lastModified
+        }
+        
+        return headers.isEmpty ? nil : headers
     }
     
     func get<T: Codable>(key: String) -> T? {
@@ -295,7 +374,7 @@ class OfflineCache {
         return try? decoder.decode(T.self, from: metadata.data)
     }
     
-    func set<T: Codable>(key: String, value: T) {
+    func set<T: Codable>(key: String, value: T, headers: [String: String] = [:]) {
         // ✅ P0 Fix: 统一使用 ISO8601 日期编码策略
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -307,11 +386,16 @@ class OfflineCache {
         // 1. 写入内存缓存
         memoryCache.setObject(entry, forKey: key as NSString)
         
-        // 2. 异步写入磁盘
+        // 2. 异步写入磁盘（包含 ETag/Last-Modified）
         let cacheDir = self.cacheDirectory
         let cacheKey = key.sha256Hash
         Task.detached(priority: .utility) {
-            let metadata = CacheMetadata(data: data, expirationDate: expirationDate)
+            let metadata = CacheMetadata(
+                data: data,
+                expirationDate: expirationDate,
+                etag: headers["ETag"],
+                lastModified: headers["Last-Modified"]
+            )
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
             guard let metadataData = try? encoder.encode(metadata) else { return }
@@ -329,11 +413,6 @@ class OfflineCache {
             self.data = data
             self.expirationDate = expirationDate
         }
-    }
-    
-    private struct CacheMetadata: Codable, Sendable {
-        let data: Data
-        let expirationDate: Date
     }
 }
 

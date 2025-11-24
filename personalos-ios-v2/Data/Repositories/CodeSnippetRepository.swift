@@ -1,5 +1,4 @@
 import SwiftData
 import Foundation
 
-@MainActor
-class CodeSnippetRepository: BaseRepository<CodeSnippet> {}
+typealias CodeSnippetRepository = BaseRepository<CodeSnippet>
