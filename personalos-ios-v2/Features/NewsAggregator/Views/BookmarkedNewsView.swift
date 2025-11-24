@@ -7,6 +7,10 @@ struct BookmarkedNewsView: View {
     @Query(sort: \NewsItem.date, order: .reverse) private var bookmarkedNews: [NewsItem]
     @State private var selectedArticleURL: IdentifiableURL?
     
+    // ✅ Task 27: Add delete confirmation
+    @State private var itemToDelete: NewsItem?
+    @State private var showDeleteConfirmation = false
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -55,7 +59,9 @@ struct BookmarkedNewsView: View {
                                         }
                                         
                                         Button(role: .destructive, action: {
-                                            removeBookmark(item)
+                                            // ✅ Task 27: Show confirmation dialog
+                                            itemToDelete = item
+                                            showDeleteConfirmation = true
                                         }) {
                                             Label("Remove Bookmark", systemImage: "bookmark.slash")
                                         }
@@ -73,6 +79,20 @@ struct BookmarkedNewsView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .confirmationDialog(
+                "Remove Bookmark",
+                isPresented: $showDeleteConfirmation,
+                presenting: itemToDelete
+            ) { item in
+                Button("Remove", role: .destructive) {
+                    removeBookmark(item)
+                }
+                Button("Cancel", role: .cancel) {
+                    itemToDelete = nil
+                }
+            } message: { item in
+                Text("Are you sure you want to remove '\(item.title)' from bookmarks?")
+            }
             .fullScreenCover(item: $selectedArticleURL) { identifiableURL in
                 SafariView(url: identifiableURL.url)
                     .ignoresSafeArea()
@@ -82,8 +102,19 @@ struct BookmarkedNewsView: View {
     
     private func removeBookmark(_ item: NewsItem) {
         modelContext.delete(item)
-        try? modelContext.save()
-        HapticsManager.shared.light()
+        
+        do {
+            try modelContext.save()
+            HapticsManager.shared.light()
+            Logger.log("Bookmark removed: \(item.title)", category: Logger.general)
+            
+            // ✅ Task 27: Clear the item after successful deletion
+            itemToDelete = nil
+        } catch {
+            // ✅ Task 27: Handle deletion failure
+            ErrorHandler.shared.handle(error, context: "BookmarkedNewsView.removeBookmark")
+            itemToDelete = nil
+        }
     }
     
     private func shareArticle(url: URL, title: String) {

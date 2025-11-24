@@ -139,6 +139,38 @@ struct SettingsView: View {
                         .font(.caption)
                 }
                 
+                // ✅ P0 Fix: Legal documents section (Requirement 17.5)
+                Section {
+                    NavigationLink(destination: LegalDocumentView(documentType: .termsOfService)) {
+                        HStack {
+                            Image(systemName: "doc.text")
+                                .foregroundStyle(AppTheme.mistBlue)
+                            Text("Terms of Service")
+                        }
+                    }
+                    
+                    NavigationLink(destination: LegalDocumentView(documentType: .privacyPolicy)) {
+                        HStack {
+                            Image(systemName: "hand.raised")
+                                .foregroundStyle(AppTheme.mistBlue)
+                            Text("Privacy Policy")
+                        }
+                    }
+                    
+                    NavigationLink(destination: LegalDocumentView(documentType: .licenses)) {
+                        HStack {
+                            Image(systemName: "list.bullet.rectangle")
+                                .foregroundStyle(AppTheme.mistBlue)
+                            Text("Third-Party Licenses")
+                        }
+                    }
+                } header: {
+                    Text("Legal")
+                } footer: {
+                    Text("View our legal documents and privacy practices")
+                        .font(.caption)
+                }
+                
                 Section {
                     HStack {
                         Text("Version")

@@ -100,22 +100,73 @@ struct PresentableError: Identifiable {
 class ErrorPresenter {
     static let shared = ErrorPresenter()
     
+    // ✅ P0 Fix: Error queue for multiple errors
     var currentError: PresentableError?
+    private(set) var errorQueue: [PresentableError] = []
     var toastMessage: String?
+    
+    // ✅ P0 Fix: Track last operation for retry
+    private var lastOperation: (() async throws -> Void)?
     
     private init() {}
     
+    // ✅ P0 Fix: Enhanced present with queue support
     func present(_ error: PresentableError) {
-        if error.severity == .critical {
-            currentError = error
+        // Log error for debugging
+        Logger.error("Error presented: \(error.title) - \(error.message)", category: Logger.general)
+        
+        if error.severity == .critical || error.severity == .error {
+            // Add to queue
+            errorQueue.append(error)
+            
+            // Show if no current error
+            if currentError == nil {
+                showNextError()
+            }
         } else {
+            // Show as toast for warnings and info
             showToast(error.message)
         }
     }
     
-    func present(_ error: Error, context: String? = nil) {
-        let appError = PresentableError.from(error, context: context)
+    func present(_ error: Error, context: String? = nil, retryAction: (() async throws -> Void)? = nil) {
+        var appError = PresentableError.from(error, context: context)
+        
+        // Store retry action
+        if let retryAction = retryAction {
+            lastOperation = retryAction
+            appError = PresentableError(
+                title: appError.title,
+                message: appError.message,
+                severity: appError.severity,
+                isRecoverable: appError.isRecoverable,
+                retryAction: { [weak self] in
+                    try? await self?.retry()
+                }
+            )
+        }
+        
         present(appError)
+    }
+    
+    // ✅ P0 Fix: Retry mechanism
+    func retry() async throws {
+        guard let operation = lastOperation else {
+            throw ErrorPresenterError.noRetryAction
+        }
+        
+        Logger.log("Retrying last operation", category: Logger.general)
+        
+        do {
+            try await operation()
+            Logger.log("Retry successful", category: Logger.general)
+            
+            // Clear error on success
+            dismiss()
+        } catch {
+            Logger.error("Retry failed: \(error)", category: Logger.general)
+            throw error
+        }
     }
     
     func showToast(_ message: String) {
@@ -127,8 +178,40 @@ class ErrorPresenter {
         }
     }
     
+    // ✅ P0 Fix: Enhanced dismiss with queue support
     func dismiss() {
         currentError = nil
+        
+        // Show next error in queue
+        if !errorQueue.isEmpty {
+            errorQueue.removeFirst()
+            showNextError()
+        }
+    }
+    
+    private func showNextError() {
+        guard !errorQueue.isEmpty else { return }
+        currentError = errorQueue.first
+    }
+    
+    // ✅ P0 Fix: Clear all errors
+    func clearAll() {
+        currentError = nil
+        errorQueue.removeAll()
+        toastMessage = nil
+        lastOperation = nil
+    }
+}
+
+/// Error presenter errors
+enum ErrorPresenterError: Error, LocalizedError {
+    case noRetryAction
+    
+    var errorDescription: String? {
+        switch self {
+        case .noRetryAction:
+            return "No retry action available"
+        }
     }
 }
 

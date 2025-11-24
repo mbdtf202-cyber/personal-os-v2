@@ -15,6 +15,13 @@ struct NewsFeedView: View {
     @State private var showBookmarks = false
     @State private var showSearch = false
     @State private var searchQuery = ""
+    @State private var searchTask: Task<Void, Never>?
+    @State private var searchResults: [NewsItem] = []
+    @State private var isSearching = false
+    
+    // ✅ Task 26: Track bookmark and task operations to prevent duplicates
+    @State private var bookmarkOperations: Set<UUID> = []
+    @State private var taskOperations: Set<UUID> = []
 
     
     let mockNews: [NewsItem] = [
@@ -50,9 +57,14 @@ struct NewsFeedView: View {
     let categories = ["All", "Tech", "AI", "Crypto", "Dev", "Design"]
     
     var filteredNews: [NewsItem] {
+        // ✅ Task 25: Use search results when searching
+        if !searchQuery.isEmpty && !searchResults.isEmpty {
+            return searchResults
+        }
         if searchQuery.isEmpty {
             return news
         }
+        // Fallback to local filtering
         return news.filter { item in
             item.title.localizedCaseInsensitiveContains(searchQuery) ||
             item.summary.localizedCaseInsensitiveContains(searchQuery)
@@ -98,11 +110,21 @@ struct NewsFeedView: View {
                     
                     // News List
                     ScrollView(showsIndicators: false) {
-                        if newsService.isLoading {
+                        if newsService.isLoading || newsService.isParsingNews {
                             VStack(spacing: 16) {
                                 ProgressView()
                                     .scaleEffect(1.2)
-                                Text("Loading latest news...")
+                                Text(newsService.isParsingNews ? "Parsing news..." : "Loading latest news...")
+                                    .font(.subheadline)
+                                    .foregroundStyle(AppTheme.secondaryText)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 60)
+                        } else if isSearching {
+                            VStack(spacing: 16) {
+                                ProgressView()
+                                    .scaleEffect(1.2)
+                                Text("Searching...")
                                     .font(.subheadline)
                                     .foregroundStyle(AppTheme.secondaryText)
                             }
@@ -115,6 +137,26 @@ struct NewsFeedView: View {
                             )
                         } else {
                             LazyVStack(spacing: 16) {
+                                // ✅ P0 Fix: Data source banner (Requirement 14.4)
+                                if newsService.currentDataSource != .real {
+                                    HStack {
+                                        Image(systemName: "info.circle.fill")
+                                            .foregroundStyle(newsService.currentDataSource == .demo ? .orange : .gray)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(newsService.currentDataSource.displayName)
+                                                .font(.caption)
+                                                .fontWeight(.semibold)
+                                            Text("Configure News API key in Settings for live data")
+                                                .font(.caption2)
+                                                .foregroundStyle(AppTheme.secondaryText)
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding()
+                                    .background(newsService.currentDataSource == .demo ? Color.orange.opacity(0.1) : Color.gray.opacity(0.1))
+                                    .cornerRadius(12)
+                                }
+                                
                                 // Error Banner
                                 if let error = newsService.error {
                                     HStack {
@@ -138,7 +180,8 @@ struct NewsFeedView: View {
                                 ForEach(filteredNews) { item in
                                     NewsCard(
                                         article: convertToNewsArticle(item),
-                                        isBookmarked: bookmarkedNews.contains(where: { $0.id == item.id }),
+                                        isBookmarked: bookmarkedNews.contains(where: { $0.canonicalID == item.canonicalID }), // ✅ Use canonical ID
+                                        dataSource: item.dataSourceType,
                                         onBookmark: {
                                             bookmarkArticle(item)
                                         },
@@ -188,9 +231,37 @@ struct NewsFeedView: View {
             .onChange(of: selectedCategory) { _, _ in
                 handleCategoryChange()
             }
+            .onChange(of: searchQuery) { _, newValue in
+                // ✅ Task 25: Implement search debouncing
+                searchTask?.cancel()
+                
+                guard !newValue.isEmpty else {
+                    searchResults = []
+                    isSearching = false
+                    return
+                }
+                
+                searchTask = Task {
+                    isSearching = true
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 500ms debounce
+                    
+                    guard !Task.isCancelled else {
+                        isSearching = false
+                        return
+                    }
+                    
+                    await performSearch(query: newValue)
+                    isSearching = false
+                }
+            }
             .fullScreenCover(item: $selectedArticleURL) { identifiableURL in
                 SafariView(url: identifiableURL.url)
                     .ignoresSafeArea()
+            }
+            .onDisappear {
+                // ✅ Task 24: Cancel parsing on view disappear
+                newsService.cancelParsing()
+                searchTask?.cancel()
             }
         }
     }
@@ -199,7 +270,10 @@ struct NewsFeedView: View {
         await newsService.fetchTopHeadlines(category: selectedCategory.lowercased())
         if !newsService.articles.isEmpty {
             news = newsService.articles.map { article in
-                NewsItem(
+                // ✅ P0 Fix: Use URL as canonical ID (Requirement 16.2)
+                let canonicalID = article.url.isEmpty ? nil : article.url
+                
+                return NewsItem(
                     source: article.source.name,
                     title: article.title,
                     summary: article.description ?? "",
@@ -207,7 +281,9 @@ struct NewsFeedView: View {
                     image: "newspaper.fill",
                     imageURL: article.urlToImage,
                     date: Date(),
-                    url: URL(string: article.url)
+                    url: URL(string: article.url),
+                    dataSource: newsService.currentDataSource,
+                    canonicalID: canonicalID
                 )
             }
         }
@@ -225,7 +301,10 @@ struct NewsFeedView: View {
         await newsService.fetchFromMultipleRSSFeeds(feeds: feeds)
         if !newsService.articles.isEmpty {
             news = newsService.articles.map { article in
-                NewsItem(
+                // ✅ P0 Fix: Use URL as canonical ID (Requirement 16.2)
+                let canonicalID = article.url.isEmpty ? nil : article.url
+                
+                return NewsItem(
                     source: article.source.name,
                     title: article.title,
                     summary: article.description ?? "No description available",
@@ -233,7 +312,9 @@ struct NewsFeedView: View {
                     image: "antenna.radiowaves.left.and.right",
                     imageURL: article.urlToImage,
                     date: Date(),
-                    url: URL(string: article.url)
+                    url: URL(string: article.url),
+                    dataSource: newsService.currentDataSource,
+                    canonicalID: canonicalID
                 )
             }
         }
@@ -256,10 +337,22 @@ struct NewsFeedView: View {
     }
     
     private func bookmarkArticle(_ item: NewsItem) {
-        // Check if already bookmarked
+        // ✅ Task 26: Check for duplicate bookmark operations
+        guard !bookmarkOperations.contains(item.id) else {
+            Logger.log("Bookmark operation already in progress", category: Logger.general)
+            return
+        }
+        
+        bookmarkOperations.insert(item.id)
+        
+        // ✅ P0 Fix: Use canonical ID for bookmark matching (Requirement 16.3)
         Task {
+            defer {
+                bookmarkOperations.remove(item.id)
+            }
+            
             do {
-                if let existingBookmark = bookmarkedNews.first(where: { $0.id == item.id }) {
+                if let existingBookmark = bookmarkedNews.first(where: { $0.canonicalID == item.canonicalID }) {
                     // Remove bookmark
                     try await appDependency?.repositories.news.delete(existingBookmark)
                     HapticsManager.shared.light()
@@ -277,19 +370,72 @@ struct NewsFeedView: View {
     }
     
     private func createTaskFromArticle(_ item: NewsItem) {
-        let task = TodoItem(
-            title: "Read: \(item.title)",
-            category: "Reading",
-            priority: 1
-        )
+        // ✅ Task 26: Check for duplicate task operations
+        guard !taskOperations.contains(item.id) else {
+            Logger.log("Task creation already in progress", category: Logger.general)
+            return
+        }
+        
+        taskOperations.insert(item.id)
+        
+        // ✅ P0 Fix: Check for duplicate tasks using canonical ID (Requirement 16.4)
         Task {
+            defer {
+                taskOperations.remove(item.id)
+            }
+            
             do {
+                // Check if task already exists for this article
+                let existingTasks = try await appDependency?.repositories.todo.fetch() ?? []
+                let taskTitle = "Read: \(item.title)"
+                
+                if existingTasks.contains(where: { $0.title == taskTitle }) {
+                    Logger.log("Task already exists for article", category: Logger.general)
+                    return
+                }
+                
+                let task = TodoItem(
+                    title: taskTitle,
+                    category: "Reading",
+                    priority: 1
+                )
+                
                 try await appDependency?.repositories.todo.save(task)
                 HapticsManager.shared.success()
                 Logger.log("Task created from article", category: Logger.general)
             } catch {
                 ErrorHandler.shared.handle(error, context: "NewsFeedView.createTaskFromArticle")
             }
+        }
+    }
+    
+    // ✅ Task 25: Perform API search
+    private func performSearch(query: String) async {
+        do {
+            let articles = try await newsService.searchNews(query: query)
+            
+            searchResults = articles.map { article in
+                let canonicalID = article.url.isEmpty ? nil : article.url
+                
+                return NewsItem(
+                    source: article.source.name,
+                    title: article.title,
+                    summary: article.description ?? "",
+                    category: "Search",
+                    image: "magnifyingglass",
+                    imageURL: article.urlToImage,
+                    date: Date(),
+                    url: URL(string: article.url),
+                    dataSource: .real,
+                    canonicalID: canonicalID
+                )
+            }
+            
+            Logger.log("Search completed: \(searchResults.count) results", category: Logger.general)
+        } catch {
+            // ✅ Task 25: Fallback to local search on API failure
+            Logger.error("Search API failed, using local search: \(error)", category: Logger.general)
+            searchResults = []
         }
     }
     

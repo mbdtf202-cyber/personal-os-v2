@@ -16,6 +16,16 @@ final class DataBootstrapper {
         
         Logger.log("🚀 Bootstrapping application data...", category: Logger.general)
         
+        // ✅ P0 Fix: Only seed data in non-production environments
+        let envManager = EnvironmentManager.shared
+        guard envManager.shouldSeedMockData() else {
+            Logger.log("⚠️ Production environment detected - skipping mock data seeding", category: Logger.general)
+            hasBootstrapped = true
+            return
+        }
+        
+        Logger.log("📝 Development/Staging environment - seeding mock data", category: Logger.general)
+        
         await seedDefaultTasksIfNeeded(dependency: dependency)
         await seedDefaultHabitsIfNeeded(dependency: dependency)
         
@@ -25,6 +35,7 @@ final class DataBootstrapper {
     
     private func seedDefaultTasksIfNeeded(dependency: AppDependency) async {
         do {
+            // ✅ P0 Fix: Idempotent check - only seed if no tasks exist
             let existingTasks = try await dependency.repositories.todo.fetch()
             guard existingTasks.isEmpty else {
                 Logger.log("Tasks already exist, skipping seed", category: Logger.general)
@@ -49,6 +60,7 @@ final class DataBootstrapper {
     
     private func seedDefaultHabitsIfNeeded(dependency: AppDependency) async {
         do {
+            // ✅ P0 Fix: Idempotent check - only seed if no habits exist
             let existingHabits = try await dependency.repositories.habit.fetch()
             guard existingHabits.isEmpty else {
                 Logger.log("Habits already exist, skipping seed", category: Logger.general)

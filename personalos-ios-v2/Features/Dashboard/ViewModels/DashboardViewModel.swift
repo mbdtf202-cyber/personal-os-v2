@@ -17,6 +17,18 @@ struct QuickAction: Identifiable {
     }
 }
 
+enum LoadingState: Equatable {
+    case idle
+    case loading
+    case loaded
+    case error(String)
+    
+    var isLoading: Bool {
+        if case .loading = self { return true }
+        return false
+    }
+}
+
 @Observable
 @MainActor
 class DashboardViewModel: BaseViewModel {
@@ -31,22 +43,71 @@ class DashboardViewModel: BaseViewModel {
     var recentTrades: [TradeRecord] = []
     var recentProjects: [ProjectItem] = []
     
+    // 独立的加载状态
+    var tasksLoadingState: LoadingState = .idle
+    var postsLoadingState: LoadingState = .idle
+    var tradesLoadingState: LoadingState = .idle
+    var projectsLoadingState: LoadingState = .idle
+    var activityLoadingState: LoadingState = .idle
+    
     private let todoRepository: TodoRepository
     private let modelContext: ModelContext
+    private var loadTask: Task<Void, Never>?
     
     init(todoRepository: TodoRepository, modelContext: ModelContext) {
         self.todoRepository = todoRepository
         self.modelContext = modelContext
     }
     
+    deinit {
+        // 清理资源
+        loadTask?.cancel()
+    }
+    
     func loadRecentData() async {
-        await loadRecentTasks()
-        await loadRecentPosts()
-        await loadRecentTrades()
-        await loadRecentProjects()
+        // 取消之前的加载任务
+        loadTask?.cancel()
+        
+        loadTask = Task {
+            // 并行加载所有数据，提升性能
+            let traceID = PerformanceMonitor.shared.startTrace(
+                name: "dashboard_load_recent_data",
+                attributes: ["operation": "parallel_load"]
+            )
+            
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await self.loadRecentTasks() }
+                group.addTask { await self.loadRecentPosts() }
+                group.addTask { await self.loadRecentTrades() }
+                group.addTask { await self.loadRecentProjects() }
+            }
+            
+            PerformanceMonitor.shared.stopTrace(traceID)
+        }
+        
+        await loadTask?.value
+    }
+    
+    func retryLoad(section: String) async {
+        switch section {
+        case "tasks":
+            await loadRecentTasks()
+        case "posts":
+            await loadRecentPosts()
+        case "trades":
+            await loadRecentTrades()
+        case "projects":
+            await loadRecentProjects()
+        default:
+            await loadRecentData()
+        }
     }
     
     private func loadRecentTasks() async {
+        guard !Task.isCancelled else { return }
+        
+        tasksLoadingState = .loading
+        
         var descriptor = FetchDescriptor<TodoItem>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
@@ -54,12 +115,18 @@ class DashboardViewModel: BaseViewModel {
         
         do {
             recentTasks = try modelContext.fetch(descriptor)
+            tasksLoadingState = .loaded
         } catch {
+            tasksLoadingState = .error(error.localizedDescription)
             ErrorHandler.shared.handle(error, context: "DashboardViewModel.loadRecentTasks")
         }
     }
     
     private func loadRecentPosts() async {
+        guard !Task.isCancelled else { return }
+        
+        postsLoadingState = .loading
+        
         var descriptor = FetchDescriptor<SocialPost>(
             sortBy: [SortDescriptor(\.date, order: .reverse)]
         )
@@ -67,12 +134,18 @@ class DashboardViewModel: BaseViewModel {
         
         do {
             recentPosts = try modelContext.fetch(descriptor)
+            postsLoadingState = .loaded
         } catch {
+            postsLoadingState = .error(error.localizedDescription)
             ErrorHandler.shared.handle(error, context: "DashboardViewModel.loadRecentPosts")
         }
     }
     
     private func loadRecentTrades() async {
+        guard !Task.isCancelled else { return }
+        
+        tradesLoadingState = .loading
+        
         var descriptor = FetchDescriptor<TradeRecord>(
             sortBy: [SortDescriptor(\.date, order: .reverse)]
         )
@@ -80,12 +153,18 @@ class DashboardViewModel: BaseViewModel {
         
         do {
             recentTrades = try modelContext.fetch(descriptor)
+            tradesLoadingState = .loaded
         } catch {
+            tradesLoadingState = .error(error.localizedDescription)
             ErrorHandler.shared.handle(error, context: "DashboardViewModel.loadRecentTrades")
         }
     }
     
     private func loadRecentProjects() async {
+        guard !Task.isCancelled else { return }
+        
+        projectsLoadingState = .loading
+        
         var descriptor = FetchDescriptor<ProjectItem>(
             sortBy: [SortDescriptor(\.name)]
         )
@@ -93,7 +172,9 @@ class DashboardViewModel: BaseViewModel {
         
         do {
             recentProjects = try modelContext.fetch(descriptor)
+            projectsLoadingState = .loaded
         } catch {
+            projectsLoadingState = .error(error.localizedDescription)
             ErrorHandler.shared.handle(error, context: "DashboardViewModel.loadRecentProjects")
         }
     }
@@ -142,49 +223,83 @@ class DashboardViewModel: BaseViewModel {
     }
     
     func calculateActivityData() async -> [(String, Double)] {
+        activityLoadingState = .loading
+        
+        let traceID = PerformanceMonitor.shared.startTrace(
+            name: "dashboard_calculate_activity",
+            attributes: ["operation": "optimized_query"]
+        )
+        
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         
         var activityData: [(String, Double)] = []
         
-        for i in 0..<7 {
-            guard let date = calendar.date(byAdding: .day, value: -6 + i, to: today) else { continue }
-            let dayStart = calendar.startOfDay(for: date)
-            let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
-            
-            // 使用数据库层面的过滤，而不是内存过滤
-            let completedTasks = (try? modelContext.fetch(
-                FetchDescriptor<TodoItem>(
-                    predicate: #Predicate { task in
-                        task.isCompleted && task.createdAt >= dayStart && task.createdAt < dayEnd
+        do {
+            // 并行查询所有天的数据
+            await withTaskGroup(of: (Int, Double).self) { group in
+                for i in 0..<7 {
+                    group.addTask {
+                        guard let date = calendar.date(byAdding: .day, value: -6 + i, to: today) else {
+                            return (i, 0.0)
+                        }
+                        let dayStart = calendar.startOfDay(for: date)
+                        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+                        
+                        // 使用数据库层面的过滤，而不是内存过滤
+                        let completedTasks = (try? self.modelContext.fetch(
+                            FetchDescriptor<TodoItem>(
+                                predicate: #Predicate { task in
+                                    task.isCompleted && task.createdAt >= dayStart && task.createdAt < dayEnd
+                                }
+                            )
+                        ).count) ?? 0
+                        
+                        let postsCount = (try? self.modelContext.fetch(
+                            FetchDescriptor<SocialPost>(
+                                predicate: #Predicate { post in
+                                    post.date >= dayStart && post.date < dayEnd
+                                }
+                            )
+                        ).count) ?? 0
+                        
+                        let tradesCount = (try? self.modelContext.fetch(
+                            FetchDescriptor<TradeRecord>(
+                                predicate: #Predicate { trade in
+                                    trade.date >= dayStart && trade.date < dayEnd
+                                }
+                            )
+                        ).count) ?? 0
+                        
+                        let totalActivity = Double(completedTasks + postsCount + tradesCount)
+                        return (i, totalActivity)
                     }
-                )
-            ).count) ?? 0
+                }
+                
+                // 收集结果
+                var results: [(Int, Double)] = []
+                for await result in group {
+                    results.append(result)
+                }
+                
+                // 按顺序排列
+                results.sort { $0.0 < $1.0 }
+                
+                for (i, activity) in results {
+                    guard let date = calendar.date(byAdding: .day, value: -6 + i, to: today) else { continue }
+                    let dayIndex = calendar.component(.weekday, from: date)
+                    let dayName = weekDays[(dayIndex + 5) % 7]
+                    activityData.append((dayName, activity))
+                }
+            }
             
-            let postsCount = (try? modelContext.fetch(
-                FetchDescriptor<SocialPost>(
-                    predicate: #Predicate { post in
-                        post.date >= dayStart && post.date < dayEnd
-                    }
-                )
-            ).count) ?? 0
-            
-            let tradesCount = (try? modelContext.fetch(
-                FetchDescriptor<TradeRecord>(
-                    predicate: #Predicate { trade in
-                        trade.date >= dayStart && trade.date < dayEnd
-                    }
-                )
-            ).count) ?? 0
-            
-            let totalActivity = Double(completedTasks + postsCount + tradesCount)
-            let dayIndex = calendar.component(.weekday, from: date)
-            let dayName = weekDays[(dayIndex + 5) % 7]
-            
-            activityData.append((dayName, totalActivity))
+            activityLoadingState = .loaded
+        } catch {
+            activityLoadingState = .error(error.localizedDescription)
         }
         
+        PerformanceMonitor.shared.stopTrace(traceID)
         return activityData
     }
 
@@ -193,8 +308,10 @@ class DashboardViewModel: BaseViewModel {
         do {
             try await todoRepository.save(item)
             Logger.log("Task added: \(title)", category: Logger.general)
+            DashboardMetrics.shared.recordOperationSuccess("add_task")
         } catch {
             ErrorHandler.shared.handle(error, context: "DashboardViewModel.addTask")
+            DashboardMetrics.shared.recordOperationFailure("add_task", error: error)
         }
     }
 
@@ -203,8 +320,10 @@ class DashboardViewModel: BaseViewModel {
         HapticsManager.shared.light()
         do {
             try await todoRepository.save(task)
+            DashboardMetrics.shared.recordOperationSuccess("toggle_task")
         } catch {
             ErrorHandler.shared.handle(error, context: "DashboardViewModel.toggleTask")
+            DashboardMetrics.shared.recordOperationFailure("toggle_task", error: error)
         }
     }
 
@@ -212,8 +331,10 @@ class DashboardViewModel: BaseViewModel {
         do {
             try await todoRepository.delete(task)
             Logger.log("Task deleted", category: Logger.general)
+            DashboardMetrics.shared.recordOperationSuccess("delete_task")
         } catch {
             ErrorHandler.shared.handle(error, context: "DashboardViewModel.deleteTask")
+            DashboardMetrics.shared.recordOperationFailure("delete_task", error: error)
         }
     }
 }

@@ -13,6 +13,12 @@ struct TradeLogForm: View {
     @State private var assetType: AssetType = .stock
     @State private var emotion: TradeEmotion = .neutral
     @State private var tradeDate: Date = Date()
+    @State private var riskAlerts: [RiskAlert] = []
+    @State private var showRiskWarning = false
+    @State private var overrideRisk = false
+    @State private var isSaving = false
+    
+    @StateObject private var riskManager = RiskManager()
 
     var body: some View {
         NavigationView {
@@ -82,6 +88,31 @@ struct TradeLogForm: View {
                         }
                     }
                 }
+                
+                // Risk Alerts Section
+                if !riskAlerts.isEmpty {
+                    Section(header: Text("Risk Warnings")) {
+                        ForEach(riskAlerts) { alert in
+                            HStack(spacing: 12) {
+                                Image(systemName: alert.severity == .critical ? "exclamationmark.triangle.fill" : "exclamationmark.circle.fill")
+                                    .foregroundStyle(alert.severity.color)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(alert.message)
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.primaryText)
+                                }
+                                Spacer()
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        
+                        if riskAlerts.contains(where: { $0.severity == .critical }) {
+                            Toggle("Override Risk Limits", isOn: $overrideRisk)
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.coral)
+                        }
+                    }
+                }
             }
             .navigationTitle("Log Trade")
             .toolbar {
@@ -89,22 +120,81 @@ struct TradeLogForm: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveTrade() }
-                        .fontWeight(.bold)
-                        .foregroundStyle(AppTheme.primaryText)
+                    Button("Save") {
+                        Task {
+                            await saveTrade()
+                        }
+                    }
+                    .fontWeight(.bold)
+                    .foregroundStyle(AppTheme.primaryText)
+                    .disabled(isSaving)
                 }
             }
             .contentShape(Rectangle())
             .onTapGesture {
                 hideKeyboard()
             }
+            .onChange(of: price) { _, _ in validateTrade() }
+            .onChange(of: quantity) { _, _ in validateTrade() }
+            .onChange(of: symbol) { _, _ in validateTrade() }
+            .onChange(of: type) { _, _ in validateTrade() }
+            .onChange(of: emotion) { _, _ in validateTrade() }
+            .alert("Risk Warning", isPresented: $showRiskWarning) {
+                Button("Cancel", role: .cancel) { }
+                Button("Save Anyway", role: .destructive) {
+                    Task {
+                        await performSave(overrideRisk: true)
+                    }
+                }
+            } message: {
+                Text("This trade violates risk management rules. Are you sure you want to proceed?")
+            }
         }
     }
 
-    private func saveTrade() {
+    private func validateTrade() {
+        guard !symbol.isEmpty, let p = Double(price), let q = Double(quantity), p > 0, q > 0 else {
+            riskAlerts = []
+            return
+        }
+        
+        let tempTrade = TradeRecord(
+            symbol: symbol.uppercased(),
+            type: type,
+            price: p,
+            quantity: q,
+            assetType: assetType,
+            emotion: emotion,
+            note: note,
+            date: tradeDate
+        )
+        
+        // Evaluate risk
+        riskAlerts = riskManager.evaluateTrade(tempTrade)
+    }
+    
+    private func saveTrade() async {
         guard !symbol.isEmpty, let p = Double(price), let q = Double(quantity), p > 0, q > 0 else {
             return
         }
+        
+        // Check for critical risk alerts
+        let hasCriticalAlerts = riskAlerts.contains(where: { $0.severity == .critical })
+        
+        if hasCriticalAlerts && !overrideRisk {
+            showRiskWarning = true
+            return
+        }
+        
+        await performSave(overrideRisk: overrideRisk)
+    }
+    
+    private func performSave(overrideRisk: Bool) async {
+        guard !symbol.isEmpty, let p = Double(price), let q = Double(quantity), p > 0, q > 0 else {
+            return
+        }
+        
+        isSaving = true
         
         let newTrade = TradeRecord(
             symbol: symbol.uppercased(),
@@ -116,16 +206,31 @@ struct TradeLogForm: View {
             note: note,
             date: tradeDate
         )
-        Task {
-            do {
-                try await appDependency?.repositories.trade.save(newTrade)
-                HapticsManager.shared.success()
+        
+        do {
+            try await appDependency?.repositories.trade.save(newTrade)
+            
+            // Log risk override if applicable
+            if overrideRisk {
+                Logger.log("Trade saved with risk override: \(type.rawValue) \(q) \(symbol) @ $\(p)", category: Logger.trading)
+                
+                // Record override decision
+                let overrideNote = "Risk override: \(riskAlerts.map { $0.message }.joined(separator: ", "))"
+                Logger.log(overrideNote, category: Logger.trading)
+            } else {
                 Logger.log("Trade logged: \(type.rawValue) \(q) \(symbol) @ $\(p)", category: Logger.general)
-            } catch {
-                ErrorHandler.shared.handle(error, context: "TradeLogForm.logTrade")
             }
+            
+            await MainActor.run {
+                HapticsManager.shared.success()
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                isSaving = false
+            }
+            ErrorHandler.shared.handle(error, context: "TradeLogForm.saveTrade")
         }
-        dismiss()
     }
     
     private func hideKeyboard() {

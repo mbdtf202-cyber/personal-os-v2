@@ -143,7 +143,9 @@ struct GlobalSearchView: View {
             }
         }
         .onDisappear {
+            // 取消搜索任务
             searchTask?.cancel()
+            searchTask = nil
         }
     }
     
@@ -153,14 +155,25 @@ struct GlobalSearchView: View {
             return
         }
         
+        let traceID = PerformanceMonitor.shared.startTrace(
+            name: "global_search",
+            attributes: ["query": searchQuery]
+        )
+        
         let lowercased = searchQuery.lowercased()
         var results: [SearchResult] = []
         
+        // 使用 predicate 在数据库层面过滤，而不是加载所有数据后过滤
         // Search Tasks
-        let taskDescriptor = FetchDescriptor<TodoItem>()
+        var taskDescriptor = FetchDescriptor<TodoItem>(
+            predicate: #Predicate { task in
+                task.title.localizedStandardContains(searchQuery)
+            }
+        )
+        taskDescriptor.fetchLimit = 20
+        
         if let tasks = try? modelContext.fetch(taskDescriptor) {
-            let matchedTasks = tasks.filter { $0.title.lowercased().contains(lowercased) }
-            results += matchedTasks.map { task in
+            results += tasks.map { task in
                 SearchResult(
                     type: .task,
                     title: task.title,
@@ -172,13 +185,16 @@ struct GlobalSearchView: View {
         }
         
         // Search Projects
-        let projectDescriptor = FetchDescriptor<ProjectItem>()
-        if let projects = try? modelContext.fetch(projectDescriptor) {
-            let matchedProjects = projects.filter { 
-                $0.name.lowercased().contains(lowercased) || 
-                $0.details.lowercased().contains(lowercased)
+        var projectDescriptor = FetchDescriptor<ProjectItem>(
+            predicate: #Predicate { project in
+                project.name.localizedStandardContains(searchQuery) ||
+                project.details.localizedStandardContains(searchQuery)
             }
-            results += matchedProjects.map { project in
+        )
+        projectDescriptor.fetchLimit = 20
+        
+        if let projects = try? modelContext.fetch(projectDescriptor) {
+            results += projects.map { project in
                 SearchResult(
                     type: .project,
                     title: project.name,
@@ -190,10 +206,15 @@ struct GlobalSearchView: View {
         }
         
         // Search Posts
-        let postDescriptor = FetchDescriptor<SocialPost>()
+        var postDescriptor = FetchDescriptor<SocialPost>(
+            predicate: #Predicate { post in
+                post.title.localizedStandardContains(searchQuery)
+            }
+        )
+        postDescriptor.fetchLimit = 20
+        
         if let posts = try? modelContext.fetch(postDescriptor) {
-            let matchedPosts = posts.filter { $0.title.lowercased().contains(lowercased) }
-            results += matchedPosts.map { post in
+            results += posts.map { post in
                 SearchResult(
                     type: .post,
                     title: post.title,
@@ -205,10 +226,15 @@ struct GlobalSearchView: View {
         }
         
         // Search Trades
-        let tradeDescriptor = FetchDescriptor<TradeRecord>()
+        var tradeDescriptor = FetchDescriptor<TradeRecord>(
+            predicate: #Predicate { trade in
+                trade.symbol.localizedStandardContains(searchQuery)
+            }
+        )
+        tradeDescriptor.fetchLimit = 20
+        
         if let trades = try? modelContext.fetch(tradeDescriptor) {
-            let matchedTrades = trades.filter { $0.symbol.lowercased().contains(lowercased) }
-            results += matchedTrades.map { trade in
+            results += trades.map { trade in
                 SearchResult(
                     type: .trade,
                     title: trade.symbol,
@@ -220,6 +246,10 @@ struct GlobalSearchView: View {
         }
         
         searchResults = results
+        
+        PerformanceMonitor.shared.stopTrace(traceID, metrics: [
+            "result_count": Double(results.count)
+        ])
     }
 }
 

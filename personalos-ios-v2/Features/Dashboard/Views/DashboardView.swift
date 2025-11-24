@@ -80,6 +80,9 @@ struct DashboardView: View {
             TradeLogForm()
         }
         .task {
+            // 开始首屏加载计时
+            DashboardMetrics.shared.startFirstScreenLoad()
+            
             // ✅ P2 Fix: 使用 .task 自动管理 ViewModel 生命周期
             if viewModel == nil, let dependency = appDependency {
                 viewModel = DashboardViewModel(
@@ -87,10 +90,15 @@ struct DashboardView: View {
                     modelContext: modelContext
                 )
             }
+            
             await viewModel?.loadRecentData()
+            
             if let vm = viewModel {
                 activityData = await vm.calculateActivityData()
             }
+            
+            // 结束首屏加载计时
+            DashboardMetrics.shared.endFirstScreenLoad()
         }
         .sheet(isPresented: $showQRScanner) {
             QRCodeGeneratorView()

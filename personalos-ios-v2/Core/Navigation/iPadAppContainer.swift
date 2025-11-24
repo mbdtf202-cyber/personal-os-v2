@@ -2,6 +2,7 @@ import SwiftUI
 
 struct iPadAppContainer: View {
     @Environment(AppRouter.self) private var router
+    @Environment(\.appDependency) private var appDependency
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     
     var body: some View {
@@ -40,17 +41,29 @@ struct iPadAppContainer: View {
         } detail: {
             // Detail View
             Group {
-                switch router.selectedTab {
-                case .dashboard:
-                    DashboardView()
-                case .growth:
-                    GrowthHubView()
-                case .social:
-                    SocialDashboardView()
-                case .wealth:
-                    TradingDashboardView()
-                case .news:
-                    NewsFeedView()
+                if let appDependency = appDependency {
+                    switch router.selectedTab {
+                    case .dashboard:
+                        DashboardView()
+                    case .growth:
+                        GrowthHubView()
+                    case .social:
+                        SocialDashboardView(
+                            viewModel: SocialDashboardViewModel(
+                                socialPostRepository: appDependency.repositories.socialPost
+                            )
+                        )
+                    case .wealth:
+                        TradingDashboardView()
+                    case .news:
+                        NewsFeedView()
+                    }
+                } else {
+                    EmptyStateView(
+                        icon: "exclamationmark.triangle",
+                        title: "Initialization Error",
+                        message: "App dependencies not available"
+                    )
                 }
             }
         }

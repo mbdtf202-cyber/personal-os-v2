@@ -27,14 +27,14 @@ extension Endpoint {
 
 // MARK: - GitHub Endpoints
 enum GitHubEndpoint: Endpoint {
-    case userRepos(username: String, perPage: Int)
+    case userRepos(username: String, perPage: Int, page: Int, token: String?)
     case repoIssues(owner: String, repo: String)
     
     var baseURL: String { "https://api.github.com" }
     
     var path: String {
         switch self {
-        case .userRepos(let username, _):
+        case .userRepos(let username, _, _, _):
             return "/users/\(username)/repos"
         case .repoIssues(let owner, let repo):
             return "/repos/\(owner)/\(repo)/issues"
@@ -44,15 +44,27 @@ enum GitHubEndpoint: Endpoint {
     var method: HTTPMethod { .get }
     
     var headers: [String: String]? {
-        ["Accept": "application/vnd.github.v3+json"]
+        var headers = ["Accept": "application/vnd.github.v3+json"]
+        
+        switch self {
+        case .userRepos(_, _, _, let token):
+            if let token = token {
+                headers["Authorization"] = "Bearer \(token)"
+            }
+        case .repoIssues:
+            break
+        }
+        
+        return headers
     }
     
     var queryItems: [URLQueryItem]? {
         switch self {
-        case .userRepos(_, let perPage):
+        case .userRepos(_, let perPage, let page, _):
             return [
                 URLQueryItem(name: "sort", value: "updated"),
-                URLQueryItem(name: "per_page", value: "\(perPage)")
+                URLQueryItem(name: "per_page", value: "\(perPage)"),
+                URLQueryItem(name: "page", value: "\(page)")
             ]
         case .repoIssues:
             return nil

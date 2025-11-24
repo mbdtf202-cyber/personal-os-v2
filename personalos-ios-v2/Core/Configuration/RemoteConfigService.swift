@@ -25,13 +25,14 @@ struct ABTestConfig: Codable {
     var experiments: [String: String] = [:]
 }
 
-@MainActor
-class RemoteConfigService: ObservableObject {
+@Observable
+final class RemoteConfigService {
     static let shared = RemoteConfigService()
     
-    @Published var featureFlags: FeatureFlags
-    @Published var abTestConfig: ABTestConfig
-    @Published var isLoaded: Bool = false
+    private(set) var featureFlags: FeatureFlags
+    private(set) var abTestConfig: ABTestConfig
+    private(set) var isLoaded: Bool = false
+    private(set) var apiKeys: [String: String] = [:]
     
     private let configURL: String
     private let cacheKey = "cached_remote_config"
@@ -131,6 +132,14 @@ class RemoteConfigService: ObservableObject {
     
     func getExperimentVariant(_ experimentName: String) -> String? {
         return abTestConfig.experiments[experimentName]
+    }
+    
+    func getAPIKey(for service: String) -> String? {
+        return apiKeys[service]
+    }
+    
+    func updateAPIKeys(_ keys: [String: String]) {
+        self.apiKeys = keys
     }
 }
 

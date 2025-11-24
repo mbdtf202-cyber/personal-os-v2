@@ -1,14 +1,17 @@
 import SwiftUI
 import UIKit
-import Combine
+import Observation
 
+/// ✅ P0 Task 20: Migrated from ObservableObject to @Observable
+/// Requirement 18.1: Use @Observable macro for state management
 @MainActor
-class ThemeManager: ObservableObject {
+@Observable
+class ThemeManager {
     static let shared = ThemeManager()
     
-    @Published var currentTheme: AppThemeMode = .system
-    @Published var currentStyle: ThemeStyle = .glass
-    @Published var performanceMode: PerformanceMode = .standard
+    var currentTheme: AppThemeMode = .system
+    var currentStyle: ThemeStyle = .glass
+    var performanceMode: PerformanceMode = .standard
     
     private init() {
         loadSavedTheme()

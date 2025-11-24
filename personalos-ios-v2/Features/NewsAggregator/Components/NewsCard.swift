@@ -3,6 +3,7 @@ import SwiftUI
 struct NewsCard: View {
     let article: NewsArticle
     let isBookmarked: Bool
+    let dataSource: NewsDataSource // ✅ P0 Fix: Data source parameter
     let onBookmark: () async -> Void
     let onCreateTask: () async -> Void
     
@@ -13,6 +14,18 @@ struct NewsCard: View {
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(AppTheme.mistBlue)
+                
+                // ✅ P0 Fix: Data source badge (Requirement 14.3)
+                if dataSource != .real {
+                    Text(dataSource.displayName)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(dataSource == .demo ? Color.orange : Color.gray)
+                        .cornerRadius(4)
+                }
                 
                 Spacer()
                 

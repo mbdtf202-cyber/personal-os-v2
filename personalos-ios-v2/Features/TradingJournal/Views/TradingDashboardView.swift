@@ -37,6 +37,18 @@ struct TradingDashboardView: View {
                             PriceErrorBanner(error: error, onDismiss: { showPriceError = false })
                         }
                         
+                        if viewModel.isCalculating {
+                            CalculationProgressView(
+                                progress: viewModel.calculationProgress,
+                                status: viewModel.calculationStatus,
+                                onCancel: { viewModel.cancelCalculation() }
+                            )
+                        }
+                        
+                        if let error = viewModel.calculationError {
+                            ErrorBanner(message: error)
+                        }
+                        
                         BalanceCard(
                             totalBalance: Double(truncating: viewModel.totalBalance as NSNumber),
                             dayPnL: Double(truncating: viewModel.dayPnL as NSNumber),
@@ -88,12 +100,14 @@ struct TradingDashboardView: View {
             }
         }
         .onChange(of: recentTrades) { _, newTrades in
-            viewModel.recalculatePortfolio(from: newTrades)
+            Task {
+                await viewModel.recalculatePortfolio(from: newTrades)
+            }
         }
         .onAppear {
             viewModel.priceService = stockPriceService
-            viewModel.recalculatePortfolio(from: recentTrades)
             Task {
+                await viewModel.recalculatePortfolio(from: recentTrades)
                 await viewModel.refreshPrices(for: recentTrades)
                 if stockPriceService.error != nil {
                     showPriceError = true
@@ -348,4 +362,66 @@ struct RecentTradeRow: View {
 #Preview {
     TradingDashboardView()
         .modelContainer(for: TradeRecord.self, inMemory: true)
+}
+
+
+// MARK: - Calculation Progress View
+struct CalculationProgressView: View {
+    let progress: Double
+    let status: String
+    let onCancel: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Calculating Portfolio")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.primaryText)
+                    Text(status)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+                Spacer()
+                Button(action: onCancel) {
+                    Text("Cancel")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.coral)
+                }
+            }
+            
+            ProgressView(value: progress, total: 1.0)
+                .tint(AppTheme.mistBlue)
+            
+            HStack {
+                Text("\(Int(progress * 100))%")
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.tertiaryText)
+                Spacer()
+            }
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: AppTheme.shadow, radius: 5, y: 2)
+    }
+}
+
+// MARK: - Error Banner
+struct ErrorBanner: View {
+    let message: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(AppTheme.coral)
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(AppTheme.primaryText)
+            Spacer()
+        }
+        .padding()
+        .background(AppTheme.coral.opacity(0.1))
+        .cornerRadius(12)
+    }
 }

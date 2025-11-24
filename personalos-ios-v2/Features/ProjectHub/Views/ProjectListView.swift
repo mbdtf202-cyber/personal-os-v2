@@ -10,6 +10,22 @@ struct ProjectListView: View {
     @Query(sort: \ProjectItem.name) private var projects: [ProjectItem]
     @State private var showGitHubSync = false
     @State private var githubUsername = ""
+    @State private var searchText = ""
+    @State private var searchTask: Task<Void, Never>?
+    @State private var filteredProjects: [ProjectItem] = []
+    @State private var isSearching = false
+    @State private var displayedCount = 20
+    @State private var isLoadingMore = false
+    
+    private var displayProjects: [ProjectItem] {
+        let source = isSearching ? filteredProjects : projects
+        return Array(source.prefix(displayedCount))
+    }
+    
+    private var hasMore: Bool {
+        let source = isSearching ? filteredProjects : projects
+        return displayedCount < source.count
+    }
     
     var body: some View {
         NavigationStack {
@@ -27,11 +43,30 @@ struct ProjectListView: View {
                         
                         // Projects List
                         LazyVStack(spacing: 16) {
-                            ForEach(projects) { project in
+                            ForEach(displayProjects) { project in
                                 NavigationLink(destination: ProjectDetailView(project: project)) {
                                     ProjectRow(project: project)
                                 }
                                 .buttonStyle(.plain)
+                                .onAppear {
+                                    if project.id == displayProjects.last?.id {
+                                        loadMoreIfNeeded()
+                                    }
+                                }
+                            }
+                            
+                            if isLoadingMore {
+                                HStack {
+                                    Spacer()
+                                    ProgressView()
+                                        .padding()
+                                    Spacer()
+                                }
+                            } else if !hasMore && !displayProjects.isEmpty {
+                                Text("No more projects")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.tertiaryText)
+                                    .padding()
                             }
                         }
                         
@@ -60,12 +95,75 @@ struct ProjectListView: View {
                 }
             }
             .navigationTitle("Project Hub")
+            .searchable(text: $searchText, prompt: "Search projects...")
+            .onChange(of: searchText) { oldValue, newValue in
+                performSearch(query: newValue)
+            }
             .sheet(isPresented: $showGitHubSync) {
                 GitHubSyncSheet()
             }
             .onAppear {
                 seedProjectsIfNeeded()
             }
+        }
+    }
+    
+    private func performSearch(query: String) {
+        // Cancel previous search
+        searchTask?.cancel()
+        
+        // Reset pagination on new search
+        displayedCount = 20
+        
+        // Debounce search
+        searchTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+            
+            guard !Task.isCancelled else { return }
+            
+            await MainActor.run {
+                if query.isEmpty {
+                    isSearching = false
+                    filteredProjects = []
+                } else {
+                    isSearching = true
+                    searchProjects(query: query)
+                }
+            }
+        }
+    }
+    
+    private func loadMoreIfNeeded() {
+        guard !isLoadingMore && hasMore else { return }
+        
+        isLoadingMore = true
+        
+        Task {
+            try? await Task.sleep(nanoseconds: 500_000_000) // Simulate loading
+            
+            await MainActor.run {
+                displayedCount += 20
+                isLoadingMore = false
+            }
+        }
+    }
+    
+    private func searchProjects(query: String) {
+        do {
+            // Use predicate for efficient database search
+            let predicate = #Predicate<ProjectItem> { project in
+                project.name.localizedStandardContains(query) ||
+                project.details.localizedStandardContains(query) ||
+                project.language.localizedStandardContains(query)
+            }
+            
+            var descriptor = FetchDescriptor<ProjectItem>(predicate: predicate)
+            descriptor.sortBy = [SortDescriptor(\ProjectItem.name)]
+            
+            filteredProjects = try modelContext.fetch(descriptor)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "ProjectListView.searchProjects")
+            filteredProjects = []
         }
     }
     

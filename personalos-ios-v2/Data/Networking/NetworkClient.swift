@@ -93,10 +93,24 @@ class NetworkClient {
         cachePolicy: CachePolicy = .networkFirst
     ) async throws -> T {
         
+        // 开始性能追踪
+        let traceID = PerformanceMonitor.shared.startTrace(
+            name: "network_request",
+            attributes: [
+                "endpoint": endpoint,
+                "method": method.rawValue
+            ]
+        )
+        
+        defer {
+            PerformanceMonitor.shared.stopTrace(traceID)
+        }
+        
         // Check circuit breaker
         guard !circuitBreaker.isOpen else {
             // Try offline cache
             if let cached: T = offlineCache.get(key: endpoint) {
+                PerformanceMonitor.shared.recordCustomMetric(name: "cache_hit", value: 1)
                 return cached
             }
             throw NetworkError.circuitBreakerOpen
@@ -104,6 +118,7 @@ class NetworkClient {
         
         // Try cache first if policy allows
         if cachePolicy == .cacheFirst, let cached: T = offlineCache.get(key: endpoint) {
+            PerformanceMonitor.shared.recordCustomMetric(name: "cache_hit", value: 1)
             return cached
         }
         
@@ -121,13 +136,19 @@ class NetworkClient {
                 circuitBreaker.recordSuccess()
                 offlineCache.set(key: endpoint, value: result)
                 
+                PerformanceMonitor.shared.recordCustomMetric(name: "network_success", value: 1)
+                PerformanceMonitor.shared.recordCustomMetric(name: "retry_count", value: Double(attempt))
+                
                 return result
             } catch {
                 lastError = error
                 circuitBreaker.recordFailure()
                 
+                PerformanceMonitor.shared.recordCustomMetric(name: "network_error", value: 1)
+                
                 // Don't retry on certain errors
                 if case NetworkError.serverError(let code) = error, code == 429 {
+                    PerformanceMonitor.shared.recordCustomMetric(name: "rate_limited", value: 1)
                     throw NetworkError.rateLimited
                 }
                 
@@ -140,6 +161,7 @@ class NetworkClient {
         
         // Final fallback to cache
         if let cached: T = offlineCache.get(key: endpoint) {
+            PerformanceMonitor.shared.recordCustomMetric(name: "cache_fallback", value: 1)
             return cached
         }
         

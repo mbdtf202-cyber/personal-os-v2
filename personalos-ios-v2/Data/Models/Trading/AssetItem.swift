@@ -6,19 +6,22 @@ final class AssetItem {
     var id: UUID
     var symbol: String
     var name: String
-    // ✅ 使用 Double 而不是 Decimal，SwiftData 原生支持
-    var quantity: Double
-    var currentPrice: Double
-    var avgCost: Double
+    // ✅ P0 Fix: 使用 Decimal 类型确保金融精度
+    @Attribute(.transformable(by: "DecimalTransformer"))
+    var quantity: Decimal
+    @Attribute(.transformable(by: "DecimalTransformer"))
+    var currentPrice: Decimal
+    @Attribute(.transformable(by: "DecimalTransformer"))
+    var avgCost: Decimal
     var type: AssetType
 
     init(
         id: UUID = UUID(),
         symbol: String,
         name: String,
-        quantity: Double,
-        currentPrice: Double,
-        avgCost: Double,
+        quantity: Decimal,
+        currentPrice: Decimal,
+        avgCost: Decimal,
         type: AssetType
     ) {
         self.id = id
@@ -30,30 +33,38 @@ final class AssetItem {
         self.type = type
     }
     
-    var marketValue: Double {
+    var marketValue: Decimal {
         quantity * currentPrice
     }
     
-    var pnl: Double {
+    var pnl: Decimal {
         (currentPrice - avgCost) * quantity
     }
     
-    var pnlPercent: Double {
+    var pnlPercent: Decimal {
         guard avgCost != 0 else { return 0 }
         return (currentPrice - avgCost) / avgCost
     }
     
-    // 提供 Decimal 版本用于精确计算
-    var quantityDecimal: Decimal {
-        Decimal(quantity)
-    }
-    
-    var currentPriceDecimal: Decimal {
-        Decimal(currentPrice)
-    }
-    
-    var avgCostDecimal: Decimal {
-        Decimal(avgCost)
+    // Convenience initializer for backward compatibility
+    convenience init(
+        id: UUID = UUID(),
+        symbol: String,
+        name: String,
+        quantity: Double,
+        currentPrice: Double,
+        avgCost: Double,
+        type: AssetType
+    ) {
+        self.init(
+            id: id,
+            symbol: symbol,
+            name: name,
+            quantity: Decimal(quantity),
+            currentPrice: Decimal(currentPrice),
+            avgCost: Decimal(avgCost),
+            type: type
+        )
     }
 }
 

@@ -1,0 +1,53 @@
+# SwiftFormat Configuration
+
+# Version
+--swiftversion 5.9
+
+# Indentation
+--indent 4
+--tabwidth 4
+--indentcase false
+--ifdef no-indent
+
+# Wrapping
+--maxwidth 120
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--closingparen balanced
+
+# Spacing
+--trimwhitespace always
+--commas inline
+--semicolons never
+
+# Organization
+--importgrouping testable-bottom
+--extensionacl on-declarations
+
+# Redundancy
+--redundanttype inferred
+--redundantnil remove
+--redundantparens remove
+--redundantget remove
+--redundantself remove
+
+# Formatting
+--elseposition same-line
+--guardelse same-line
+--header strip
+--patternlet inline
+--self remove
+--stripunusedargs closure-only
+--voidtype void
+
+# Rules to enable
+--enable isEmpty
+--enable sortedImports
+--enable blankLinesAtStartOfScope
+--enable blankLinesAtEndOfScope
+--enable consecutiveSpaces
+
+# Rules to disable
+--disable andOperator
+--disable wrapMultilineStatementBraces

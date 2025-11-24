@@ -39,8 +39,9 @@ class CloudSyncManager: ObservableObject {
             return
         }
         
-        container.accountStatus { status, error in
-            Task { @MainActor [weak self] in
+        // ✅ Task 28: Already using weak self - good!
+        container.accountStatus { [weak self] status, error in
+            Task { @MainActor in
                 self?.iCloudAvailable = (status == .available)
                 
                 if let error = error {

@@ -7,6 +7,8 @@ class PerformanceMonitor {
     
     private let logger = OSLog(subsystem: "com.personalos.v2", category: "performance")
     private var metrics: [PerformanceMetric] = []
+    private var customMetrics: [String: [Double]] = [:]
+    private var activeTraces: [String: TraceInfo] = [:]
     
     private init() {}
     
@@ -30,11 +32,72 @@ class PerformanceMonitor {
         recordMetric(operation: token.operation, duration: duration)
     }
     
-    private func recordMetric(operation: String, duration: TimeInterval) {
+    // MARK: - Enhanced Tracing
+    
+    func startTrace(name: String, attributes: [String: String] = [:]) -> String {
+        let traceID = UUID().uuidString
+        let trace = TraceInfo(
+            id: traceID,
+            name: name,
+            startTime: Date(),
+            attributes: attributes
+        )
+        activeTraces[traceID] = trace
+        
+        Logger.log("Started trace: \(name) [\(traceID)]", category: Logger.performance)
+        return traceID
+    }
+    
+    func stopTrace(_ traceID: String, metrics: [String: Double] = [:]) {
+        guard let trace = activeTraces.removeValue(forKey: traceID) else {
+            Logger.warning("Attempted to stop unknown trace: \(traceID)", category: Logger.performance)
+            return
+        }
+        
+        let duration = Date().timeIntervalSince(trace.startTime)
+        
+        // 记录追踪
+        let metric = PerformanceMetric(
+            timestamp: trace.startTime,
+            operation: trace.name,
+            duration: duration,
+            attributes: trace.attributes,
+            customMetrics: metrics
+        )
+        
+        self.metrics.append(metric)
+        
+        // 记录自定义指标
+        for (key, value) in metrics {
+            recordCustomMetric(name: key, value: value)
+        }
+        
+        Logger.log("Stopped trace: \(trace.name) - Duration: \(duration)s", category: Logger.performance)
+        
+        // 上报到分析系统
+        AnalyticsLogger.shared.log(.performance(metric: trace.name, duration: duration))
+    }
+    
+    func recordCustomMetric(name: String, value: Double) {
+        if customMetrics[name] == nil {
+            customMetrics[name] = []
+        }
+        customMetrics[name]?.append(value)
+        
+        Logger.log("Custom metric: \(name) = \(value)", category: Logger.performance)
+    }
+    
+    func incrementCounter(name: String, by value: Int = 1) {
+        let currentValue = (customMetrics[name]?.last ?? 0) + Double(value)
+        recordCustomMetric(name: name, value: currentValue)
+    }
+    
+    private func recordMetric(operation: String, duration: TimeInterval, attributes: [String: String] = [:]) {
         let metric = PerformanceMetric(
             timestamp: Date(),
             operation: operation,
-            duration: duration
+            duration: duration,
+            attributes: attributes
         )
         
         metrics.append(metric)
@@ -48,6 +111,10 @@ class PerformanceMonitor {
         // 如果性能过慢，记录警告
         if duration > 2.0 {
             Logger.warning("Slow operation detected: \(operation) took \(duration)s", category: Logger.performance)
+            FirebaseCrashReporter.shared.addBreadcrumb(
+                message: "Slow operation: \(operation)",
+                metadata: ["duration": duration]
+            )
         }
     }
     
@@ -63,6 +130,39 @@ class PerformanceMonitor {
         guard !filtered.isEmpty else { return nil }
         return filtered.map(\.duration).reduce(0, +) / Double(filtered.count)
     }
+    
+    func getCustomMetricStats(for name: String) -> MetricStats? {
+        guard let values = customMetrics[name], !values.isEmpty else { return nil }
+        
+        let sorted = values.sorted()
+        let count = values.count
+        let sum = values.reduce(0, +)
+        
+        return MetricStats(
+            count: count,
+            sum: sum,
+            average: sum / Double(count),
+            min: sorted.first ?? 0,
+            max: sorted.last ?? 0,
+            median: sorted[count / 2]
+        )
+    }
+}
+
+struct TraceInfo {
+    let id: String
+    let name: String
+    let startTime: Date
+    let attributes: [String: String]
+}
+
+struct MetricStats {
+    let count: Int
+    let sum: Double
+    let average: Double
+    let min: Double
+    let max: Double
+    let median: Double
 }
 
 struct PerformanceToken {
@@ -75,4 +175,6 @@ struct PerformanceMetric: Identifiable {
     let timestamp: Date
     let operation: String
     let duration: TimeInterval
+    var attributes: [String: String] = [:]
+    var customMetrics: [String: Double] = [:]
 }

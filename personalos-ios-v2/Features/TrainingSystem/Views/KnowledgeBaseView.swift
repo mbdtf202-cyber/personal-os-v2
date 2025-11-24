@@ -8,25 +8,28 @@ struct KnowledgeBaseView: View {
     @State private var selectedCategory: KnowledgeCategory?
     @State private var searchText = ""
     @State private var showAddSnippet = false
+    @State private var searchTask: Task<Void, Never>?
+    @State private var filteredSnippets: [CodeSnippet] = []
+    @State private var isSearching = false
+    @State private var displayedCount = 20
+    @State private var isLoadingMore = false
     
-    private var filteredSnippets: [CodeSnippet] {
-        var results = allSnippets
-        
-        // Filter by category
-        if let category = selectedCategory {
-            results = results.filter { $0.category == category }
+    private var sourceSnippets: [CodeSnippet] {
+        if isSearching {
+            return filteredSnippets
+        } else if let category = selectedCategory {
+            return allSnippets.filter { $0.category == category }
+        } else {
+            return allSnippets
         }
-        
-        // Filter by search text
-        if !searchText.isEmpty {
-            results = results.filter { 
-                $0.title.localizedCaseInsensitiveContains(searchText) ||
-                $0.summary.localizedCaseInsensitiveContains(searchText) ||
-                $0.code.localizedCaseInsensitiveContains(searchText)
-            }
-        }
-        
-        return results
+    }
+    
+    private var displaySnippets: [CodeSnippet] {
+        Array(sourceSnippets.prefix(displayedCount))
+    }
+    
+    private var hasMore: Bool {
+        displayedCount < sourceSnippets.count
     }
     
     var body: some View {
@@ -58,7 +61,7 @@ struct KnowledgeBaseView: View {
                     // Content List
                     ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 16) {
-                            if filteredSnippets.isEmpty {
+                            if displaySnippets.isEmpty {
                                 VStack(spacing: 16) {
                                     Image(systemName: "doc.text.magnifyingglass")
                                         .font(.system(size: 48))
@@ -74,11 +77,30 @@ struct KnowledgeBaseView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.top, 60)
                             } else {
-                                ForEach(filteredSnippets) { snippet in
+                                ForEach(displaySnippets) { snippet in
                                     NavigationLink(destination: SnippetDetailView(snippet: snippet)) {
                                         SnippetRowCard(snippet: snippet)
                                     }
                                     .buttonStyle(.plain)
+                                    .onAppear {
+                                        if snippet.id == displaySnippets.last?.id {
+                                            loadMoreIfNeeded()
+                                        }
+                                    }
+                                }
+                                
+                                if isLoadingMore {
+                                    HStack {
+                                        Spacer()
+                                        ProgressView()
+                                            .padding()
+                                        Spacer()
+                                    }
+                                } else if !hasMore && !displaySnippets.isEmpty {
+                                    Text("No more snippets")
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.tertiaryText)
+                                        .padding()
                                 }
                             }
                         }
@@ -88,6 +110,15 @@ struct KnowledgeBaseView: View {
             }
             .navigationTitle("Knowledge Base")
             .searchable(text: $searchText, prompt: "Search snippets, bugs, notes...")
+            .onChange(of: searchText) { oldValue, newValue in
+                performSearch(query: newValue)
+            }
+            .onChange(of: selectedCategory) { oldValue, newValue in
+                displayedCount = 20
+                if isSearching && !searchText.isEmpty {
+                    performSearch(query: searchText)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { showAddSnippet = true }) {
@@ -101,6 +132,76 @@ struct KnowledgeBaseView: View {
             .onAppear {
                 seedSnippetsIfNeeded()
             }
+        }
+    }
+    
+    private func performSearch(query: String) {
+        // Cancel previous search
+        searchTask?.cancel()
+        
+        // Reset pagination on new search
+        displayedCount = 20
+        
+        // Debounce search
+        searchTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+            
+            guard !Task.isCancelled else { return }
+            
+            await MainActor.run {
+                if query.isEmpty {
+                    isSearching = false
+                    filteredSnippets = []
+                } else {
+                    isSearching = true
+                    searchSnippets(query: query)
+                }
+            }
+        }
+    }
+    
+    private func loadMoreIfNeeded() {
+        guard !isLoadingMore && hasMore else { return }
+        
+        isLoadingMore = true
+        
+        Task {
+            try? await Task.sleep(nanoseconds: 500_000_000) // Simulate loading
+            
+            await MainActor.run {
+                displayedCount += 20
+                isLoadingMore = false
+            }
+        }
+    }
+    
+    private func searchSnippets(query: String) {
+        do {
+            // Build predicate with category filter if needed
+            let predicate: Predicate<CodeSnippet>
+            
+            if let category = selectedCategory {
+                predicate = #Predicate<CodeSnippet> { snippet in
+                    snippet.category == category &&
+                    (snippet.title.localizedStandardContains(query) ||
+                     snippet.summary.localizedStandardContains(query) ||
+                     snippet.code.localizedStandardContains(query))
+                }
+            } else {
+                predicate = #Predicate<CodeSnippet> { snippet in
+                    snippet.title.localizedStandardContains(query) ||
+                    snippet.summary.localizedStandardContains(query) ||
+                    snippet.code.localizedStandardContains(query)
+                }
+            }
+            
+            var descriptor = FetchDescriptor<CodeSnippet>(predicate: predicate)
+            descriptor.sortBy = [SortDescriptor(\CodeSnippet.date, order: .reverse)]
+            
+            filteredSnippets = try modelContext.fetch(descriptor)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "KnowledgeBaseView.searchSnippets")
+            filteredSnippets = []
         }
     }
     

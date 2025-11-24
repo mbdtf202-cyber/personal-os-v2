@@ -7,6 +7,18 @@ struct QuickNoteOverlay: View {
     @State private var saveAsPost: Bool = false
     @FocusState private var isFocused: Bool
     @Environment(\.appDependency) private var appDependency
+    @State private var isSaving = false
+    @State private var showError = false
+    @State private var errorMessage = ""
+    
+    private var isValid: Bool {
+        !noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        noteText.count <= 1000
+    }
+    
+    private var characterCount: Int {
+        noteText.count
+    }
     
     var body: some View {
         ZStack {
@@ -25,13 +37,17 @@ struct QuickNoteOverlay: View {
                             .font(.headline)
                             .foregroundStyle(AppTheme.primaryText)
                         Spacer()
-                        Button("Save") {
-                            saveNote()
-                            withAnimation { isPresented = false }
+                        if isSaving {
+                            ProgressView()
+                                .tint(AppTheme.mistBlue)
+                        } else {
+                            Button("Save") {
+                                saveNote()
+                            }
+                            .fontWeight(.bold)
+                            .foregroundStyle(isValid ? AppTheme.mistBlue : AppTheme.tertiaryText)
+                            .disabled(!isValid)
                         }
-                        .fontWeight(.bold)
-                        .foregroundStyle(AppTheme.mistBlue)
-                        .disabled(noteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     
                     TextEditor(text: $noteText)
@@ -64,6 +80,20 @@ struct QuickNoteOverlay: View {
                             .font(.caption2)
                             .foregroundStyle(AppTheme.secondaryText)
                         Spacer()
+                        Text("\(characterCount)/1000")
+                            .font(.caption2)
+                            .foregroundStyle(characterCount > 1000 ? AppTheme.coral : AppTheme.tertiaryText)
+                    }
+                    
+                    if showError {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(AppTheme.coral)
+                            Text(errorMessage)
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.coral)
+                        }
+                        .padding(.top, 4)
                     }
                 }
                 .padding(24)
@@ -79,45 +109,57 @@ struct QuickNoteOverlay: View {
     
     private func saveNote() {
         let trimmedText = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty else { return }
         
-        if saveAsPost {
-            // Save as Social Post (Idea status)
-            let title = trimmedText.components(separatedBy: .newlines).first ?? trimmedText
-            let post = SocialPost(
-                title: title,
-                platform: .blog,
-                status: .idea,
-                date: Date(),
-                content: trimmedText,
-                views: 0,
-                likes: 0
-            )
-            Task {
-                do {
+        guard isValid else {
+            showError = true
+            errorMessage = trimmedText.isEmpty ? "Note cannot be empty" : "Note is too long (max 1000 characters)"
+            HapticsManager.shared.error()
+            return
+        }
+        
+        isSaving = true
+        showError = false
+        
+        Task {
+            do {
+                if saveAsPost {
+                    // Save as Social Post (Idea status)
+                    let title = trimmedText.components(separatedBy: .newlines).first ?? trimmedText
+                    let post = SocialPost(
+                        title: title,
+                        platform: .blog,
+                        status: .idea,
+                        date: Date(),
+                        content: trimmedText,
+                        views: 0,
+                        likes: 0
+                    )
                     try await appDependency?.repositories.socialPost.save(post)
                     Logger.log("Quick note saved as Social Post", category: Logger.general)
-                    HapticsManager.shared.success()
-                } catch {
-                    ErrorHandler.shared.handle(error, context: "QuickNoteOverlay.saveNote")
-                }
-            }
-        } else {
-            // Save as Todo Item
-            let title = trimmedText.components(separatedBy: .newlines).first ?? trimmedText
-            let todo = TodoItem(
-                title: title,
-                category: "Note",
-                priority: 1
-            )
-            Task {
-                do {
+                } else {
+                    // Save as Todo Item
+                    let title = trimmedText.components(separatedBy: .newlines).first ?? trimmedText
+                    let todo = TodoItem(
+                        title: title,
+                        category: "Note",
+                        priority: 1
+                    )
                     try await appDependency?.repositories.todo.save(todo)
                     Logger.log("Quick note saved as Task", category: Logger.general)
-                    HapticsManager.shared.success()
-                } catch {
-                    ErrorHandler.shared.handle(error, context: "QuickNoteOverlay.saveNote")
                 }
+                
+                await MainActor.run {
+                    HapticsManager.shared.success()
+                    withAnimation { isPresented = false }
+                }
+            } catch {
+                await MainActor.run {
+                    isSaving = false
+                    showError = true
+                    errorMessage = "Failed to save note. Please try again."
+                    HapticsManager.shared.error()
+                }
+                ErrorHandler.shared.handle(error, context: "QuickNoteOverlay.saveNote")
             }
         }
     }
