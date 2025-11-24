@@ -43,7 +43,9 @@ actor ImageCache {
         
         // 1. 检查内存缓存
         if let cachedImage = memoryCache.object(forKey: cacheKey) {
-            StructuredLogger.shared.debug("Image loaded from memory cache", context: ["url": url.absoluteString])
+            await MainActor.run {
+                StructuredLogger.shared.debug("Image loaded from memory cache", context: ["url": url.absoluteString])
+            }
             return cachedImage
         }
         
@@ -53,12 +55,16 @@ actor ImageCache {
             let cost = diskImage.pngData()?.count ?? 0
             memoryCache.setObject(diskImage, forKey: cacheKey, cost: cost)
             
-            StructuredLogger.shared.debug("Image loaded from disk cache", context: ["url": url.absoluteString])
+            await MainActor.run {
+                StructuredLogger.shared.debug("Image loaded from disk cache", context: ["url": url.absoluteString])
+            }
             return diskImage
         }
         
         // 3. 从网络下载
-        StructuredLogger.shared.debug("Downloading image from network", context: ["url": url.absoluteString])
+        await MainActor.run {
+            StructuredLogger.shared.debug("Downloading image from network", context: ["url": url.absoluteString])
+        }
         
         let (data, _) = try await URLSession.shared.data(from: url)
         
@@ -108,9 +114,11 @@ actor ImageCache {
     
     // MARK: - Memory Management
     
-    func clearMemoryCache() {
+    func clearMemoryCache() async {
         memoryCache.removeAllObjects()
-        StructuredLogger.shared.info("Memory cache cleared")
+        await MainActor.run {
+            StructuredLogger.shared.info("Memory cache cleared")
+        }
     }
     
     func clearDiskCache() async {
@@ -119,20 +127,26 @@ actor ImageCache {
             for file in files {
                 try? FileManager.default.removeItem(at: file)
             }
-            StructuredLogger.shared.info("Disk cache cleared")
+            await MainActor.run {
+                StructuredLogger.shared.info("Disk cache cleared")
+            }
         } catch {
-            StructuredLogger.shared.error("Failed to clear disk cache: \(error)")
+            await MainActor.run {
+                StructuredLogger.shared.error("Failed to clear disk cache: \(error)")
+            }
         }
     }
     
     func clearAll() async {
-        clearMemoryCache()
+        await clearMemoryCache()
         await clearDiskCache()
     }
     
-    private func handleMemoryWarning() {
-        clearMemoryCache()
-        StructuredLogger.shared.warning("Memory warning received, cleared image cache")
+    private func handleMemoryWarning() async {
+        await clearMemoryCache()
+        await MainActor.run {
+            StructuredLogger.shared.warning("Memory warning received, cleared image cache")
+        }
     }
     
     // MARK: - Cache Management
@@ -150,7 +164,9 @@ actor ImageCache {
                 }
             }
         } catch {
-            StructuredLogger.shared.error("Failed to calculate disk cache size: \(error)")
+            await MainActor.run {
+                StructuredLogger.shared.error("Failed to calculate disk cache size: \(error)")
+            }
         }
         
         return totalSize
@@ -173,9 +189,13 @@ actor ImageCache {
                 }
             }
             
-            StructuredLogger.shared.info("Cleaned up old cache files")
+            await MainActor.run {
+                StructuredLogger.shared.info("Cleaned up old cache files")
+            }
         } catch {
-            StructuredLogger.shared.error("Failed to cleanup old files: \(error)")
+            await MainActor.run {
+                StructuredLogger.shared.error("Failed to cleanup old files: \(error)")
+            }
         }
     }
     
@@ -210,9 +230,13 @@ actor ImageCache {
                 }
             }
             
-            StructuredLogger.shared.info("Enforced disk cache limit, deleted \(deletedSize) bytes")
+            await MainActor.run {
+                StructuredLogger.shared.info("Enforced disk cache limit, deleted \(deletedSize) bytes")
+            }
         } catch {
-            StructuredLogger.shared.error("Failed to enforce disk cache limit: \(error)")
+            await MainActor.run {
+                StructuredLogger.shared.error("Failed to enforce disk cache limit: \(error)")
+            }
         }
     }
 }

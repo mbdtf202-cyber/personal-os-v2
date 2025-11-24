@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum ErrorSeverity {
+enum PresentableErrorSeverity {
     case info
     case warning
     case error
@@ -29,14 +29,14 @@ struct PresentableError: Identifiable {
     let id = UUID()
     let title: String
     let message: String
-    let severity: ErrorSeverity
+    let severity: PresentableErrorSeverity
     let isRecoverable: Bool
     let retryAction: (() async -> Void)?
     
     init(
         title: String,
         message: String,
-        severity: ErrorSeverity = .error,
+        severity: PresentableErrorSeverity = .error,
         isRecoverable: Bool = true,
         retryAction: (() async -> Void)? = nil
     ) {
@@ -49,7 +49,7 @@ struct PresentableError: Identifiable {
     
     static func from(_ error: Error, context: String? = nil) -> PresentableError {
         let message: String
-        let severity: ErrorSeverity
+        let severity: PresentableErrorSeverity
         let isRecoverable: Bool
         
         switch error {

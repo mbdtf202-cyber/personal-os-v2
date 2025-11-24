@@ -7,14 +7,11 @@ extension Decimal {
         return self != self
     }
     
-    var isInfinite: Bool {
-        // Decimal 不会是无限大，但为了 API 一致性提供此方法
-        false
-    }
+    // Note: Decimal already has isInfinite in Foundation, so we don't redefine it
     
     var isFinite: Bool {
         // Decimal values are always finite (no infinity)
-        !isNaN
+        !isNaN && !isInfinite
     }
     
     var isZero: Bool {

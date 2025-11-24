@@ -188,17 +188,24 @@ final class BlackBoxLogger {
 
 // MARK: - Black Box Entry
 
+enum BlackBoxLogLevel: String, Codable {
+    case debug = "DEBUG"
+    case info = "INFO"
+    case warning = "WARNING"
+    case error = "ERROR"
+}
+
 struct BlackBoxEntry: Codable {
     let timestamp: TimeInterval
-    let level: LogLevel
+    let level: BlackBoxLogLevel
     let message: String
     let context: [String: String]
 }
 
-// MARK: - LogLevel Comparable
+// MARK: - BlackBoxLogLevel Comparable
 
-extension LogLevel: Comparable {
-    static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
+extension BlackBoxLogLevel: Comparable {
+    static func < (lhs: BlackBoxLogLevel, rhs: BlackBoxLogLevel) -> Bool {
         return lhs.priority < rhs.priority
     }
     
