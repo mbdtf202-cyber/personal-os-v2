@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import Observation
 
 @Observable
@@ -14,9 +15,57 @@ class PortfolioViewModel {
     var calculationStatus: String = ""
     var calculationError: String?
     
+    // ✅ EXTREME OPTIMIZATION 3: 将数据加载移入 ViewModel，避免 @Query 在 View 层触发
+    var recentTrades: [TradeRecord] = []
+    var isLoadingTrades = false
+    
     var priceService: StockPriceService?
     private let calculator = PortfolioCalculator()
     private var calculationTask: Task<Void, Never>?
+    private var modelContext: ModelContext?
+    
+    /// 设置 ModelContext（从 View 传入）
+    func setModelContext(_ context: ModelContext) {
+        self.modelContext = context
+    }
+    
+    /// 加载最近 90 天的交易记录（懒加载）
+    func loadRecentTrades() async {
+        guard let context = modelContext else {
+            Logger.error("ModelContext not set in PortfolioViewModel", category: Logger.trading)
+            return
+        }
+        
+        isLoadingTrades = true
+        
+        // 在后台线程执行数据库查询
+        let trades = await Task.detached(priority: .userInitiated) {
+            let ninetyDaysAgo = Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? Date()
+            
+            let descriptor = FetchDescriptor<TradeRecord>(
+                predicate: #Predicate { trade in
+                    trade.date > ninetyDaysAgo
+                },
+                sortBy: [SortDescriptor(\.date, order: .reverse)]
+            )
+            
+            do {
+                return try context.fetch(descriptor)
+            } catch {
+                Logger.error("Failed to fetch trades: \(error)", category: Logger.trading)
+                return []
+            }
+        }.value
+        
+        await MainActor.run {
+            self.recentTrades = trades
+            self.isLoadingTrades = false
+            Logger.log("Loaded \(trades.count) recent trades", category: Logger.trading)
+        }
+        
+        // 自动触发计算
+        await recalculatePortfolio(from: trades)
+    }
 
     func recalculatePortfolio(from trades: [TradeRecord]) async {
         // Cancel any existing calculation

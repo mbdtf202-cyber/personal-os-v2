@@ -90,16 +90,15 @@ final class StructuredLogger {
         function: String = #function,
         line: Int = #line
     ) {
-        // 获取追踪上下文
+        // ✅ EXTREME OPTIMIZATION 2: 在 Release 包中移除分布式追踪开销
+        #if DEBUG || TESTFLIGHT
+        // 开发和 TestFlight 环境：完整追踪
         let traceContext = TraceContextManager.shared.getCurrentContext()
-        
-        // 合并上下文
         var fullContext = context
         if let traceContext = traceContext {
             fullContext.merge(traceContext.toLogContext()) { _, new in new }
         }
         
-        // 创建日志条目
         let entry = LogEntry(
             timestamp: Date(),
             level: level,
@@ -113,7 +112,7 @@ final class StructuredLogger {
             line: line
         )
         
-        // 存储日志
+        // 存储日志（仅 DEBUG/TestFlight）
         logEntries.append(entry)
         if logEntries.count > maxEntries {
             logEntries.removeFirst(logEntries.count - maxEntries)
@@ -121,12 +120,30 @@ final class StructuredLogger {
         
         // 输出到 OSLog
         os_log(level.osLogType, log: osLog, "%{public}@", entry.formatted())
+        #else
+        // Release 环境：轻量级日志，无追踪 ID
+        let entry = LogEntry(
+            timestamp: Date(),
+            level: level,
+            message: message,
+            category: category,
+            context: context,
+            traceID: nil,  // Release 不携带 traceID
+            spanID: nil,   // Release 不携带 spanID
+            file: (file as NSString).lastPathComponent,
+            function: function,
+            line: line
+        )
         
-        // 如果是错误，添加面包屑
+        // Release 仅输出到 OSLog，不存储在内存
+        os_log(level.osLogType, log: osLog, "%{public}@", entry.formatted())
+        #endif
+        
+        // 错误级别始终添加面包屑（所有环境）
         if level == .error || level == .critical {
             FirebaseCrashReporter.shared.addBreadcrumb(
                 message: message,
-                metadata: fullContext
+                metadata: context
             )
         }
     }
@@ -151,10 +168,15 @@ final class StructuredLogger {
         log(message, level: .critical, category: category, context: context, file: file, function: function, line: line)
     }
     
-    // MARK: - Query
+    // MARK: - Query (仅 DEBUG/TestFlight 可用)
     
     func getRecentLogs(limit: Int = 100) -> [LogEntry] {
-        Array(logEntries.suffix(limit))
+        #if DEBUG || TESTFLIGHT
+        return Array(logEntries.suffix(limit))
+        #else
+        Logger.warning("Log query not available in Release builds", category: Logger.general)
+        return []
+        #endif
     }
     
     func filterLogs(
@@ -163,23 +185,35 @@ final class StructuredLogger {
         traceID: String? = nil,
         since: Date? = nil
     ) -> [LogEntry] {
-        logEntries.filter { entry in
+        #if DEBUG || TESTFLIGHT
+        return logEntries.filter { entry in
             if let level = level, entry.level != level { return false }
             if let category = category, entry.category != category { return false }
             if let traceID = traceID, entry.traceID != traceID { return false }
             if let since = since, entry.timestamp < since { return false }
             return true
         }
+        #else
+        return []
+        #endif
     }
     
     func searchLogs(query: String) -> [LogEntry] {
-        logEntries.filter { entry in
+        #if DEBUG || TESTFLIGHT
+        return logEntries.filter { entry in
             entry.message.localizedCaseInsensitiveContains(query) ||
             entry.context.values.contains { $0.localizedCaseInsensitiveContains(query) }
         }
+        #else
+        return []
+        #endif
     }
     
     func exportLogs() -> String {
-        logEntries.map { $0.formatted() }.joined(separator: "\n")
+        #if DEBUG || TESTFLIGHT
+        return logEntries.map { $0.formatted() }.joined(separator: "\n")
+        #else
+        return "Log export not available in Release builds"
+        #endif
     }
 }

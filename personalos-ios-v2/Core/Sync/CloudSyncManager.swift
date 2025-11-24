@@ -90,20 +90,38 @@ class CloudSyncManager: ObservableObject {
         }
     }
     
-    func resolveConflict(_ conflict: SyncConflict) async throws {
-        // ✅ EXTREME FIX 4: 使用 CRDT-inspired 冲突解决
-        Logger.log("Resolving conflict: \(conflict.entityType)", category: Logger.sync)
+    // ✅ EXTREME OPTIMIZATION 1: 明确界限 - SwiftData 自动同步 vs 手动 CRDT
+    // 当使用 cloudKitDatabase: .automatic 时，SwiftData 底层已经处理冲突
+    // 手动冲突解决仅在完全接管 CloudKit 时使用（cloudKitDatabase: .none + 手动 CKRecord）
+    
+    /// 仅在手动管理 CloudKit 时使用（非 SwiftData 自动同步）
+    /// 如果使用 SwiftData 的 .automatic 模式，此方法不应被调用
+    func resolveConflictManually(_ conflict: SyncConflict) async throws {
+        guard !isCloudKitEnabled else {
+            Logger.warning("⚠️ Manual conflict resolution called but SwiftData auto-sync is enabled. This is redundant.", category: Logger.sync)
+            return
+        }
         
-        // 使用 ConflictResolver 处理冲突
+        // 仅在完全手动管理 CloudKit 时才执行
+        Logger.log("Manually resolving conflict: \(conflict.entityType)", category: Logger.sync)
+        
+        // 使用 ConflictResolver 处理冲突（仅用于手动 CKRecord 操作）
         let resolver = ConflictResolver.shared
-        
-        // SwiftData 会自动处理大部分冲突
-        // 对于复杂场景，使用向量时钟策略
-        Logger.log("Using vector clock strategy for conflict resolution", category: Logger.sync)
+        Logger.log("Using vector clock strategy for manual conflict resolution", category: Logger.sync)
     }
     
+    /// 设置冲突策略（仅在手动管理 CloudKit 时有效）
     func setConflictStrategy(_ strategy: ConflictResolutionStrategy) {
+        guard !isCloudKitEnabled else {
+            Logger.warning("⚠️ Setting conflict strategy has no effect when SwiftData auto-sync is enabled", category: Logger.sync)
+            return
+        }
         ConflictResolver.shared.setStrategy(strategy)
+    }
+    
+    /// 检查当前是否使用 SwiftData 自动同步
+    var isUsingAutoSync: Bool {
+        return isCloudKitEnabled
     }
 }
 

@@ -6,19 +6,8 @@ struct TradingDashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var stockPriceService = StockPriceService()
     
-    // ✅ P0 Fix: 数据库级过滤，避免内存遍历 10,000+ 条记录
-    // 使用静态计算的日期，让 SwiftData 在 SQLite 层面过滤
-    private static var ninetyDaysAgo: Date {
-        Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? Date()
-    }
-    
-    @Query(
-        filter: #Predicate<TradeRecord> { trade in
-            trade.date > TradingDashboardView.ninetyDaysAgo
-        },
-        sort: \TradeRecord.date,
-        order: .reverse
-    ) private var recentTrades: [TradeRecord]
+    // ✅ EXTREME OPTIMIZATION 3: 移除 @Query，完全由 ViewModel 管理数据加载
+    // 避免 @Query 在 View 初始化时建立观察，防止 10万+ 记录时主线程掉帧
     @State private var viewModel = PortfolioViewModel()
     @State private var showLogForm = false
     @State private var showPriceError = false
@@ -62,7 +51,7 @@ struct TradingDashboardView: View {
                             dayPnL: Double(truncating: viewModel.dayPnL as NSNumber),
                             dayPnLPercent: Double(truncating: viewModel.dayPnLPercent as NSNumber)
                         )
-                        TradingStatsGrid(trades: recentTrades)
+                        TradingStatsGrid(trades: viewModel.recentTrades)
                         EquityChart(equityCurve: viewModel.equityCurve)
                         performanceMetrics
                         holdingsList
@@ -78,7 +67,7 @@ struct TradingDashboardView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
                         Task {
-                            await viewModel.refreshPrices(for: recentTrades)
+                            await viewModel.refreshPrices(for: viewModel.recentTrades)
                             if stockPriceService.error != nil {
                                 showPriceError = true
                             }
@@ -88,7 +77,7 @@ struct TradingDashboardView: View {
                             .font(.system(size: 18))
                             .foregroundStyle(AppTheme.primaryText)
                     }
-                    .disabled(stockPriceService.isLoading)
+                    .disabled(stockPriceService.isLoading || viewModel.isLoadingTrades)
                     .accessibilityLabel("Refresh Prices")
                 }
                 ToolbarItem(placement: .primaryAction) {
@@ -107,19 +96,17 @@ struct TradingDashboardView: View {
                 TradeHistoryListView()
             }
         }
-        .onChange(of: recentTrades) { _, newTrades in
-            Task {
-                await viewModel.recalculatePortfolio(from: newTrades)
-            }
-        }
-        .onAppear {
+        .task {
+            // ✅ EXTREME OPTIMIZATION 3: 懒加载数据，避免 View 初始化时的性能开销
+            viewModel.setModelContext(modelContext)
             viewModel.priceService = stockPriceService
-            Task {
-                await viewModel.recalculatePortfolio(from: recentTrades)
-                await viewModel.refreshPrices(for: recentTrades)
-                if stockPriceService.error != nil {
-                    showPriceError = true
-                }
+            
+            // 异步加载数据
+            await viewModel.loadRecentTrades()
+            await viewModel.refreshPrices(for: viewModel.recentTrades)
+            
+            if stockPriceService.error != nil {
+                showPriceError = true
             }
         }
     }
@@ -160,21 +147,25 @@ struct TradingDashboardView: View {
                 
                 Spacer()
                 
-                if !recentTrades.isEmpty {
+                if !viewModel.recentTrades.isEmpty {
                     Text("Last 5")
                         .font(.caption)
                         .foregroundStyle(AppTheme.secondaryText)
                 }
             }
             
-            if recentTrades.isEmpty {
+            if viewModel.isLoadingTrades {
+                ProgressView()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else if viewModel.recentTrades.isEmpty {
                 Text("No recent trades. Tap + to log your first trade.")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding()
             } else {
-                ForEach(recentTrades.prefix(5)) { trade in
+                ForEach(viewModel.recentTrades.prefix(5)) { trade in
                     RecentTradeRow(trade: trade)
                 }
             }
@@ -209,14 +200,18 @@ struct TradingDashboardView: View {
                 }
             }
             
-            if viewModel.assets.isEmpty {
+            if viewModel.isLoadingTrades {
+                ProgressView()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else if viewModel.assets.isEmpty {
                 Text("No assets. Tap + to log a trade.")
                     .font(.subheadline)
                     .foregroundStyle(AppTheme.secondaryText)
                     .padding()
             } else {
                 ForEach(viewModel.assets) { asset in
-                    NavigationLink(destination: AssetDetailView(asset: asset, trades: recentTrades)) {
+                    NavigationLink(destination: AssetDetailView(asset: asset, trades: viewModel.recentTrades)) {
                         HStack(spacing: 12) {
                             Image(systemName: asset.type.icon)
                                 .font(.title2)
