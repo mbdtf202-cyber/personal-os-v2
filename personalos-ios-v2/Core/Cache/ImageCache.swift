@@ -230,8 +230,10 @@ actor ImageCache {
                 }
             }
             
+            // Capture deletedSize before async call
+            let finalDeletedSize = deletedSize
             await MainActor.run {
-                StructuredLogger.shared.info("Enforced disk cache limit, deleted \(deletedSize) bytes")
+                StructuredLogger.shared.info("Enforced disk cache limit, deleted \(finalDeletedSize) bytes")
             }
         } catch {
             await MainActor.run {
@@ -246,13 +248,4 @@ enum CacheError: Error {
     case diskCacheFull
 }
 
-// ✅ P0 Fix: 使用 CryptoKit 实现正确的 SHA256 哈希
-import CryptoKit
-
-private extension String {
-    var sha256Hash: String {
-        guard let data = self.data(using: .utf8) else { return self }
-        let hash = SHA256.hash(data: data)
-        return hash.compactMap { String(format: "%02x", $0) }.joined()
-    }
-}
+// Note: sha256Hash extension is defined in NetworkClient.swift
