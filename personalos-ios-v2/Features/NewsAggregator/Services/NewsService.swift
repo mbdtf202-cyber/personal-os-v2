@@ -238,8 +238,7 @@ class NewsService: NewsServiceProtocol {
         Logger.log("Successfully fetched \(articles.count) articles from \(feeds.count) RSS feeds", category: Logger.network)
         isLoading = false
     }
-}
-
+    
     // ✅ Task 23: Helper to format timestamp
     private func formatTimestamp(_ date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()

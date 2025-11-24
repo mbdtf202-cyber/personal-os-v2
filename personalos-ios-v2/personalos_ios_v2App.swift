@@ -4,8 +4,8 @@ import SwiftData
 @main
 struct personalos_ios_v2App: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var themeManager = ThemeManager.shared
-    @StateObject private var remoteConfig = RemoteConfigService.shared
+    @State private var themeManager = ThemeManager.shared
+    @State private var remoteConfig = RemoteConfigService.shared
     @State private var router = AppRouter()
     @State private var healthManager = HealthStoreManager()
 
@@ -40,8 +40,8 @@ struct personalos_ios_v2App: App {
         .modelContainer(createModelContainer())
         .environment(router)
         .environment(healthManager)
-        .environmentObject(themeManager)
-        .environmentObject(remoteConfig)
+        .environment(themeManager)
+        .environment(remoteConfig)
     }
     
     private func createModelContainer() -> ModelContainer {
