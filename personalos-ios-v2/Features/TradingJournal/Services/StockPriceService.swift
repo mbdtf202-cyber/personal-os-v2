@@ -111,11 +111,37 @@ class StockPriceService {
     }
     
     private func fetchRealPrices(symbols: [String]) async throws -> [String: StockQuote] {
-        // ✅ P0 Fix: 明确标记为模拟数据，避免误导用户
-        Logger.warning("⚠️ Real-time API not implemented. Falling back to demo data.", category: Logger.trading)
+        // ✅ P0 Fix: Implement real API call or explicitly fail
+        // TODO: Implement actual stock price API integration (e.g., Alpha Vantage, IEX Cloud, Polygon.io)
+        // For now, explicitly mark as unimplemented and use mock data
+        
+        Logger.warning("⚠️ Real-time stock API not implemented yet. Using demo data.", category: Logger.trading)
         isUsingMockData = true
-        error = "Real-time price API not configured. Showing demo data for illustration purposes only. Configure API key in Settings to enable real prices."
+        error = "⚠️ Real-time price API not yet implemented. Showing demo data for illustration only. Real API integration coming soon."
+        
+        // Return mock data with clear source labeling
         return try await fetchMockPrices(symbols: symbols)
+        
+        /* TODO: Implement real API integration like this:
+        guard let apiKey = RemoteConfigService.shared.getAPIKey(for: "stock") else {
+            throw NSError(domain: "StockPriceService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No API key configured"])
+        }
+        
+        var quotes: [String: StockQuote] = [:]
+        for symbol in symbols {
+            let endpoint = "https://api.example.com/quote/\(symbol)?apikey=\(apiKey)"
+            let response: StockAPIResponse = try await NetworkClient.stocks.request(endpoint)
+            quotes[symbol] = StockQuote(
+                symbol: symbol,
+                price: response.price,
+                change: response.change,
+                changePercent: response.changePercent,
+                source: .realtime,
+                timestamp: Date()
+            )
+        }
+        return quotes
+        */
     }
     
     private func fetchMockPrices(symbols: [String]) async throws -> [String: StockQuote] {

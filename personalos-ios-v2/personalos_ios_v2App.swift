@@ -96,6 +96,21 @@ struct personalos_ios_v2App: App {
             } catch {
                 Logger.error("Failed to create container even after cleanup: \(error)", category: Logger.general)
             }
+            #else
+            // ✅ P0 Fix: 生产环境安全恢复策略
+            Logger.error("⚠️ ModelContainer creation failed in RELEASE mode", category: Logger.general)
+            CrashReporter.shared.recordError(error, context: "ModelContainer creation failed")
+            
+            // 尝试备份现有数据
+            let backupService = DataBackupService()
+            Task {
+                do {
+                    try await backupService.createEmergencyBackup()
+                    Logger.log("✅ Emergency backup created", category: Logger.general)
+                } catch {
+                    Logger.error("Failed to create emergency backup: \(error)", category: Logger.general)
+                }
+            }
             #endif
             
             // ✅ 如果启用了 CloudKit 但失败，尝试降级到本地存储
@@ -119,14 +134,74 @@ struct personalos_ios_v2App: App {
                 do {
                     let container = try ModelContainer(for: schema, configurations: fallbackConfig)
                     Logger.log("✅ ModelContainer created with local storage fallback", category: Logger.general)
+                    
+                    #if !DEBUG
+                    // 在生产环境显示用户友好的错误消息
+                    DispatchQueue.main.async {
+                        ErrorPresenter.shared.presentError(
+                            AppError.database(.migrationFailed),
+                            context: "Database initialization failed. Using local storage only. Your data is safe."
+                        )
+                    }
+                    #endif
+                    
                     return container
                 } catch {
                     Logger.error("Fallback also failed: \(error)", category: Logger.general)
+                    
+                    #if DEBUG
                     fatalError("Could not create ModelContainer even with fallback: \(error)")
+                    #else
+                    // ✅ P0 Fix: 生产环境最后防线 - 使用内存存储
+                    Logger.error("⚠️ All database creation attempts failed. Using in-memory storage.", category: Logger.general)
+                    CrashReporter.shared.recordError(error, context: "All ModelContainer creation attempts failed")
+                    
+                    let memoryConfig = ModelConfiguration(
+                        schema: schema,
+                        isStoredInMemoryOnly: true
+                    )
+                    
+                    do {
+                        let container = try ModelContainer(for: schema, configurations: memoryConfig)
+                        Logger.log("✅ Using in-memory storage as last resort", category: Logger.general)
+                        
+                        // 显示严重错误消息
+                        DispatchQueue.main.async {
+                            ErrorPresenter.shared.presentError(
+                                AppError.database(.migrationFailed),
+                                context: "Critical: Database unavailable. Using temporary storage. Data will not persist. Please contact support."
+                            )
+                        }
+                        
+                        return container
+                    } catch {
+                        // 真的无法恢复了
+                        Logger.error("Even in-memory storage failed: \(error)", category: Logger.general)
+                        fatalError("Critical: Could not create any ModelContainer: \(error)")
+                    }
+                    #endif
                 }
             }
             
+            #if DEBUG
             fatalError("Could not create ModelContainer: \(error)")
+            #else
+            // 生产环境最后防线
+            Logger.error("⚠️ Creating in-memory container as last resort", category: Logger.general)
+            let memoryConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            do {
+                let container = try ModelContainer(for: schema, configurations: memoryConfig)
+                DispatchQueue.main.async {
+                    ErrorPresenter.shared.presentError(
+                        AppError.database(.migrationFailed),
+                        context: "Critical: Using temporary storage. Data will not persist."
+                    )
+                }
+                return container
+            } catch {
+                fatalError("Critical: Could not create any ModelContainer: \(error)")
+            }
+            #endif
         }
     }
     

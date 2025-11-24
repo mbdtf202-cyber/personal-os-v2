@@ -109,30 +109,64 @@ class GitHubService: GitHubServiceProtocol {
         return allRepos
     }
     
-    // Request with retry and rate limit handling
+    // ✅ P0 Fix: Request with retry and rate limit handling - catch AppError correctly
     private func requestWithRetry<T: Codable>(_ endpoint: Endpoint) async throws -> T {
         var lastError: Error?
         
         for attempt in 0..<maxRetries {
             do {
                 return try await networkClient.request(endpoint)
-            } catch let error as NetworkError {
+            } catch let error as AppError {
                 lastError = error
                 
-                // Handle rate limiting
+                // ✅ P0 Fix: Handle AppError.network correctly
+                if case .network(let networkError, _) = error {
+                    // Handle rate limiting (403)
+                    if case .forbidden = networkError {
+                        Logger.error("GitHub rate limit exceeded (403)", category: Logger.general)
+                        throw GitHubError.rateLimitExceeded
+                    }
+                    
+                    // Handle timeout - retry with exponential backoff
+                    if case .timeout = networkError {
+                        if attempt < maxRetries - 1 {
+                            let delay = baseDelay * pow(2.0, Double(attempt))
+                            Logger.log("Request timeout, retrying in \(delay)s (attempt \(attempt + 1)/\(maxRetries))", category: Logger.general)
+                            try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                            continue
+                        }
+                    }
+                    
+                    // Handle other retryable network errors
+                    if case .serverError = networkError {
+                        if attempt < maxRetries - 1 {
+                            let delay = baseDelay * pow(2.0, Double(attempt))
+                            Logger.log("Server error, retrying in \(delay)s (attempt \(attempt + 1)/\(maxRetries))", category: Logger.general)
+                            try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                            continue
+                        }
+                    }
+                }
+                
+                // Non-retryable errors
+                throw error
+            } catch let error as NetworkError {
+                // Legacy NetworkError support
+                lastError = error
+                
                 if case .serverError(let statusCode, _) = error, statusCode == 403 {
                     throw GitHubError.rateLimitExceeded
                 }
                 
-                // Handle timeout
                 if case .timeout = error {
-                    let delay = baseDelay * pow(2.0, Double(attempt))
-                    Logger.log("Request timeout, retrying in \(delay)s (attempt \(attempt + 1)/\(maxRetries))", category: Logger.general)
-                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    continue
+                    if attempt < maxRetries - 1 {
+                        let delay = baseDelay * pow(2.0, Double(attempt))
+                        Logger.log("Request timeout, retrying in \(delay)s (attempt \(attempt + 1)/\(maxRetries))", category: Logger.general)
+                        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                        continue
+                    }
                 }
                 
-                // Other errors, don't retry
                 throw error
             } catch {
                 lastError = error

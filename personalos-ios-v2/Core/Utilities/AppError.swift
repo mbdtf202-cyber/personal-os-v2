@@ -186,7 +186,7 @@ enum NetworkError: Error {
 
 /// Database-specific errors
 enum DatabaseError: Error {
-    case migrationFailed(String)
+    case migrationFailed
     case corruptedData
     case constraintViolation
     case concurrencyConflict

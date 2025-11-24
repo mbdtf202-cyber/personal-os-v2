@@ -26,6 +26,7 @@ final class SSLPinningManager: NSObject {
         
         // 真实证书哈希（Let's Encrypt 常用根证书 + 备用证书）
         // 生产环境必须替换为实际服务器的证书哈希
+        // ⚠️ IMPORTANT: Replace these with your actual server certificate hashes before production
         return [
             "C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=", // Let's Encrypt ISRG Root X1
             "YLh1dUR9y6Kja30RrAn7JKnbQG/uEtLMkBgFF2Fuihg=", // Let's Encrypt ISRG Root X2
@@ -94,13 +95,22 @@ final class SSLPinningManager: NSObject {
     
     private func shouldPinHost(_ host: String) -> Bool {
         // ✅ P0 Fix: Fail-Closed - 对关键域名强制启用 SSL Pinning
+        // 如果没有配置任何证书哈希，对关键域名拒绝连接
         let criticalHosts = [
             "api.personalos.com",
             "sync.personalos.com",
             "auth.personalos.com"
         ]
         
-        return criticalHosts.contains { host.contains($0) }
+        let isCriticalHost = criticalHosts.contains { host.contains($0) }
+        
+        // ✅ Fail-Closed: 如果是关键域名但没有配置证书，拒绝连接
+        if isCriticalHost && trustedPublicKeyHashes.isEmpty {
+            Logger.error("SSL Pinning: No certificate hashes configured for critical host: \(host)", category: Logger.general)
+            return true // 返回 true 以触发验证，验证会失败因为没有哈希
+        }
+        
+        return isCriticalHost
     }
     
     /// ✅ P0 Fix: 计算数据的 SHA256 哈希并返回 Base64 编码
