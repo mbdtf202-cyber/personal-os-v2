@@ -222,38 +222,13 @@ enum CacheError: Error {
     case diskCacheFull
 }
 
-// 扩展 String 以支持 SHA256
+// ✅ P0 Fix: 使用 CryptoKit 实现正确的 SHA256 哈希
+import CryptoKit
+
 private extension String {
     var sha256Hash: String {
         guard let data = self.data(using: .utf8) else { return self }
-        let hash = data.withUnsafeBytes { bytes in
-            var hasher = SHA256Hasher()
-            hasher.update(bytes)
-            return hasher.finalize()
-        }
-        return hash.map { String(format: "%02x", $0) }.joined()
-    }
-}
-
-// 简单的 SHA256 实现
-private struct SHA256Hasher {
-    private var state: [UInt32] = [
-        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-    ]
-    
-    mutating func update(_ bytes: UnsafeRawBufferPointer) {
-        // 简化实现，实际应使用 CryptoKit
-    }
-    
-    func finalize() -> [UInt8] {
-        return state.flatMap { value in
-            [
-                UInt8((value >> 24) & 0xff),
-                UInt8((value >> 16) & 0xff),
-                UInt8((value >> 8) & 0xff),
-                UInt8(value & 0xff)
-            ]
-        }
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
     }
 }

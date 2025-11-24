@@ -4,6 +4,8 @@ struct ToolsView: View {
     @State private var showPasswordGenerator = false
     @State private var showUnitConverter = false
     @State private var showColorPicker = false
+    @State private var showQuickNote = false
+    @State private var showTimestampConverter = false
     
     private let tools: [ToolItem] = [
         .init(title: "二维码生成", subtitle: "文本/链接转二维码", icon: "qrcode.viewfinder", accent: AppTheme.mistBlue, primaryAction: "生成二维码", destination: .qrCode),
@@ -47,6 +49,12 @@ struct ToolsView: View {
             .sheet(isPresented: $showColorPicker) {
                 ColorPickerToolView()
             }
+            .sheet(isPresented: $showQuickNote) {
+                QuickNoteOverlay(isPresented: $showQuickNote)
+            }
+            .sheet(isPresented: $showTimestampConverter) {
+                TimestampConverterView()
+            }
         }
     }
     
@@ -59,6 +67,12 @@ struct ToolsView: View {
             showUnitConverter = true
         case .colorPicker:
             showColorPicker = true
+        case .quickNote:
+            // ✅ P2 Fix: Quick Note action
+            showQuickNote = true
+        case .timestamp:
+            // ✅ P2 Fix: Timestamp converter action
+            showTimestampConverter = true
         default:
             break
         }

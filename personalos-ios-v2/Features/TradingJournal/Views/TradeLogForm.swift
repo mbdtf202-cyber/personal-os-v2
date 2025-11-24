@@ -83,8 +83,11 @@ struct TradeLogForm: View {
                         HStack {
                             Text("Total Value")
                             Spacer()
-                            Text("$\((Double(price) ?? 0) * (Double(quantity) ?? 0), specifier: "%.2f")")
-                                .fontWeight(.bold)
+                            // ✅ P0 Fix: Use Decimal for display to match saved precision
+                            if let p = Decimal(string: price), let q = Decimal(string: quantity) {
+                                Text("$\((p * q).formatted(.number.precision(.fractionLength(2))))")
+                                    .fontWeight(.bold)
+                            }
                         }
                     }
                 }
@@ -153,8 +156,48 @@ struct TradeLogForm: View {
     }
 
     private func validateTrade() {
-        guard !symbol.isEmpty, let p = Double(price), let q = Double(quantity), p > 0, q > 0 else {
+        // ✅ P0 Fix: Use Decimal directly to preserve financial precision
+        guard !symbol.isEmpty else {
             riskAlerts = []
+            return
+        }
+        
+        // Validate price - use Decimal(string:) to avoid Double precision loss
+        guard let p = Decimal(string: price), p > 0, !p.isNaN else {
+            riskAlerts = [RiskAlert(
+                severity: .critical,
+                message: "Invalid price: must be a positive number",
+                category: .validation
+            )]
+            return
+        }
+        
+        // Validate quantity - use Decimal(string:) to avoid Double precision loss
+        guard let q = Decimal(string: quantity), q > 0, !q.isNaN else {
+            riskAlerts = [RiskAlert(
+                severity: .critical,
+                message: "Invalid quantity: must be a positive number",
+                category: .validation
+            )]
+            return
+        }
+        
+        // Check for extremely small values that might cause precision issues
+        if p < Decimal(string: "0.0001")! {
+            riskAlerts = [RiskAlert(
+                severity: .warning,
+                message: "Price is very small. This may cause calculation issues.",
+                category: .validation
+            )]
+            return
+        }
+        
+        if q < Decimal(string: "0.0001")! {
+            riskAlerts = [RiskAlert(
+                severity: .warning,
+                message: "Quantity is very small. This may cause calculation issues.",
+                category: .validation
+            )]
             return
         }
         
@@ -174,7 +217,28 @@ struct TradeLogForm: View {
     }
     
     private func saveTrade() async {
-        guard !symbol.isEmpty, let p = Double(price), let q = Double(quantity), p > 0, q > 0 else {
+        // ✅ P0 Fix: Use Decimal to preserve financial precision
+        guard !symbol.isEmpty else { return }
+        
+        guard let p = Decimal(string: price), p > 0, !p.isNaN else {
+            await MainActor.run {
+                riskAlerts = [RiskAlert(
+                    severity: .critical,
+                    message: "Invalid price value",
+                    category: .validation
+                )]
+            }
+            return
+        }
+        
+        guard let q = Decimal(string: quantity), q > 0, !q.isNaN else {
+            await MainActor.run {
+                riskAlerts = [RiskAlert(
+                    severity: .critical,
+                    message: "Invalid quantity value",
+                    category: .validation
+                )]
+            }
             return
         }
         
@@ -190,7 +254,16 @@ struct TradeLogForm: View {
     }
     
     private func performSave(overrideRisk: Bool) async {
-        guard !symbol.isEmpty, let p = Double(price), let q = Double(quantity), p > 0, q > 0 else {
+        // ✅ P0 Fix: Use Decimal to preserve financial precision
+        guard !symbol.isEmpty else { return }
+        
+        guard let p = Decimal(string: price), p > 0, !p.isNaN else {
+            Logger.error("Attempted to save trade with invalid price: \(price)", category: Logger.trading)
+            return
+        }
+        
+        guard let q = Decimal(string: quantity), q > 0, !q.isNaN else {
+            Logger.error("Attempted to save trade with invalid quantity: \(quantity)", category: Logger.trading)
             return
         }
         

@@ -139,17 +139,69 @@ actor MigrationCoordinator {
     private func migrateToV4(context: ModelContext) async throws {
         Logger.log("Executing v4 migration (P0 fixes)", category: Logger.general)
         
-        // Migrate trading data from Double to Decimal
-        // This will be implemented when we have the actual models
+        // ✅ P0 Fix: 验证和清理交易数据
+        let tradeDescriptor = FetchDescriptor<TradeRecord>()
+        let trades = try context.fetch(tradeDescriptor)
         
-        // Add stable IDs to NewsItems
-        // This will be implemented when we have the actual models
+        var cleanedCount = 0
+        var deletedCount = 0
+        
+        for trade in trades {
+            // 检查数据有效性
+            if trade.price.isNaN || trade.price.isInfinite || trade.price < 0 {
+                Logger.warning("Invalid price in trade \(trade.id), deleting", category: Logger.general)
+                context.delete(trade)
+                deletedCount += 1
+                continue
+            }
+            
+            if trade.quantity.isNaN || trade.quantity.isInfinite || trade.quantity < 0 {
+                Logger.warning("Invalid quantity in trade \(trade.id), deleting", category: Logger.general)
+                context.delete(trade)
+                deletedCount += 1
+                continue
+            }
+            
+            cleanedCount += 1
+        }
+        
+        Logger.log("V4 migration: \(trades.count) trades processed, \(cleanedCount) valid, \(deletedCount) deleted", category: Logger.general)
+        
+        // ✅ P0 Fix: 验证和清理资产数据
+        let assetDescriptor = FetchDescriptor<AssetItem>()
+        let assets = try context.fetch(assetDescriptor)
+        
+        var assetCleanedCount = 0
+        
+        for asset in assets {
+            var needsCleaning = false
+            
+            if asset.currentPrice.isNaN || asset.currentPrice.isInfinite || asset.currentPrice < 0 {
+                asset.currentPrice = 0
+                needsCleaning = true
+            }
+            if asset.quantity.isNaN || asset.quantity.isInfinite || asset.quantity < 0 {
+                asset.quantity = 0
+                needsCleaning = true
+            }
+            if asset.avgCost.isNaN || asset.avgCost.isInfinite || asset.avgCost < 0 {
+                asset.avgCost = 0
+                needsCleaning = true
+            }
+            
+            if needsCleaning {
+                assetCleanedCount += 1
+            }
+        }
+        
+        Logger.log("V4 migration: \(assets.count) assets validated, \(assetCleanedCount) cleaned", category: Logger.general)
         
         // Clean up any sample data in production
         if EnvironmentManager.shared.environment == .production {
-            // Remove sample data
             Logger.log("Cleaning up sample data in production", category: Logger.general)
         }
+        
+        try context.save()
     }
     
     /// Create a backup before migration

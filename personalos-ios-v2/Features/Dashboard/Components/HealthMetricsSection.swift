@@ -61,7 +61,15 @@ struct HealthMetricsSection: View {
     
     private var connectHealthCard: some View {
         Button {
-            showHealthPermission = true
+            Task {
+                // ✅ P2 Fix: Request permission directly
+                await healthManager.requestHealthKitAuthorization()
+                
+                // Show permission sheet if authorization failed
+                if !healthManager.isAuthorized {
+                    showHealthPermission = true
+                }
+            }
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "heart.circle.fill")
@@ -76,9 +84,9 @@ struct HealthMetricsSection: View {
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(AppTheme.primaryText)
-                    Text("Track your steps, sleep, and energy levels")
+                    Text(healthManager.authorizationError ?? "Track your steps, sleep, and energy levels")
                         .font(.caption)
-                        .foregroundStyle(AppTheme.secondaryText)
+                        .foregroundStyle(healthManager.authorizationError != nil ? AppTheme.coral : AppTheme.secondaryText)
                 }
                 
                 Spacer()

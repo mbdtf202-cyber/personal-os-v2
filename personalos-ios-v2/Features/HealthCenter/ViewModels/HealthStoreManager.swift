@@ -14,6 +14,15 @@ class HealthStoreManager {
 
     var sleepHistory: [(day: String, hours: Double)] = []
     
+    // ✅ P2 Fix: Add authorization tracking
+    var isAuthorized: Bool {
+        return healthKitService.isAuthorized
+    }
+    
+    var authorizationError: String? {
+        return healthKitService.authorizationError
+    }
+    
     var isHealthKitAvailable: Bool {
         #if targetEnvironment(macCatalyst)
         return false
@@ -30,8 +39,15 @@ class HealthStoreManager {
     func requestHealthKitAuthorization() async {
         do {
             try await healthKitService.requestAuthorization()
+            healthKitService.authorizationError = nil
             await syncHealthData()
         } catch {
+            // ✅ P2 Fix: Set authorization error message
+            if let healthError = error as? HealthDataError {
+                healthKitService.authorizationError = healthError.errorDescription
+            } else {
+                healthKitService.authorizationError = "Failed to authorize: \(error.localizedDescription)"
+            }
             Logger.error("Failed to request HealthKit authorization: \(error)", category: Logger.health)
         }
     }

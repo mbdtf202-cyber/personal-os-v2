@@ -40,6 +40,7 @@ class HealthKitService: HealthServiceProtocol {
     
     var isAuthorized = false
     var authorizationDenied = false
+    var authorizationError: String? // ✅ P2 Fix: Track authorization errors
     var todaySteps: Int = 0
     var lastNightSleep: Double = 0.0
     var heartRate: Int = 0

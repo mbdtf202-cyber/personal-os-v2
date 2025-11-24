@@ -141,6 +141,20 @@ final class RemoteConfigService {
     func updateAPIKeys(_ keys: [String: String]) {
         self.apiKeys = keys
     }
+    
+    /// ✅ P0 Fix: 添加 getBool 方法供 SSLPinningManager 使用
+    func getBool(_ key: String, defaultValue: Bool = false) -> Bool {
+        // 可以从 Remote Config 读取布尔值
+        // 目前返回默认值，后续可扩展
+        return defaultValue
+    }
+    
+    /// ✅ P0 Fix: 添加 getString 方法供 SSLPinningManager 使用
+    func getString(_ key: String, defaultValue: String? = nil) -> String? {
+        // 可以从 Remote Config 读取字符串值
+        // 目前返回默认值，后续可扩展
+        return defaultValue
+    }
 }
 
 struct RemoteConfig: Codable {

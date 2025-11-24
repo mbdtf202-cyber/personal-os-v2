@@ -68,19 +68,18 @@ class DashboardViewModel: BaseViewModel {
         // 取消之前的加载任务
         loadTask?.cancel()
         
-        loadTask = Task {
-            // 并行加载所有数据，提升性能
+        loadTask = Task { @MainActor in
+            // ✅ P0 Fix: 串行加载避免 ModelContext 并发访问
+            // ModelContext 非线程安全，必须在主线程串行访问
             let traceID = PerformanceMonitor.shared.startTrace(
                 name: "dashboard_load_recent_data",
-                attributes: ["operation": "parallel_load"]
+                attributes: ["operation": "serial_load"]
             )
             
-            await withTaskGroup(of: Void.self) { group in
-                group.addTask { await self.loadRecentTasks() }
-                group.addTask { await self.loadRecentPosts() }
-                group.addTask { await self.loadRecentTrades() }
-                group.addTask { await self.loadRecentProjects() }
-            }
+            await loadRecentTasks()
+            await loadRecentPosts()
+            await loadRecentTrades()
+            await loadRecentProjects()
             
             PerformanceMonitor.shared.stopTrace(traceID)
         }
@@ -227,7 +226,7 @@ class DashboardViewModel: BaseViewModel {
         
         let traceID = PerformanceMonitor.shared.startTrace(
             name: "dashboard_calculate_activity",
-            attributes: ["operation": "optimized_query"]
+            attributes: ["operation": "serial_query"]
         )
         
         let calendar = Calendar.current
@@ -236,69 +235,47 @@ class DashboardViewModel: BaseViewModel {
         
         var activityData: [(String, Double)] = []
         
-        do {
-            // 并行查询所有天的数据
-            await withTaskGroup(of: (Int, Double).self) { group in
-                for i in 0..<7 {
-                    group.addTask {
-                        guard let date = calendar.date(byAdding: .day, value: -6 + i, to: today) else {
-                            return (i, 0.0)
-                        }
-                        let dayStart = calendar.startOfDay(for: date)
-                        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
-                        
-                        // 使用数据库层面的过滤，而不是内存过滤
-                        let completedTasks = (try? self.modelContext.fetch(
-                            FetchDescriptor<TodoItem>(
-                                predicate: #Predicate { task in
-                                    task.isCompleted && task.createdAt >= dayStart && task.createdAt < dayEnd
-                                }
-                            )
-                        ).count) ?? 0
-                        
-                        let postsCount = (try? self.modelContext.fetch(
-                            FetchDescriptor<SocialPost>(
-                                predicate: #Predicate { post in
-                                    post.date >= dayStart && post.date < dayEnd
-                                }
-                            )
-                        ).count) ?? 0
-                        
-                        let tradesCount = (try? self.modelContext.fetch(
-                            FetchDescriptor<TradeRecord>(
-                                predicate: #Predicate { trade in
-                                    trade.date >= dayStart && trade.date < dayEnd
-                                }
-                            )
-                        ).count) ?? 0
-                        
-                        let totalActivity = Double(completedTasks + postsCount + tradesCount)
-                        return (i, totalActivity)
-                    }
-                }
-                
-                // 收集结果
-                var results: [(Int, Double)] = []
-                for await result in group {
-                    results.append(result)
-                }
-                
-                // 按顺序排列
-                results.sort { $0.0 < $1.0 }
-                
-                for (i, activity) in results {
-                    guard let date = calendar.date(byAdding: .day, value: -6 + i, to: today) else { continue }
-                    let dayIndex = calendar.component(.weekday, from: date)
-                    let dayName = weekDays[(dayIndex + 5) % 7]
-                    activityData.append((dayName, activity))
-                }
+        // ✅ P0 Fix: 串行查询避免 ModelContext 并发访问
+        for i in 0..<7 {
+            guard let date = calendar.date(byAdding: .day, value: -6 + i, to: today) else {
+                continue
             }
+            let dayStart = calendar.startOfDay(for: date)
+            let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
             
-            activityLoadingState = .loaded
-        } catch {
-            activityLoadingState = .error(error.localizedDescription)
+            // 使用数据库层面的过滤，而不是内存过滤
+            let completedTasks = (try? modelContext.fetch(
+                FetchDescriptor<TodoItem>(
+                    predicate: #Predicate { task in
+                        task.isCompleted && task.createdAt >= dayStart && task.createdAt < dayEnd
+                    }
+                )
+            ).count) ?? 0
+            
+            let postsCount = (try? modelContext.fetch(
+                FetchDescriptor<SocialPost>(
+                    predicate: #Predicate { post in
+                        post.date >= dayStart && post.date < dayEnd
+                    }
+                )
+            ).count) ?? 0
+            
+            let tradesCount = (try? modelContext.fetch(
+                FetchDescriptor<TradeRecord>(
+                    predicate: #Predicate { trade in
+                        trade.date >= dayStart && trade.date < dayEnd
+                    }
+                )
+            ).count) ?? 0
+            
+            let totalActivity = Double(completedTasks + postsCount + tradesCount)
+            
+            let dayIndex = calendar.component(.weekday, from: date)
+            let dayName = weekDays[(dayIndex + 5) % 7]
+            activityData.append((dayName, totalActivity))
         }
         
+        activityLoadingState = .loaded
         PerformanceMonitor.shared.stopTrace(traceID)
         return activityData
     }

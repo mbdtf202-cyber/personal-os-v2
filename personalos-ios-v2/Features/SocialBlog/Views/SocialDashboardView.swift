@@ -2,9 +2,10 @@ import SwiftUI
 import SwiftData
 
 struct SocialDashboardView: View {
-    // ✅ Task 21: Use database predicate filtering for better performance
-    @Query(sort: \SocialPost.date, order: .reverse) private var allPosts: [SocialPost]
+    // ✅ P1 Fix: Use database-level pagination with fetchLimit
+    @Environment(\.modelContext) private var modelContext
     @State private var viewModel: SocialDashboardViewModel
+    @State private var allPosts: [SocialPost] = []
     @State private var currentPage = 0
     @State private var isLoadingMore = false
     private let pageSize = 20
@@ -13,10 +14,22 @@ struct SocialDashboardView: View {
         _viewModel = State(initialValue: viewModel)
     }
 
-    // ✅ Task 21: Implement pagination for post lists
+    // ✅ P1 Fix: Load posts from database with limit
+    private func loadPosts() {
+        do {
+            var descriptor = FetchDescriptor<SocialPost>(
+                sortBy: [SortDescriptor(\SocialPost.date, order: .reverse)]
+            )
+            descriptor.fetchLimit = (currentPage + 1) * pageSize
+            
+            allPosts = try modelContext.fetch(descriptor)
+        } catch {
+            ErrorHandler.shared.handle(error, context: "SocialDashboardView.loadPosts")
+        }
+    }
+    
     private var paginatedPosts: [SocialPost] {
-        let endIndex = min((currentPage + 1) * pageSize, allPosts.count)
-        return Array(allPosts.prefix(endIndex))
+        return allPosts
     }
     
     private var upcomingPosts: [SocialPost] {
@@ -258,9 +271,21 @@ struct SocialDashboardView: View {
             }
         }
         .onAppear {
-            Task {
-                await viewModel.seedDefaultPosts()
+            // ✅ P1 Fix: Load posts from database
+            loadPosts()
+            
+            // ✅ P0 Fix: Only seed in DEBUG mode
+            #if DEBUG
+            if EnvironmentManager.shared.shouldSeedMockData() {
+                Task {
+                    await viewModel.seedDefaultPosts()
+                    loadPosts() // Reload after seeding
+                }
             }
+            #endif
+        }
+        .onChange(of: currentPage) { _, _ in
+            loadPosts()
         }
         .onDisappear {
             // Clean up any ongoing tasks
@@ -268,15 +293,17 @@ struct SocialDashboardView: View {
         }
     }
     
-    // ✅ Task 21: Load more posts helper
+    // ✅ P1 Fix: Load more posts from database
     private func loadMorePosts() {
         guard !isLoadingMore else { return }
         isLoadingMore = true
         
         Task {
-            try? await Task.sleep(nanoseconds: 500_000_000) // Simulate loading
-            currentPage += 1
-            isLoadingMore = false
+            await MainActor.run {
+                currentPage += 1
+                loadPosts()
+                isLoadingMore = false
+            }
         }
     }
     

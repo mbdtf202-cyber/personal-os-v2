@@ -62,6 +62,16 @@ final class EnvironmentManager {
     
     let environment: AppEnvironment
     
+    // ✅ P0 Fix: Expose current environment for checks
+    var currentEnvironment: AppEnvironment {
+        return environment
+    }
+    
+    // ✅ P0 Fix: Mock environment for testing
+    enum MockEnvironment {
+        case mock
+    }
+    
     private init() {
         self.environment = AppEnvironment.current
     }

@@ -13,14 +13,12 @@ struct TradingDashboardView: View {
     }
     
     @Query(
+        filter: #Predicate<TradeRecord> { trade in
+            trade.date > TradingDashboardView.ninetyDaysAgo
+        },
         sort: \TradeRecord.date,
         order: .reverse
-    ) private var allTrades: [TradeRecord]
-    
-    private var recentTrades: [TradeRecord] {
-        let cutoffDate = Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? Date()
-        return allTrades.filter { $0.date > cutoffDate }
-    }
+    ) private var recentTrades: [TradeRecord]
     @State private var viewModel = PortfolioViewModel()
     @State private var showLogForm = false
     @State private var showPriceError = false
@@ -33,6 +31,16 @@ struct TradingDashboardView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
+                        // ✅ P0 Fix: Data source warning banner
+                        if stockPriceService.isUsingMockData {
+                            DataSourceWarningBanner(
+                                dataSource: "Demo Data",
+                                message: "Configure Stock API key in Settings for real-time prices",
+                                icon: "exclamationmark.triangle.fill",
+                                color: .orange
+                            )
+                        }
+                        
                         if let error = stockPriceService.error, showPriceError {
                             PriceErrorBanner(error: error, onDismiss: { showPriceError = false })
                         }
@@ -423,5 +431,48 @@ struct ErrorBanner: View {
         .padding()
         .background(AppTheme.coral.opacity(0.1))
         .cornerRadius(12)
+    }
+}
+
+// MARK: - Data Source Warning Banner
+struct DataSourceWarningBanner: View {
+    let dataSource: String
+    let message: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(color)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(dataSource)
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundStyle(color)
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 4))
+                        .foregroundStyle(color)
+                    Text("Not Real-Time")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.secondaryText)
+                }
+                Text(message)
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.secondaryText)
+            }
+            
+            Spacer()
+        }
+        .padding()
+        .background(color.opacity(0.1))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(color.opacity(0.3), lineWidth: 1)
+        )
     }
 }

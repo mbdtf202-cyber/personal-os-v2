@@ -177,6 +177,22 @@ struct RootView: View {
 
 // LoadingView moved to Core/DesignSystem/Components/LoadingView.swift
 
+// MARK: - Social Dashboard Wrapper
+struct SocialDashboardViewWrapper: View {
+    @Environment(\.appDependency) private var appDependency
+    @Environment(\.modelContext) private var modelContext
+    
+    var body: some View {
+        if let dependency = appDependency {
+            SocialDashboardView(viewModel: SocialDashboardViewModel(
+                socialPostRepository: dependency.repositories.socialPost
+            ))
+        } else {
+            LoadingView(message: "Loading Social...")
+        }
+    }
+}
+
 // MARK: - Main Tab View
 struct MainTabView: View {
     @Environment(AppRouter.self) private var router
@@ -203,7 +219,7 @@ struct MainTabView: View {
                     .tag(AppRouter.Tab.growth)
                 
                 // 3. 💬 Social
-                SocialDashboardView()
+                SocialDashboardViewWrapper()
                     .tabItem {
                         Label("Social", systemImage: "bubble.left.and.bubble.right.fill")
                     }

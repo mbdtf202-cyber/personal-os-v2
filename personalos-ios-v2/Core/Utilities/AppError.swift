@@ -1,5 +1,12 @@
 import Foundation
 
+/// Error severity levels
+enum ErrorSeverity {
+    case warning
+    case error
+    case critical
+}
+
 /// Comprehensive application error types
 enum AppError: Error, Identifiable {
     // Network errors

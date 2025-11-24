@@ -187,12 +187,18 @@ struct RSSFeedsView: View {
     }
     
     private func seedDefaultFeeds() {
+        // ✅ P0 Fix: Only seed in DEBUG mode
+        #if DEBUG
         guard feeds.isEmpty else { return }
+        guard EnvironmentManager.shared.shouldSeedMockData() else { return }
+        
         Task {
             for feed in RSSFeed.defaultFeeds {
                 try? await appDependency?.repositories.rssFeed.save(feed)
             }
+            Logger.log("🌱 Seeded \(RSSFeed.defaultFeeds.count) demo RSS feeds (DEBUG mode)", category: Logger.general)
         }
+        #endif
     }
 }
 

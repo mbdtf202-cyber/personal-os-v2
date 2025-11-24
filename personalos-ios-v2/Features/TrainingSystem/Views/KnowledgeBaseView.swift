@@ -206,12 +206,18 @@ struct KnowledgeBaseView: View {
     }
     
     private func seedSnippetsIfNeeded() {
+        // ✅ P0 Fix: Only seed in DEBUG mode
+        #if DEBUG
         guard allSnippets.isEmpty else { return }
+        guard EnvironmentManager.shared.shouldSeedMockData() else { return }
+        
         Task {
             for snippet in CodeSnippet.defaultSnippets {
                 try? await appDependency?.repositories.codeSnippet.save(snippet)
             }
+            Logger.log("🌱 Seeded \(CodeSnippet.defaultSnippets.count) demo snippets (DEBUG mode)", category: Logger.general)
         }
+        #endif
     }
 }
 

@@ -65,8 +65,8 @@ final class NetworkClientTests: XCTestCase {
             circuitBreakerTimeout: 5
         )
         
-        // Note: NetworkClient 使用私有 init，这里测试的是公共 API
-        client = NetworkClient.shared
+        // ✅ P0 Fix: 使用可注入的 session 进行测试
+        client = NetworkClient(config: config, session: mockSession)
     }
     
     override func tearDown() async throws {

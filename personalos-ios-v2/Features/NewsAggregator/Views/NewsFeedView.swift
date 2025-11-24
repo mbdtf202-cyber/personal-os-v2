@@ -192,6 +192,46 @@ struct NewsFeedView: View {
                                     .onTapGesture {
                                         openArticle(item)
                                     }
+                                    // ✅ P2 Fix: Long press context menu
+                                    .contextMenu {
+                                        Button {
+                                            openArticle(item)
+                                        } label: {
+                                            Label("Open Article", systemImage: "safari")
+                                        }
+                                        
+                                        Button {
+                                            bookmarkArticle(item)
+                                        } label: {
+                                            Label(
+                                                bookmarkedNews.contains(where: { $0.canonicalID == item.canonicalID }) ? "Remove Bookmark" : "Bookmark",
+                                                systemImage: bookmarkedNews.contains(where: { $0.canonicalID == item.canonicalID }) ? "bookmark.fill" : "bookmark"
+                                            )
+                                        }
+                                        
+                                        Button {
+                                            createTaskFromArticle(item)
+                                        } label: {
+                                            Label("Create Task", systemImage: "checklist")
+                                        }
+                                        
+                                        Divider()
+                                        
+                                        Button {
+                                            if let url = item.url {
+                                                shareArticle(url: url, title: item.title)
+                                            }
+                                        } label: {
+                                            Label("Share", systemImage: "square.and.arrow.up")
+                                        }
+                                        
+                                        Button {
+                                            UIPasteboard.general.string = item.url?.absoluteString ?? item.title
+                                            HapticsManager.shared.light()
+                                        } label: {
+                                            Label("Copy Link", systemImage: "doc.on.doc")
+                                        }
+                                    }
                                 }
                             }
                             .padding(.horizontal)
@@ -337,8 +377,9 @@ struct NewsFeedView: View {
     }
     
     private func bookmarkArticle(_ item: NewsItem) {
-        // ✅ Task 26: Check for duplicate bookmark operations
-        guard !bookmarkOperations.contains(item.id) else {
+        // ✅ P1 Fix: Use canonical ID for deduplication
+        let operationKey = item.canonicalID ?? item.id.uuidString
+        guard !bookmarkOperations.contains(where: { $0.uuidString == operationKey || item.canonicalID == operationKey }) else {
             Logger.log("Bookmark operation already in progress", category: Logger.general)
             return
         }
@@ -370,34 +411,51 @@ struct NewsFeedView: View {
     }
     
     private func createTaskFromArticle(_ item: NewsItem) {
-        // ✅ Task 26: Check for duplicate task operations
-        guard !taskOperations.contains(item.id) else {
+        // ✅ P1 Fix: Use canonical ID for deduplication
+        let operationKey = item.canonicalID ?? item.id.uuidString
+        guard !taskOperations.contains(where: { $0.uuidString == operationKey || item.canonicalID == operationKey }) else {
             Logger.log("Task creation already in progress", category: Logger.general)
             return
         }
         
         taskOperations.insert(item.id)
         
-        // ✅ P0 Fix: Check for duplicate tasks using canonical ID (Requirement 16.4)
+        // ✅ P1 Fix: Use database predicate instead of fetching all tasks
         Task {
             defer {
                 taskOperations.remove(item.id)
             }
             
             do {
-                // Check if task already exists for this article
-                let existingTasks = try await appDependency?.repositories.todo.fetch() ?? []
                 let taskTitle = "Read: \(item.title)"
                 
-                if existingTasks.contains(where: { $0.title == taskTitle }) {
+                // Use predicate to check existence without loading all tasks
+                let predicate = #Predicate<TodoItem> { task in
+                    task.title == taskTitle
+                }
+                var descriptor = FetchDescriptor<TodoItem>(predicate: predicate)
+                descriptor.fetchLimit = 1
+                
+                let existingTasks = try modelContext.fetch(descriptor)
+                
+                if !existingTasks.isEmpty {
                     Logger.log("Task already exists for article", category: Logger.general)
                     return
                 }
                 
+                // ✅ P2 Fix: Attach source URL to task notes
+                let taskNotes = """
+                Source: \(item.source)
+                URL: \(item.url?.absoluteString ?? "N/A")
+                
+                \(item.summary)
+                """
+                
                 let task = TodoItem(
                     title: taskTitle,
                     category: "Reading",
-                    priority: 1
+                    priority: 1,
+                    notes: taskNotes
                 )
                 
                 try await appDependency?.repositories.todo.save(task)
@@ -433,9 +491,21 @@ struct NewsFeedView: View {
             
             Logger.log("Search completed: \(searchResults.count) results", category: Logger.general)
         } catch {
-            // ✅ Task 25: Fallback to local search on API failure
+            // ✅ P1 Fix: Show error and fallback to local search
             Logger.error("Search API failed, using local search: \(error)", category: Logger.general)
-            searchResults = []
+            
+            await MainActor.run {
+                // Fallback to local filtering
+                searchResults = news.filter { item in
+                    item.title.localizedCaseInsensitiveContains(query) ||
+                    item.summary.localizedCaseInsensitiveContains(query)
+                }
+                
+                // Show error banner if API failed
+                if searchResults.isEmpty {
+                    newsService.error = "Search API unavailable. Showing local results."
+                }
+            }
         }
     }
     

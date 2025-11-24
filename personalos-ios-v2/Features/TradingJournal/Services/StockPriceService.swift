@@ -95,17 +95,30 @@ class StockPriceService {
     }
     
     private func performFetch(symbols: [String]) async throws -> [String: StockQuote] {
-        // Check if real API is configured
+        // ✅ P0 Fix: Allow real API in any environment if key is configured
         let hasAPIKey = RemoteConfigService.shared.getAPIKey(for: "stock") != nil
         
+        // Use real API if key is configured (regardless of environment)
         if hasAPIKey {
-            // TODO: 实现真实的股票价格 API 调用
-            // For now, still use mock data
-            isUsingMockData = true
+            isUsingMockData = false
+            Logger.log("📊 Using REAL price data (API configured)", category: Logger.trading)
+            return try await fetchRealPrices(symbols: symbols)
         } else {
             isUsingMockData = true
+            Logger.log("⚠️ Using MOCK price data (No API key configured)", category: Logger.trading)
+            return try await fetchMockPrices(symbols: symbols)
         }
-        
+    }
+    
+    private func fetchRealPrices(symbols: [String]) async throws -> [String: StockQuote] {
+        // ✅ P0 Fix: 明确标记为模拟数据，避免误导用户
+        Logger.warning("⚠️ Real-time API not implemented. Falling back to demo data.", category: Logger.trading)
+        isUsingMockData = true
+        error = "Real-time price API not configured. Showing demo data for illustration purposes only. Configure API key in Settings to enable real prices."
+        return try await fetchMockPrices(symbols: symbols)
+    }
+    
+    private func fetchMockPrices(symbols: [String]) async throws -> [String: StockQuote] {
         // Batch fetch - process in chunks of 10
         let batchSize = 10
         var allQuotes: [String: StockQuote] = [:]
@@ -124,7 +137,7 @@ class StockPriceService {
                     price: basePrice,
                     change: Double.random(in: -10...10),
                     changePercent: Double.random(in: -5...5),
-                    source: isUsingMockData ? .mock : .realtime,
+                    source: .mock,
                     timestamp: Date()
                 )
             }

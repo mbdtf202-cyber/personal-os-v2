@@ -135,6 +135,10 @@ class SocialDashboardViewModel: BaseViewModel {
     }
     
     func seedDefaultPosts() async {
+        // ✅ P0 Fix: Only seed in DEBUG mode
+        #if DEBUG
+        guard EnvironmentManager.shared.shouldSeedMockData() else { return }
+        
         do {
             let existingPosts = try await socialPostRepository.fetch()
             guard existingPosts.isEmpty else { return }
@@ -142,10 +146,11 @@ class SocialDashboardViewModel: BaseViewModel {
             for post in SocialPost.defaultPosts {
                 try await socialPostRepository.save(post)
             }
-            Logger.log("Seeded default social posts", category: Logger.general)
+            Logger.log("🌱 Seeded \(SocialPost.defaultPosts.count) demo social posts (DEBUG mode)", category: Logger.general)
         } catch {
             ErrorHandler.shared.handle(error, context: "SocialDashboardViewModel.seedDefaultPosts")
         }
+        #endif
     }
     
     func calculateStats(from posts: [SocialPost]) -> (totalViews: String, engagementRate: String) {

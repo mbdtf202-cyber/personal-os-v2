@@ -30,3 +30,11 @@ final class DecimalTransformer: ValueTransformer {
         )
     }
 }
+
+// ✅ P0 Fix: 添加 Decimal 扩展以支持数据验证
+extension Decimal {
+    var isInfinite: Bool {
+        // Decimal 类型不支持无穷大，总是返回 false
+        return false
+    }
+}

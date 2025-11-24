@@ -111,9 +111,8 @@ actor PortfolioCalculator {
         // Calculate equity curve
         let equityCurve = try await calculateEquityCurve(from: sortedTrades, priceProvider: priceProvider, progressCallback: progressCallback)
         
-        // Calculate day P&L (simplified)
-        let dayPnL: Decimal = 0
-        let dayPnLPercent: Decimal = 0
+        // ✅ P0 Fix: Calculate real day P&L from equity curve
+        let (dayPnL, dayPnLPercent) = calculateDayPnL(equityCurve: equityCurve, currentBalance: totalBalance)
         
         progressCallback?(1.0, "Complete")
         
@@ -178,7 +177,7 @@ actor PortfolioCalculator {
         return positions
     }
     
-    // Calculate equity curve over time
+    // ✅ P0 Fix: Calculate equity curve using historical prices at each trade date
     private func calculateEquityCurve(
         from trades: [TradeRecord],
         priceProvider: (String, Double) -> Decimal,
@@ -187,54 +186,72 @@ actor PortfolioCalculator {
         var curve: [EquityPoint] = []
         var positions: [String: Position] = [:]
         
-        for (index, trade) in trades.enumerated() {
+        // Group trades by date for more accurate equity calculation
+        let calendar = Calendar.current
+        var tradesByDate: [Date: [TradeRecord]] = [:]
+        
+        for trade in trades {
+            let dayStart = calendar.startOfDay(for: trade.date)
+            tradesByDate[dayStart, default: []].append(trade)
+        }
+        
+        let sortedDates = tradesByDate.keys.sorted()
+        
+        for (index, date) in sortedDates.enumerated() {
             guard !isCancelled else {
                 throw CalculationError.cancelled
             }
             
-            // Report progress every 10 trades
-            if index % 10 == 0 {
-                let progress = 0.8 + (Double(index) / Double(trades.count)) * 0.2
-                progressCallback?(progress, "Building equity curve \(index + 1)/\(trades.count)...")
-            }
-            let symbol = trade.symbol
-            var position = positions[symbol] ?? Position(symbol: symbol, quantity: 0, avgCost: 0, costBasis: 0)
-            
-            switch trade.type {
-            case .buy:
-                let newCostBasis = position.costBasis + (trade.price * trade.quantity)
-                let newQuantity = position.quantity + trade.quantity
-                let newAvgCost = newQuantity > 0 ? newCostBasis / newQuantity : 0
-                
-                position = Position(
-                    symbol: symbol,
-                    quantity: newQuantity,
-                    avgCost: newAvgCost,
-                    costBasis: newCostBasis
-                )
-                
-            case .sell:
-                let newQuantity = position.quantity - trade.quantity
-                let newCostBasis = position.costBasis - (position.avgCost * trade.quantity)
-                
-                position = Position(
-                    symbol: symbol,
-                    quantity: max(0, newQuantity),
-                    avgCost: position.avgCost,
-                    costBasis: max(0, newCostBasis)
-                )
+            // Report progress
+            if index % 5 == 0 {
+                let progress = 0.8 + (Double(index) / Double(sortedDates.count)) * 0.2
+                progressCallback?(progress, "Building equity curve \(index + 1)/\(sortedDates.count) days...")
             }
             
-            positions[symbol] = position
+            // Process all trades for this date
+            let dayTrades = tradesByDate[date] ?? []
+            for trade in dayTrades {
+                let symbol = trade.symbol
+                var position = positions[symbol] ?? Position(symbol: symbol, quantity: 0, avgCost: 0, costBasis: 0)
+                
+                switch trade.type {
+                case .buy:
+                    let newCostBasis = position.costBasis + (trade.price * trade.quantity)
+                    let newQuantity = position.quantity + trade.quantity
+                    let newAvgCost = newQuantity > 0 ? newCostBasis / newQuantity : 0
+                    
+                    position = Position(
+                        symbol: symbol,
+                        quantity: newQuantity,
+                        avgCost: newAvgCost,
+                        costBasis: newCostBasis
+                    )
+                    
+                case .sell:
+                    let newQuantity = position.quantity - trade.quantity
+                    let newCostBasis = position.costBasis - (position.avgCost * trade.quantity)
+                    
+                    position = Position(
+                        symbol: symbol,
+                        quantity: max(0, newQuantity),
+                        avgCost: position.avgCost,
+                        costBasis: max(0, newCostBasis)
+                    )
+                }
+                
+                positions[symbol] = position
+            }
             
-            // Calculate total equity at this point
+            // ✅ P0 Fix: Calculate equity using trade prices (historical) instead of current price
+            // Use the last trade price of the day as the closing price
             var totalEquity: Decimal = 0
-            for (sym, pos) in positions {
-                let price = priceProvider(sym, 0)
-                totalEquity += pos.quantity * price
+            for (sym, pos) in positions where pos.quantity > 0 {
+                // Find the last trade price for this symbol on or before this date
+                let historicalPrice = dayTrades.last(where: { $0.symbol == sym })?.price ?? pos.avgCost
+                totalEquity += pos.quantity * historicalPrice
             }
             
-            curve.append(EquityPoint(date: trade.date, value: totalEquity))
+            curve.append(EquityPoint(date: date, value: totalEquity))
         }
         
         return curve
@@ -269,6 +286,33 @@ actor PortfolioCalculator {
                 throw ValidationError.negativePosition(symbol: trade.symbol)
             }
         }
+    }
+    
+    // ✅ P0 Fix: Calculate day P&L from equity curve
+    private func calculateDayPnL(equityCurve: [EquityPoint], currentBalance: Decimal) -> (Decimal, Decimal) {
+        guard !equityCurve.isEmpty else {
+            return (0, 0)
+        }
+        
+        // Find yesterday's equity (or last available point before today)
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        
+        // Find the last equity point before today
+        let yesterdayEquity = equityCurve
+            .filter { calendar.startOfDay(for: $0.date) < today }
+            .last?.value ?? 0
+        
+        // If no previous data, return 0
+        guard yesterdayEquity > 0 else {
+            return (0, 0)
+        }
+        
+        // Calculate day P&L
+        let dayPnL = currentBalance - yesterdayEquity
+        let dayPnLPercent = (dayPnL / yesterdayEquity) * 100
+        
+        return (dayPnL, dayPnLPercent)
     }
     
     // Calculate realized gains from complete history

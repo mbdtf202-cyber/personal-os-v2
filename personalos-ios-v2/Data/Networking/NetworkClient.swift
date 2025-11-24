@@ -1,16 +1,6 @@
 import Foundation
 import CryptoKit
 
-enum NetworkError: Error {
-    case invalidURL
-    case noData
-    case decodingError
-    case serverError(Int)
-    case timeout
-    case circuitBreakerOpen
-    case rateLimited
-}
-
 struct NetworkConfig {
     var timeout: TimeInterval
     var maxRetries: Int
@@ -57,34 +47,42 @@ struct NetworkConfig {
 }
 
 class NetworkClient {
+    static let shared = NetworkClient(config: .default)
+    static let news = NetworkClient(config: .news)
+    static let stocks = NetworkClient(config: .stocks)
+    static let github = NetworkClient(config: .github)
+    
     private let session: URLSession
     private let config: NetworkConfig
-    private var circuitBreaker: CircuitBreaker
+    private let circuitBreaker: CircuitBreaker
     private let offlineCache: OfflineCache
     
-    init(config: NetworkConfig) {
+    init(config: NetworkConfig, session: URLSession? = nil) {
         self.config = config
         
-        let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = config.timeout
-        configuration.timeoutIntervalForResource = config.timeout * 2
-        configuration.waitsForConnectivity = true
-        
-        // ✅ 集成 SSL Pinning
-        self.session = URLSession(
-            configuration: configuration,
-            delegate: SSLPinningManager.shared,
-            delegateQueue: nil
-        )
+        if let providedSession = session {
+            self.session = providedSession
+        } else {
+            let configuration = URLSessionConfiguration.default
+            configuration.timeoutIntervalForRequest = config.timeout
+            configuration.timeoutIntervalForResource = config.timeout * 2
+            configuration.waitsForConnectivity = true
+            
+            // ✅ 集成 SSL Pinning
+            self.session = URLSession(
+                configuration: configuration,
+                delegate: SSLPinningManager.shared,
+                delegateQueue: nil
+            )
+        }
         
         self.circuitBreaker = CircuitBreaker(
-            threshold: config.circuitBreakerThreshold,
+            failureThreshold: config.circuitBreakerThreshold,
             timeout: config.circuitBreakerTimeout
         )
         self.offlineCache = OfflineCache()
     }
     
-    @MainActor
     func request<T: Codable>(
         _ endpoint: String,
         method: HTTPMethod = .get,
@@ -107,13 +105,14 @@ class NetworkClient {
         }
         
         // Check circuit breaker
-        guard !circuitBreaker.isOpen else {
+        let canAttempt = await MainActor.run { circuitBreaker.canAttempt() }
+        guard canAttempt else {
             // Try offline cache
             if let cached: T = offlineCache.get(key: endpoint) {
                 PerformanceMonitor.shared.recordCustomMetric(name: "cache_hit", value: 1)
                 return cached
             }
-            throw NetworkError.circuitBreakerOpen
+            throw AppError.network(.circuitBreakerOpen, retryable: true)
         }
         
         // Try cache first if policy allows
@@ -133,7 +132,7 @@ class NetworkClient {
                     body: body
                 )
                 
-                circuitBreaker.recordSuccess()
+                await MainActor.run { circuitBreaker.recordSuccess() }
                 offlineCache.set(key: endpoint, value: result)
                 
                 PerformanceMonitor.shared.recordCustomMetric(name: "network_success", value: 1)
@@ -142,14 +141,14 @@ class NetworkClient {
                 return result
             } catch {
                 lastError = error
-                circuitBreaker.recordFailure()
+                await MainActor.run { circuitBreaker.recordFailure() }
                 
                 PerformanceMonitor.shared.recordCustomMetric(name: "network_error", value: 1)
                 
                 // Don't retry on certain errors
-                if case NetworkError.serverError(let code) = error, code == 429 {
+                if case AppError.network(.rateLimited, _) = error {
                     PerformanceMonitor.shared.recordCustomMetric(name: "rate_limited", value: 1)
-                    throw NetworkError.rateLimited
+                    throw error
                 }
                 
                 if attempt < config.maxRetries - 1 {
@@ -165,7 +164,7 @@ class NetworkClient {
             return cached
         }
         
-        throw lastError ?? NetworkError.noData
+        throw lastError ?? AppError.network(.noConnection, retryable: true)
     }
     
     private func performRequest<T: Codable>(
@@ -175,7 +174,7 @@ class NetworkClient {
         body: Data?
     ) async throws -> T {
         guard let url = URL(string: endpoint) else {
-            throw NetworkError.invalidURL
+            throw AppError.network(.invalidResponse, retryable: false)
         }
         
         var request = URLRequest(url: url)
@@ -187,17 +186,30 @@ class NetworkClient {
         let (data, response) = try await session.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.noData
+            throw AppError.network(.invalidResponse, retryable: true)
         }
         
         guard (200...299).contains(httpResponse.statusCode) else {
-            throw NetworkError.serverError(httpResponse.statusCode)
+            if httpResponse.statusCode == 429 {
+                throw AppError.network(.rateLimited, retryable: true)
+            } else if httpResponse.statusCode == 401 {
+                throw AppError.network(.unauthorized, retryable: false)
+            } else if httpResponse.statusCode == 403 {
+                throw AppError.network(.forbidden, retryable: false)
+            } else if (500...599).contains(httpResponse.statusCode) {
+                throw AppError.network(.serverError(httpResponse.statusCode), retryable: true)
+            } else {
+                throw AppError.network(.serverError(httpResponse.statusCode), retryable: false)
+            }
         }
         
         do {
-            return try JSONDecoder().decode(T.self, from: data)
+            // ✅ P0 Fix: 统一日期解码策略为 ISO8601
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode(T.self, from: data)
         } catch {
-            throw NetworkError.decodingError
+            throw AppError.network(.invalidResponse, retryable: false)
         }
     }
     
@@ -221,36 +233,6 @@ enum CachePolicy {
     case networkFirst
     case cacheFirst
     case networkOnly
-}
-
-// MARK: - Circuit Breaker
-class CircuitBreaker {
-    private var failureCount = 0
-    private var lastFailureTime: Date?
-    private let threshold: Int
-    private let timeout: TimeInterval
-    
-    var isOpen: Bool {
-        guard failureCount >= threshold else { return false }
-        guard let lastFailure = lastFailureTime else { return false }
-        
-        return Date().timeIntervalSince(lastFailure) < timeout
-    }
-    
-    init(threshold: Int, timeout: TimeInterval) {
-        self.threshold = threshold
-        self.timeout = timeout
-    }
-    
-    func recordSuccess() {
-        failureCount = 0
-        lastFailureTime = nil
-    }
-    
-    func recordFailure() {
-        failureCount += 1
-        lastFailureTime = Date()
-    }
 }
 
 // MARK: - Cache Metadata (must be outside class for Sendable)
@@ -277,7 +259,10 @@ class OfflineCache {
         // 1. 先查内存缓存
         if let entry = memoryCache.object(forKey: key as NSString) {
             if entry.expirationDate > Date() {
-                return try? JSONDecoder().decode(T.self, from: entry.data)
+                // ✅ P0 Fix: 统一使用 ISO8601 日期解码策略
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                return try? decoder.decode(T.self, from: entry.data)
             }
             memoryCache.removeObject(forKey: key as NSString)
         }
@@ -285,8 +270,15 @@ class OfflineCache {
         // 2. 查磁盘缓存
         let fileURL = cacheDirectory.appendingPathComponent(key.sha256Hash)
         
-        guard let data = try? Data(contentsOf: fileURL),
-              let metadata = try? JSONDecoder().decode(CacheMetadata.self, from: data) else {
+        guard let data = try? Data(contentsOf: fileURL) else {
+            return nil
+        }
+        
+        // ✅ P0 Fix: 统一使用 ISO8601 日期解码策略
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        
+        guard let metadata = try? decoder.decode(CacheMetadata.self, from: data) else {
             return nil
         }
         
@@ -299,11 +291,15 @@ class OfflineCache {
         let entry = CacheEntry(data: metadata.data, expirationDate: metadata.expirationDate)
         memoryCache.setObject(entry, forKey: key as NSString)
         
-        return try? JSONDecoder().decode(T.self, from: metadata.data)
+        // ✅ P0 Fix: 解码实际数据时也使用 ISO8601
+        return try? decoder.decode(T.self, from: metadata.data)
     }
     
     func set<T: Codable>(key: String, value: T) {
-        guard let data = try? JSONEncoder().encode(value) else { return }
+        // ✅ P0 Fix: 统一使用 ISO8601 日期编码策略
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        guard let data = try? encoder.encode(value) else { return }
         
         let expirationDate = Date().addingTimeInterval(expirationTime)
         let entry = CacheEntry(data: data, expirationDate: expirationDate)
@@ -348,8 +344,9 @@ extension NetworkClient {
     }
     
     func requestData(url: URL) async throws -> Data {
-        guard !circuitBreaker.isOpen else {
-            throw NetworkError.circuitBreakerOpen
+        let canAttempt = await MainActor.run { circuitBreaker.canAttempt() }
+        guard canAttempt else {
+            throw AppError.network(.circuitBreakerOpen, retryable: true)
         }
         
         var request = URLRequest(url: url)
@@ -358,15 +355,15 @@ extension NetworkClient {
         let (data, response) = try await session.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.noData
+            throw AppError.network(.invalidResponse, retryable: true)
         }
         
         guard (200...299).contains(httpResponse.statusCode) else {
-            circuitBreaker.recordFailure()
-            throw NetworkError.serverError(httpResponse.statusCode)
+            await MainActor.run { circuitBreaker.recordFailure() }
+            throw AppError.network(.serverError(httpResponse.statusCode), retryable: true)
         }
         
-        circuitBreaker.recordSuccess()
+        await MainActor.run { circuitBreaker.recordSuccess() }
         return data
     }
 }
