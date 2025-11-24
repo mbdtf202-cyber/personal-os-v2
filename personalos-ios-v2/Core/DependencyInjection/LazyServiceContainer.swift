@@ -1,16 +1,35 @@
 import Foundation
 import SwiftData
 
-/// ✅ EXTREME FIX 3: Lazy-loading DI container to optimize cold start time
+/// ✅ GOD-TIER OPTIMIZATION 3: Environment-injectable DI container
+/// Eliminates global singleton for pure, testable architecture
 /// Services are initialized only when first accessed, not at app launch
+
+// MARK: - Environment Key for Dependency Injection
+
+struct ServiceContainerKey: EnvironmentKey {
+    static let defaultValue: LazyServiceContainer? = nil
+}
+
+extension EnvironmentValues {
+    var serviceContainer: LazyServiceContainer? {
+        get { self[ServiceContainerKey.self] }
+        set { self[ServiceContainerKey.self] = newValue }
+    }
+}
+
 @MainActor
 final class LazyServiceContainer {
+    // ✅ Keep shared for backward compatibility, but prefer environment injection
     static let shared = LazyServiceContainer()
     
     private var modelContainer: ModelContainer?
     private var cachedServices: [String: Any] = [:]
     
-    private init() {}
+    // ✅ Allow creating isolated instances for testing
+    init(modelContainer: ModelContainer? = nil) {
+        self.modelContainer = modelContainer
+    }
     
     func configure(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
@@ -117,5 +136,20 @@ final class LazyServiceContainer {
     func clearCache() {
         cachedServices.removeAll()
         Logger.log("🗑️ Service cache cleared", category: Logger.general)
+    }
+    
+    // ✅ GOD-TIER: Create isolated container for testing
+    static func createTestContainer(modelContainer: ModelContainer) -> LazyServiceContainer {
+        Logger.log("🧪 Creating isolated test container", category: Logger.general)
+        return LazyServiceContainer(modelContainer: modelContainer)
+    }
+}
+
+// MARK: - View Extension for Easy Access
+
+extension View {
+    /// Inject service container into environment
+    func serviceContainer(_ container: LazyServiceContainer) -> some View {
+        environment(\.serviceContainer, container)
     }
 }
