@@ -33,8 +33,10 @@ class PerformanceMonitor {
     }
     
     // MARK: - Enhanced Tracing
+    // ✅ FINAL OPTIMIZATION 3: Release 模式彻底移除追踪开销
     
     func startTrace(name: String, attributes: [String: String] = [:]) -> String {
+        #if DEBUG || TESTFLIGHT
         let traceID = UUID().uuidString
         let trace = TraceInfo(
             id: traceID,
@@ -46,9 +48,14 @@ class PerformanceMonitor {
         
         Logger.log("Started trace: \(name) [\(traceID)]", category: Logger.performance)
         return traceID
+        #else
+        // Release 模式：返回空字符串，不创建追踪对象
+        return ""
+        #endif
     }
     
     func stopTrace(_ traceID: String, metrics: [String: Double] = [:]) {
+        #if DEBUG || TESTFLIGHT
         guard let trace = activeTraces.removeValue(forKey: traceID) else {
             Logger.warning("Attempted to stop unknown trace: \(traceID)", category: Logger.performance)
             return
@@ -76,20 +83,34 @@ class PerformanceMonitor {
         
         // 上报到分析系统
         AnalyticsLogger.shared.log(.performance(metric: trace.name, duration: duration))
+        #else
+        // Release 模式：完全跳过，零开销
+        return
+        #endif
     }
     
     func recordCustomMetric(name: String, value: Double) {
+        #if DEBUG || TESTFLIGHT
         if customMetrics[name] == nil {
             customMetrics[name] = []
         }
         customMetrics[name]?.append(value)
         
         Logger.log("Custom metric: \(name) = \(value)", category: Logger.performance)
+        #else
+        // Release 模式：仅记录到 OSLog，不存储在内存
+        os_log(.debug, log: logger, "Metric: %{public}@ = %.2f", name, value)
+        #endif
     }
     
     func incrementCounter(name: String, by value: Int = 1) {
+        #if DEBUG || TESTFLIGHT
         let currentValue = (customMetrics[name]?.last ?? 0) + Double(value)
         recordCustomMetric(name: name, value: currentValue)
+        #else
+        // Release 模式：轻量级计数，不存储历史
+        os_log(.debug, log: logger, "Counter: %{public}@ += %d", name, value)
+        #endif
     }
     
     private func recordMetric(operation: String, duration: TimeInterval, attributes: [String: String] = [:]) {
@@ -119,19 +140,29 @@ class PerformanceMonitor {
     }
     
     func getMetrics(for operation: String? = nil) -> [PerformanceMetric] {
+        #if DEBUG || TESTFLIGHT
         if let operation = operation {
             return metrics.filter { $0.operation == operation }
         }
         return metrics
+        #else
+        // Release 模式：不提供历史指标查询
+        return []
+        #endif
     }
     
     func getAverageTime(for operation: String) -> TimeInterval? {
+        #if DEBUG || TESTFLIGHT
         let filtered = metrics.filter { $0.operation == operation }
         guard !filtered.isEmpty else { return nil }
         return filtered.map(\.duration).reduce(0, +) / Double(filtered.count)
+        #else
+        return nil
+        #endif
     }
     
     func getCustomMetricStats(for name: String) -> MetricStats? {
+        #if DEBUG || TESTFLIGHT
         guard let values = customMetrics[name], !values.isEmpty else { return nil }
         
         let sorted = values.sorted()
@@ -146,6 +177,9 @@ class PerformanceMonitor {
             max: sorted.last ?? 0,
             median: sorted[count / 2]
         )
+        #else
+        return nil
+        #endif
     }
 }
 

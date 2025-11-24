@@ -90,38 +90,41 @@ class CloudSyncManager: ObservableObject {
         }
     }
     
-    // ✅ EXTREME OPTIMIZATION 1: 明确界限 - SwiftData 自动同步 vs 手动 CRDT
+    // ✅ FINAL OPTIMIZATION 1: 明确"主权" - 生产环境信任 SwiftData，移除手动 CRDT
     // 当使用 cloudKitDatabase: .automatic 时，SwiftData 底层已经处理冲突
-    // 手动冲突解决仅在完全接管 CloudKit 时使用（cloudKitDatabase: .none + 手动 CKRecord）
+    // ConflictResolver 和向量时钟仅在学习/实验模式下可用（DEBUG）
     
-    /// 仅在手动管理 CloudKit 时使用（非 SwiftData 自动同步）
-    /// 如果使用 SwiftData 的 .automatic 模式，此方法不应被调用
+    #if DEBUG
+    /// 仅供学习和实验：手动 CRDT 冲突解决（DEBUG 模式）
+    /// 生产环境完全信任 SwiftData 的自动同步机制
     func resolveConflictManually(_ conflict: SyncConflict) async throws {
-        guard !isCloudKitEnabled else {
-            Logger.warning("⚠️ Manual conflict resolution called but SwiftData auto-sync is enabled. This is redundant.", category: Logger.sync)
-            return
-        }
+        Logger.log("🧪 [DEBUG ONLY] Manually resolving conflict: \(conflict.entityType)", category: Logger.sync)
         
-        // 仅在完全手动管理 CloudKit 时才执行
-        Logger.log("Manually resolving conflict: \(conflict.entityType)", category: Logger.sync)
-        
-        // 使用 ConflictResolver 处理冲突（仅用于手动 CKRecord 操作）
+        // 使用 ConflictResolver 处理冲突（仅用于学习和实验）
         let resolver = ConflictResolver.shared
-        Logger.log("Using vector clock strategy for manual conflict resolution", category: Logger.sync)
+        Logger.log("🧪 Using vector clock strategy for manual conflict resolution", category: Logger.sync)
     }
     
-    /// 设置冲突策略（仅在手动管理 CloudKit 时有效）
+    /// 设置冲突策略（DEBUG 模式学习用）
     func setConflictStrategy(_ strategy: ConflictResolutionStrategy) {
-        guard !isCloudKitEnabled else {
-            Logger.warning("⚠️ Setting conflict strategy has no effect when SwiftData auto-sync is enabled", category: Logger.sync)
-            return
-        }
         ConflictResolver.shared.setStrategy(strategy)
+        Logger.log("🧪 [DEBUG ONLY] Conflict strategy set", category: Logger.sync)
     }
+    #endif
     
     /// 检查当前是否使用 SwiftData 自动同步
     var isUsingAutoSync: Bool {
         return isCloudKitEnabled
+    }
+    
+    /// 生产环境说明：完全信任 SwiftData 的 CloudKit 自动同步
+    /// 手动 CRDT 逻辑仅在 DEBUG 模式下可用，用于学习和实验
+    var syncMode: String {
+        #if DEBUG
+        return isCloudKitEnabled ? "SwiftData Auto-Sync (with DEBUG CRDT available)" : "Local Only"
+        #else
+        return isCloudKitEnabled ? "SwiftData Auto-Sync (Production)" : "Local Only"
+        #endif
     }
 }
 

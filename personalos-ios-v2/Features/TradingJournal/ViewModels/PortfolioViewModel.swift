@@ -68,6 +68,7 @@ class PortfolioViewModel {
     }
 
     func recalculatePortfolio(from trades: [TradeRecord]) async {
+        // ✅ FINAL OPTIMIZATION 2: 严密的 Task 取消检查，防止数据竞争
         // Cancel any existing calculation
         calculationTask?.cancel()
         await calculator.resetCancellation()
@@ -78,6 +79,15 @@ class PortfolioViewModel {
         calculationError = nil
         
         calculationTask = Task {
+            // ✅ 检查 1: 开始前检查取消状态
+            guard !Task.isCancelled else {
+                await MainActor.run {
+                    self.isCalculating = false
+                    self.calculationStatus = "Cancelled before start"
+                }
+                return
+            }
+            
             do {
                 let result = try await calculator.calculate(with: trades, priceProvider: { [weak self] symbol, fallback in
                     if let price = self?.priceService?.quotes[symbol]?.price {
@@ -86,14 +96,31 @@ class PortfolioViewModel {
                     return Decimal(fallback)
                 }, progressCallback: { [weak self] progress, status in
                     Task { @MainActor in
+                        // ✅ 检查 2: 进度回调中检查取消状态
+                        guard !Task.isCancelled else { return }
                         self?.calculationProgress = progress
                         self?.calculationStatus = status
                     }
                 })
                 
+                // ✅ 检查 3: 计算完成后、更新 UI 前检查取消状态
+                guard !Task.isCancelled else {
+                    await MainActor.run {
+                        self.isCalculating = false
+                        self.calculationStatus = "Cancelled after calculation"
+                        Logger.log("Portfolio calculation cancelled after completion", category: Logger.trading)
+                    }
+                    return
+                }
+                
                 // Update UI on main thread
                 await MainActor.run {
-                    guard !Task.isCancelled else { return }
+                    // ✅ 检查 4: MainActor 上下文中再次检查（双重保险）
+                    guard !Task.isCancelled else {
+                        self.isCalculating = false
+                        self.calculationStatus = "Cancelled before UI update"
+                        return
+                    }
                     
                     self.assets = result.assets
                     self.totalBalance = result.totalBalance
@@ -113,6 +140,15 @@ class PortfolioViewModel {
                     Logger.log("Portfolio calculation cancelled", category: Logger.trading)
                 }
             } catch {
+                // ✅ 检查 5: 错误处理中也检查取消状态
+                guard !Task.isCancelled else {
+                    await MainActor.run {
+                        self.isCalculating = false
+                        self.calculationStatus = "Cancelled during error handling"
+                    }
+                    return
+                }
+                
                 await MainActor.run {
                     self.isCalculating = false
                     self.calculationError = error.localizedDescription
