@@ -1,13 +1,18 @@
 import Foundation
 import SwiftData
 
-/// Thread-safe base repository for SwiftData operations
-/// All database operations are isolated using actor to prevent data races
+/// ✅ EXTREME FIX 1: ModelActor-based repository for true SwiftData concurrency safety
+/// Uses ModelActor protocol to ensure ModelContext is properly isolated per actor
+@ModelActor
 actor BaseRepository<T: PersistentModel> {
-    private let modelContext: ModelContext
+    // ModelActor provides: modelExecutor, modelContainer
+    // No need to store ModelContext directly - use modelContext computed property
     
-    init(modelContext: ModelContext) {
-        self.modelContext = modelContext
+    init(modelContainer: ModelContainer) {
+        // ✅ Create actor-isolated ModelContext from container
+        // This ensures each repository has its own context on its own executor
+        let modelExecutor = DefaultSerialModelExecutor(modelContext: ModelContext(modelContainer))
+        self.init(modelExecutor: modelExecutor)
     }
     
     /// Fetch all items matching the predicate

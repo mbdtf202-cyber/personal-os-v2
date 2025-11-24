@@ -11,6 +11,12 @@ final class TradeRecord {
     var price: Decimal
     @Attribute(.transformable(by: "DecimalTransformer"))
     var quantity: Decimal
+    
+    // ✅ EXTREME FIX 2: 添加缩放整数字段用于高效 SQL 查询
+    // 存储 price * 10000 和 quantity * 10000，支持数值比较和排序
+    var priceScaled: Int64 = 0
+    var quantityScaled: Int64 = 0
+    
     var assetType: AssetType
     var emotion: TradeEmotion
     var note: String
@@ -32,6 +38,8 @@ final class TradeRecord {
         self.type = type
         self.price = price
         self.quantity = quantity
+        self.priceScaled = price.scaledInt64
+        self.quantityScaled = quantity.scaledInt64
         self.assetType = assetType
         self.emotion = emotion
         self.note = note
