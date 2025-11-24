@@ -34,9 +34,7 @@ struct AppDependency {
     init(modelContext: ModelContext, environment: ServiceEnvironment = .production) {
         self.modelContext = modelContext
         
-        guard let modelContainer = modelContext.container else {
-            fatalError("ModelContext must have a valid container")
-        }
+        let modelContainer = modelContext.container
         
         self.repositories = Repositories(
             todo: TodoRepository(modelContainer: modelContainer),
